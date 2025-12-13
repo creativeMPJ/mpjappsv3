@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RegionalDashboard from "./pages/RegionalDashboard";
+import MediaDashboard from "./pages/MediaDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,8 @@ const App = () => (
           <Route path="/dashboard/*" element={<Dashboard />} />
           <Route path="/regional-dashboard" element={<RegionalDashboard />} />
           <Route path="/regional-dashboard/*" element={<RegionalDashboard />} />
+          <Route path="/media-dashboard" element={<MediaDashboard />} />
+          <Route path="/media-dashboard/*" element={<MediaDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
