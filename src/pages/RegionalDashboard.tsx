@@ -8,11 +8,11 @@ import {
   Menu, 
   X,
   Bell,
-  User
+  User,
+  LayoutDashboard
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import RegionalDashboardHome from "@/components/regional-dashboard/RegionalDashboardHome";
 import ValidasiPendaftar from "@/components/regional-dashboard/ValidasiPendaftar";
 import ManajemenEvent from "@/components/regional-dashboard/ManajemenEvent";
@@ -21,15 +21,14 @@ import DownloadCenter from "@/components/regional-dashboard/DownloadCenter";
 type ViewType = "beranda" | "validasi" | "event" | "download";
 
 const menuItems = [
-  { id: "beranda" as ViewType, label: "Beranda", icon: Home },
-  { id: "validasi" as ViewType, label: "Validasi Pendaftar", icon: UserCheck, badge: 5 },
-  { id: "event" as ViewType, label: "Manajemen Event", icon: Calendar },
+  { id: "beranda" as ViewType, label: "Dashboard", icon: LayoutDashboard },
+  { id: "validasi" as ViewType, label: "Validasi Data Pendaftar", icon: UserCheck, badge: 5 },
+  { id: "event" as ViewType, label: "Input & Kelola Event", icon: Calendar },
   { id: "download" as ViewType, label: "Download Center", icon: DownloadCloud },
 ];
 
 const RegionalDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>("beranda");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const renderContent = () => {
@@ -55,13 +54,19 @@ const RegionalDashboard = () => {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="p-6 border-b border-white/10">
-        <h1 className="text-xl font-bold text-white tracking-wide">MPJ Regional</h1>
-        <p className="text-sm text-white/70 mt-1">Admin Wilayah</p>
+      <div className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+            <Home className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-wide">MPJ Apps</h1>
+          </div>
+        </div>
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 px-4 space-y-1 mt-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -71,14 +76,14 @@ const RegionalDashboard = () => {
               onClick={() => handleMenuClick(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left ${
                 isActive
-                  ? "bg-white/10 text-white border-l-4 border-dashboard-accent"
-                  : "text-white/80 hover:bg-white/5 hover:text-white border-l-4 border-transparent"
+                  ? "bg-white/20 text-white border-l-4 border-accent ml-[-4px] pl-[20px]"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium text-sm">{item.label}</span>
               {item.badge && (
-                <Badge className="ml-auto bg-dashboard-accent text-white text-xs">
+                <Badge className="ml-auto bg-accent text-accent-foreground text-xs px-2">
                   {item.badge}
                 </Badge>
               )}
@@ -88,13 +93,13 @@ const RegionalDashboard = () => {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 mt-auto">
         <button
           onClick={() => window.location.href = "/"}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/5 hover:text-white transition-all duration-200"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200"
         >
           <LogOut className="w-5 h-5" />
-          <span className="font-medium">Logout</span>
+          <span className="font-medium text-sm">Logout</span>
         </button>
       </div>
     </>
@@ -102,12 +107,8 @@ const RegionalDashboard = () => {
 
   return (
     <div className="min-h-screen bg-dashboard-bg flex">
-      {/* Desktop Sidebar */}
-      <aside
-        className={`hidden md:flex flex-col bg-dashboard-sidebar transition-all duration-300 ${
-          sidebarOpen ? "w-64" : "w-20"
-        }`}
-      >
+      {/* Desktop Sidebar - Solid Emerald Green */}
+      <aside className="hidden md:flex flex-col w-64 bg-sidebar fixed h-screen">
         <SidebarContent />
       </aside>
 
@@ -119,9 +120,9 @@ const RegionalDashboard = () => {
         />
       )}
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar - Solid Emerald Green */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-dashboard-sidebar z-50 transform transition-transform duration-300 md:hidden flex flex-col ${
+        className={`fixed top-0 left-0 h-full w-64 bg-sidebar z-50 transform transition-transform duration-300 md:hidden flex flex-col ${
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -135,31 +136,34 @@ const RegionalDashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen md:ml-64">
         {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <header className="bg-card shadow-sm border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileSidebarOpen(true)}
-              className="md:hidden text-gray-600 hover:text-gray-900"
+              className="md:hidden text-muted-foreground hover:text-foreground"
             >
               <Menu className="w-6 h-6" />
             </button>
             <div>
-              <p className="text-sm text-gray-500">Wilayah</p>
-              <h2 className="text-lg font-semibold text-dashboard-sidebar">Malang Raya</h2>
+              <h2 className="text-xl font-bold text-sidebar">Wilayah: Malang Raya</h2>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100">
+            <button className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-dashboard-accent rounded-full" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
             </button>
-            <Avatar className="w-9 h-9 bg-dashboard-sidebar">
-              <AvatarFallback className="bg-dashboard-sidebar text-white text-sm">
-                <User className="w-4 h-4" />
-              </AvatarFallback>
-            </Avatar>
+            <div className="flex items-center gap-3">
+              <Avatar className="w-10 h-10 border-2 border-sidebar">
+                <AvatarImage src="/placeholder.svg" />
+                <AvatarFallback className="bg-sidebar text-sidebar-foreground text-sm">
+                  AM
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden sm:block text-sm font-medium text-foreground">Admin Malang</span>
+            </div>
           </div>
         </header>
 

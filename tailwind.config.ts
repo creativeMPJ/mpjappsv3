@@ -57,6 +57,11 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        dashboard: {
+          bg: "hsl(var(--dashboard-bg))",
+          sidebar: "hsl(var(--dashboard-sidebar))",
+          accent: "hsl(var(--dashboard-accent))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
