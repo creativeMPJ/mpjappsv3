@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RegionalDashboard from "./pages/RegionalDashboard";
 import MediaDashboard from "./pages/MediaDashboard";
+import CrewDashboard from "./pages/CrewDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,8 @@ const App = () => (
           <Route path="/regional-dashboard/*" element={<RegionalDashboard />} />
           <Route path="/media-dashboard" element={<MediaDashboard />} />
           <Route path="/media-dashboard/*" element={<MediaDashboard />} />
+          <Route path="/crew-dashboard" element={<CrewDashboard />} />
+          <Route path="/crew-dashboard/*" element={<CrewDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
