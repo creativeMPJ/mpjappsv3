@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Search, ArrowRight, Info, Plus } from "lucide-react";
+import { Building2, Search, Info, Plus, MapPin, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 
 // Mock data pesantren terdaftar
 const registeredPesantren = [
-  { id: 1, name: "Darul Ulum Jombang", region: "Jombang" },
-  { id: 2, name: "Darul Ulum Peterongan", region: "Jombang" },
-  { id: 3, name: "Tebuireng Jombang", region: "Jombang" },
-  { id: 4, name: "Lirboyo Kediri", region: "Kediri" },
-  { id: 5, name: "Sidogiri Pasuruan", region: "Pasuruan" },
-  { id: 6, name: "PeTIK Jombang", region: "Jombang" },
+  { id: 1, name: "Darul Ulum Jombang", region: "Jombang", alamat: "Jl. Raya Peterongan, Jombang" },
+  { id: 2, name: "Darul Ulum Peterongan", region: "Jombang", alamat: "Jl. Peterongan No. 10, Jombang" },
+  { id: 3, name: "Tebuireng Jombang", region: "Jombang", alamat: "Jl. Irian Jaya No. 10, Jombang" },
+  { id: 4, name: "Lirboyo Kediri", region: "Kediri", alamat: "Jl. KH. Abdul Karim, Kediri" },
+  { id: 5, name: "Sidogiri Pasuruan", region: "Pasuruan", alamat: "Jl. Sidogiri, Pasuruan" },
+  { id: 6, name: "PeTIK Jombang", region: "Jombang", alamat: "Jl. Raya Diwek, Jombang" },
 ];
 
 const CheckInstitution = () => {
@@ -30,9 +31,8 @@ const CheckInstitution = () => {
     setShowDropdown(false);
   };
 
-  const handleNext = () => {
+  const handleClaimAccount = () => {
     if (selectedPesantren) {
-      // Pesantren ditemukan -> redirect ke Claim Account dengan data
       navigate("/claim-account", { 
         state: { 
           pesantrenId: selectedPesantren.id,
@@ -40,31 +40,24 @@ const CheckInstitution = () => {
           fromSearch: true 
         } 
       });
-    } else if (searchQuery.trim()) {
-      // Tidak ditemukan -> redirect ke form pengajuan baru
-      navigate("/institution-submission", { 
-        state: { searchedName: searchQuery } 
-      });
     }
   };
 
   const handleNewSubmission = () => {
-    navigate("/institution-submission");
+    navigate("/institution-submission", { 
+      state: { searchedName: searchQuery.trim() } 
+    });
   };
+
+  const showNotFoundState = searchQuery.length > 0 && filteredPesantren.length === 0;
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <p className="text-gray-500 text-sm mb-2">Jadi bagian dari MPJ</p>
-          <button
-            onClick={handleNewSubmission}
-            className="text-[#166534] font-semibold text-base flex items-center justify-center gap-1 mx-auto hover:underline"
-          >
-            <Plus className="w-4 h-4" />
-            Ajukan Pesantren Baru
-          </button>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Cari Pesantren</h1>
+          <p className="text-gray-500 text-sm">Jadi bagian dari MPJ</p>
         </div>
 
         {/* Main Content */}
@@ -94,7 +87,7 @@ const CheckInstitution = () => {
             </div>
 
             {/* Dropdown Results */}
-            {showDropdown && filteredPesantren.length > 0 && (
+            {showDropdown && filteredPesantren.length > 0 && !selectedPesantren && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 {filteredPesantren.map((pesantren) => (
                   <button
@@ -106,39 +99,67 @@ const CheckInstitution = () => {
                       <p className="font-medium text-gray-900">{pesantren.name}</p>
                       <p className="text-sm text-gray-500">{pesantren.region}</p>
                     </div>
-                    {selectedPesantren?.id === pesantren.id && (
-                      <span className="text-[#166534] text-sm font-medium">Terpilih</span>
-                    )}
                   </button>
                 ))}
               </div>
             )}
-
-            {/* No Results */}
-            {showDropdown && searchQuery.length > 0 && filteredPesantren.length === 0 && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
-                <p className="text-gray-500 text-center text-sm">
-                  Pesantren tidak ditemukan
-                </p>
-                <button
-                  onClick={handleNewSubmission}
-                  className="w-full mt-2 text-[#166534] font-medium text-sm hover:underline"
-                >
-                  + Ajukan sebagai Pesantren Baru
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Next Button */}
-          <Button
-            onClick={handleNext}
-            disabled={!searchQuery.trim()}
-            className="w-full h-12 bg-gradient-to-r from-[#166534] to-[#22c55e] hover:from-[#14532d] hover:to-[#16a34a] text-white font-semibold text-base rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Selanjutnya
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+          {/* Selected Pesantren Card - FOUND STATE */}
+          {selectedPesantren && (
+            <Card className="border-[#166534]/30 bg-[#166534]/5">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#166534]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-5 h-5 text-[#166534]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{selectedPesantren.name}</p>
+                    <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{selectedPesantren.alamat}</span>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleClaimAccount}
+                  className="w-full h-11 bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold rounded-xl"
+                >
+                  <UserCheck className="w-4 h-4 mr-2" />
+                  Klaim Akun Ini
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Not Found State */}
+          {showNotFoundState && (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-gray-600 font-medium mb-1">Pesantren tidak ditemukan</p>
+              <p className="text-gray-500 text-sm mb-4">"{searchQuery}" belum terdaftar di sistem</p>
+              <Button
+                onClick={handleNewSubmission}
+                className="w-full h-12 bg-[#166534] hover:bg-[#14532d] text-white font-semibold rounded-xl"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Ajukan Pesantren & Buat Akun
+              </Button>
+            </div>
+          )}
+
+          {/* Quick Add Link */}
+          {!selectedPesantren && !showNotFoundState && (
+            <button
+              onClick={handleNewSubmission}
+              className="w-full text-[#166534] font-semibold text-sm flex items-center justify-center gap-1 py-2 hover:underline"
+            >
+              <Plus className="w-4 h-4" />
+              Ajukan Pesantren Baru
+            </button>
+          )}
         </div>
 
         {/* Warning Box */}
