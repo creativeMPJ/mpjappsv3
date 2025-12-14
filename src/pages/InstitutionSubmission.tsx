@@ -294,6 +294,20 @@ const InstitutionSubmission = () => {
               </Select>
             </div>
 
+            {/* Nama Regional (Auto-filled) */}
+            {pesantrenData.regional_name && (
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <MapPin className="w-4 h-4" />
+                  Nama Regional
+                  <span className="text-xs text-gray-400">(Otomatis)</span>
+                </label>
+                <div className="h-11 px-3 flex items-center bg-gray-100 border border-gray-200 rounded-md text-gray-700">
+                  {pesantrenData.regional_id} - {pesantrenData.regional_name}
+                </div>
+              </div>
+            )}
+
             {/* Email Resmi */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
