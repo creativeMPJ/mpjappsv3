@@ -18,6 +18,7 @@ import RegionalDashboardHome from "@/components/regional-dashboard/RegionalDashb
 import ValidasiPendaftar from "@/components/regional-dashboard/ValidasiPendaftar";
 import ManajemenEvent from "@/components/regional-dashboard/ManajemenEvent";
 import DataMasterRegional from "@/components/regional-dashboard/DataMasterRegional";
+import Pengaturan from "@/components/regional-dashboard/Pengaturan";
 
 type ViewType = "beranda" | "validasi" | "datamaster" | "event" | "pengaturan";
 
@@ -44,7 +45,7 @@ const RegionalDashboard = () => {
       case "event":
         return <ManajemenEvent />;
       case "pengaturan":
-        return <div className="text-muted-foreground">Pengaturan - Coming Soon</div>;
+        return <Pengaturan />;
       default:
         return <RegionalDashboardHome />;
     }
