@@ -3,28 +3,30 @@ import {
   Home, 
   UserCheck, 
   Calendar, 
-  DownloadCloud, 
   LogOut, 
   Menu, 
   X,
   Bell,
-  User,
+  Database,
+  Settings,
   LayoutDashboard
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import RegionalDashboardHome from "@/components/regional-dashboard/RegionalDashboardHome";
 import ValidasiPendaftar from "@/components/regional-dashboard/ValidasiPendaftar";
 import ManajemenEvent from "@/components/regional-dashboard/ManajemenEvent";
-import DownloadCenter from "@/components/regional-dashboard/DownloadCenter";
+import DataMasterRegional from "@/components/regional-dashboard/DataMasterRegional";
 
-type ViewType = "beranda" | "validasi" | "event" | "download";
+type ViewType = "beranda" | "validasi" | "datamaster" | "event" | "pengaturan";
 
 const menuItems = [
-  { id: "beranda" as ViewType, label: "Dashboard", icon: LayoutDashboard },
-  { id: "validasi" as ViewType, label: "Validasi Data Pendaftar", icon: UserCheck, badge: 5 },
-  { id: "event" as ViewType, label: "Input & Kelola Event", icon: Calendar },
-  { id: "download" as ViewType, label: "Download Center", icon: DownloadCloud },
+  { id: "beranda" as ViewType, label: "Beranda", icon: LayoutDashboard },
+  { id: "validasi" as ViewType, label: "Validasi Pendaftar", icon: UserCheck, badge: 5 },
+  { id: "datamaster" as ViewType, label: "Data Master", icon: Database },
+  { id: "event" as ViewType, label: "Manajemen Event", icon: Calendar },
+  { id: "pengaturan" as ViewType, label: "Pengaturan", icon: Settings },
 ];
 
 const RegionalDashboard = () => {
@@ -37,10 +39,12 @@ const RegionalDashboard = () => {
         return <RegionalDashboardHome />;
       case "validasi":
         return <ValidasiPendaftar />;
+      case "datamaster":
+        return <DataMasterRegional />;
       case "event":
         return <ManajemenEvent />;
-      case "download":
-        return <DownloadCenter />;
+      case "pengaturan":
+        return <div className="text-muted-foreground">Pengaturan - Coming Soon</div>;
       default:
         return <RegionalDashboardHome />;
     }
@@ -60,7 +64,7 @@ const RegionalDashboard = () => {
             <Home className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-wide">MPJ Apps</h1>
+            <h1 className="text-xl font-bold text-white tracking-wide">MPJ Regional</h1>
           </div>
         </div>
       </div>
@@ -74,16 +78,16 @@ const RegionalDashboard = () => {
             <button
               key={item.id}
               onClick={() => handleMenuClick(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left ${
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all duration-200 text-left min-h-[44px] ${
                 isActive
-                  ? "bg-white/20 text-white border-l-4 border-accent ml-[-4px] pl-[20px]"
+                  ? "bg-emerald-800 text-white border-l-4 border-accent ml-[-4px] pl-[20px]"
                   : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
               <span className="font-medium text-sm">{item.label}</span>
               {item.badge && (
-                <Badge className="ml-auto bg-accent text-accent-foreground text-xs px-2">
+                <Badge className="ml-auto bg-red-500 text-white text-xs px-2">
                   {item.badge}
                 </Badge>
               )}
@@ -96,7 +100,7 @@ const RegionalDashboard = () => {
       <div className="p-4 mt-auto">
         <button
           onClick={() => window.location.href = "/"}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200"
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 min-h-[44px]"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium text-sm">Logout</span>
@@ -106,57 +110,41 @@ const RegionalDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-dashboard-bg flex">
+    <div className="min-h-screen bg-dashboard-bg flex w-full">
       {/* Desktop Sidebar - Solid Emerald Green */}
-      <aside className="hidden md:flex flex-col w-64 bg-sidebar fixed h-screen">
+      <aside className="hidden md:flex flex-col w-[250px] bg-sidebar fixed h-screen">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
-      {mobileSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
-      {/* Mobile Sidebar - Solid Emerald Green */}
-      <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-sidebar z-50 transform transition-transform duration-300 md:hidden flex flex-col ${
-          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <button
-          onClick={() => setMobileSidebarOpen(false)}
-          className="absolute top-4 right-4 text-white/80 hover:text-white"
-        >
-          <X className="w-6 h-6" />
-        </button>
-        <SidebarContent />
-      </aside>
+      {/* Mobile Sidebar using Sheet */}
+      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <SheetContent side="left" className="w-[250px] p-0 bg-sidebar border-none">
+          <SidebarContent />
+        </SheetContent>
+      </Sheet>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-64">
+      <div className="flex-1 flex flex-col min-h-screen md:ml-[250px]">
         {/* Top Bar */}
-        <header className="bg-card shadow-sm border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-4">
+        <header className="bg-card shadow-sm border-b border-border px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileSidebarOpen(true)}
-              className="md:hidden text-muted-foreground hover:text-foreground"
+              className="md:hidden text-muted-foreground hover:text-foreground p-2 -ml-2"
             >
               <Menu className="w-6 h-6" />
             </button>
             <div>
-              <h2 className="text-xl font-bold text-sidebar">Wilayah: Malang Raya</h2>
+              <h2 className="text-lg md:text-xl font-bold text-sidebar">Wilayah: Malang Raya</h2>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button className="relative p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 border-2 border-sidebar">
+            <div className="flex items-center gap-2 md:gap-3">
+              <Avatar className="w-9 h-9 md:w-10 md:h-10 border-2 border-sidebar">
                 <AvatarImage src="/placeholder.svg" />
                 <AvatarFallback className="bg-sidebar text-sidebar-foreground text-sm">
                   AM
@@ -168,7 +156,7 @@ const RegionalDashboard = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           {renderContent()}
         </main>
       </div>
