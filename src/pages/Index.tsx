@@ -29,7 +29,7 @@ const Index = () => {
                 Masuk
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to="/check-institution">
               <Button size="sm" className="h-9 px-5 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium shadow-md">
                 Daftar Gratis
               </Button>
@@ -59,7 +59,7 @@ const Index = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                <Link to="/register">
+                <Link to="/check-institution">
                   <Button className="w-full sm:w-auto h-12 px-7 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-lg shadow-accent/25">
                     Mulai Sekarang
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -160,7 +160,7 @@ const Index = () => {
             <p className="text-primary-foreground/80 mb-6 text-sm sm:text-base">
               Daftar sekarang & jadilah bagian dari komunitas media pesantren terbesar
             </p>
-            <Link to="/register">
+            <Link to="/check-institution">
               <Button className="h-12 px-8 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground font-semibold shadow-lg">
                 Daftar Gratis Sekarang
                 <ArrowRight className="ml-2 h-4 w-4" />

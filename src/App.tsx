@@ -14,6 +14,8 @@ import Dashboard from "./pages/Dashboard";
 import RegionalDashboard from "./pages/RegionalDashboard";
 import MediaDashboard from "./pages/MediaDashboard";
 import CrewDashboard from "./pages/CrewDashboard";
+import CheckInstitution from "./pages/CheckInstitution";
+import InstitutionSubmission from "./pages/InstitutionSubmission";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/check-institution" element={<CheckInstitution />} />
+          <Route path="/institution-submission" element={<InstitutionSubmission />} />
           <Route path="/register" element={<Register />} />
           <Route path="/claim-account" element={<ClaimAccount />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
