@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Gamepad2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -22,12 +23,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import DashboardHome from "@/components/dashboard/DashboardHome";
-import ValidasiPayment from "@/components/dashboard/ValidasiPayment";
-import MonitoringSOP from "@/components/dashboard/MonitoringSOP";
-import DataMaster from "@/components/dashboard/DataMaster";
 import MappingArea from "@/components/dashboard/MappingArea";
 import MonitoringValidasi from "@/components/dashboard/MonitoringValidasi";
 import RegionalAkun from "@/components/dashboard/RegionalAkun";
+import Gamifikasi from "@/components/dashboard/Gamifikasi";
+import DatabasePesantren from "@/components/dashboard/DatabasePesantren";
+import PengaturanAdmin from "@/components/dashboard/PengaturanAdmin";
+import PusatUnduhan from "@/components/dashboard/PusatUnduhan";
 
 type ViewType = 
   | "dashboard" 
@@ -35,7 +37,8 @@ type ViewType =
   | "regional-mapping" 
   | "monitoring-validasi" 
   | "pusat-unduhan"
-  | "database-global" 
+  | "database-pesantren" 
+  | "gamifikasi"
   | "pengaturan";
 
 interface MenuItem {
@@ -58,8 +61,9 @@ const menuItems: MenuItem[] = [
     ]
   },
   { id: "monitoring-validasi", label: "Monitoring Validasi", icon: Shield, badge: 6 },
+  { id: "database-pesantren", label: "Database Pesantren", icon: Database },
+  { id: "gamifikasi", label: "Gamifikasi", icon: Gamepad2 },
   { id: "pusat-unduhan", label: "Pusat Unduhan", icon: Download },
-  { id: "database-global", label: "Database Global", icon: Database },
   { id: "pengaturan", label: "Pengaturan", icon: Settings },
 ];
 
@@ -72,7 +76,7 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return <DashboardHome />;
+        return <DashboardHome onNavigate={setActiveView} />;
       case "regional-akun":
         return <RegionalAkun />;
       case "regional-mapping":
@@ -80,13 +84,15 @@ const Dashboard = () => {
       case "monitoring-validasi":
         return <MonitoringValidasi />;
       case "pusat-unduhan":
-        return <MonitoringSOP />; // Reusing for now
-      case "database-global":
-        return <DataMaster />;
+        return <PusatUnduhan />;
+      case "database-pesantren":
+        return <DatabasePesantren />;
+      case "gamifikasi":
+        return <Gamifikasi />;
       case "pengaturan":
-        return <ValidasiPayment />; // Placeholder
+        return <PengaturanAdmin />;
       default:
-        return <DashboardHome />;
+        return <DashboardHome onNavigate={setActiveView} />;
     }
   };
 
