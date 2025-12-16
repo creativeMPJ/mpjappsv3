@@ -20,6 +20,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -147,6 +157,8 @@ const RegionalAkun = () => {
     regional: "",
     password: "",
   });
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [accountToToggle, setAccountToToggle] = useState<AdminAccount | null>(null);
 
   // Filter out users who are already assigned as regional admins
   const assignedEmails = accounts.map((acc) => acc.email.toLowerCase());
@@ -223,7 +235,16 @@ const RegionalAkun = () => {
     setIsDialogOpen(false);
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = (account: AdminAccount) => {
+    if (account.status === "active") {
+      setAccountToToggle(account);
+      setStatusDialogOpen(true);
+    } else {
+      confirmToggleStatus(account.id);
+    }
+  };
+
+  const confirmToggleStatus = (id: string) => {
     setAccounts((prev) =>
       prev.map((acc) =>
         acc.id === id
@@ -232,6 +253,8 @@ const RegionalAkun = () => {
       )
     );
     toast.success("Status akun berhasil diubah!");
+    setStatusDialogOpen(false);
+    setAccountToToggle(null);
   };
 
   return (
@@ -369,7 +392,7 @@ const RegionalAkun = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleToggleStatus(account.id)}
+                          onClick={() => handleToggleStatus(account)}
                           className={cn(
                             account.status === "active"
                               ? "text-red-600 hover:bg-red-50"
@@ -572,6 +595,28 @@ const RegionalAkun = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Status Toggle Confirmation Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nonaktifkan Admin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menonaktifkan akun <strong>{accountToToggle?.name}</strong>? 
+              Admin ini tidak akan dapat mengakses dashboard regional.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAccountToToggle(null)}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => accountToToggle && confirmToggleStatus(accountToToggle.id)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Nonaktifkan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
