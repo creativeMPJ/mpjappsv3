@@ -148,6 +148,12 @@ const RegionalAkun = () => {
     password: "",
   });
 
+  // Filter out users who are already assigned as regional admins
+  const assignedEmails = accounts.map((acc) => acc.email.toLowerCase());
+  const availableUsers = mockUsers.filter(
+    (user) => !assignedEmails.includes(user.email.toLowerCase())
+  );
+
   const handleCreate = () => {
     setEditingAccount(null);
     setSelectedUser(null);
@@ -418,25 +424,31 @@ const RegionalAkun = () => {
                       <CommandList>
                         <CommandEmpty>User tidak ditemukan.</CommandEmpty>
                         <CommandGroup>
-                          {mockUsers.map((user) => (
-                            <CommandItem
-                              key={user.id}
-                              value={`${user.name} ${user.email}`}
-                              onSelect={() => handleSelectUser(user)}
-                              className="cursor-pointer"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedUser?.id === user.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.name}</span>
-                                <span className="text-xs text-muted-foreground">{user.email} • {user.phone}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
+                          {availableUsers.length === 0 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Semua user sudah terdaftar sebagai admin.
+                            </div>
+                          ) : (
+                            availableUsers.map((user) => (
+                              <CommandItem
+                                key={user.id}
+                                value={`${user.name} ${user.email}`}
+                                onSelect={() => handleSelectUser(user)}
+                                className="cursor-pointer"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedUser?.id === user.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{user.name}</span>
+                                  <span className="text-xs text-muted-foreground">{user.email} • {user.phone}</span>
+                                </div>
+                              </CommandItem>
+                            ))
+                          )}
                         </CommandGroup>
                       </CommandList>
                     </Command>
