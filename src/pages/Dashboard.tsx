@@ -1,45 +1,90 @@
 import { useState } from "react";
 import { 
   LayoutDashboard, 
-  CreditCard, 
-  CalendarDays, 
+  MapPin, 
+  Users, 
+  Shield, 
+  Download, 
   Database, 
+  Settings,
   LogOut, 
   Bell,
   Menu,
-  X
+  X,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import DashboardHome from "@/components/dashboard/DashboardHome";
 import ValidasiPayment from "@/components/dashboard/ValidasiPayment";
 import MonitoringSOP from "@/components/dashboard/MonitoringSOP";
 import DataMaster from "@/components/dashboard/DataMaster";
+import MappingArea from "@/components/dashboard/MappingArea";
+import MonitoringValidasi from "@/components/dashboard/MonitoringValidasi";
+import RegionalAkun from "@/components/dashboard/RegionalAkun";
 
-type ViewType = "beranda" | "validasi" | "monitoring" | "datamaster";
+type ViewType = 
+  | "dashboard" 
+  | "regional-akun" 
+  | "regional-mapping" 
+  | "monitoring-validasi" 
+  | "pusat-unduhan"
+  | "database-global" 
+  | "pengaturan";
 
-const menuItems = [
-  { id: "beranda" as ViewType, label: "Beranda", icon: LayoutDashboard },
-  { id: "validasi" as ViewType, label: "Validasi Payment", icon: CreditCard, badge: 12 },
-  { id: "monitoring" as ViewType, label: "Monitoring & SOP", icon: CalendarDays },
-  { id: "datamaster" as ViewType, label: "Data Master", icon: Database },
+interface MenuItem {
+  id: ViewType;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: number;
+  children?: { id: ViewType; label: string }[];
+}
+
+const menuItems: MenuItem[] = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { 
+    id: "regional-akun", 
+    label: "Regional", 
+    icon: MapPin,
+    children: [
+      { id: "regional-akun", label: "Data Akun" },
+      { id: "regional-mapping", label: "Mapping Area" },
+    ]
+  },
+  { id: "monitoring-validasi", label: "Monitoring Validasi", icon: Shield, badge: 6 },
+  { id: "pusat-unduhan", label: "Pusat Unduhan", icon: Download },
+  { id: "database-global", label: "Database Global", icon: Database },
+  { id: "pengaturan", label: "Pengaturan", icon: Settings },
 ];
 
 const Dashboard = () => {
-  const [activeView, setActiveView] = useState<ViewType>("beranda");
+  const [activeView, setActiveView] = useState<ViewType>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["regional-akun"]);
 
   const renderContent = () => {
     switch (activeView) {
-      case "beranda":
+      case "dashboard":
         return <DashboardHome />;
-      case "validasi":
-        return <ValidasiPayment />;
-      case "monitoring":
-        return <MonitoringSOP />;
-      case "datamaster":
+      case "regional-akun":
+        return <RegionalAkun />;
+      case "regional-mapping":
+        return <MappingArea />;
+      case "monitoring-validasi":
+        return <MonitoringValidasi />;
+      case "pusat-unduhan":
+        return <MonitoringSOP />; // Reusing for now
+      case "database-global":
         return <DataMaster />;
+      case "pengaturan":
+        return <ValidasiPayment />; // Placeholder
       default:
         return <DashboardHome />;
     }
@@ -48,6 +93,21 @@ const Dashboard = () => {
   const handleMenuClick = (viewId: ViewType) => {
     setActiveView(viewId);
     setMobileSidebarOpen(false);
+  };
+
+  const toggleExpanded = (menuId: string) => {
+    setExpandedMenus((prev) =>
+      prev.includes(menuId)
+        ? prev.filter((id) => id !== menuId)
+        : [...prev, menuId]
+    );
+  };
+
+  const isMenuActive = (item: MenuItem) => {
+    if (item.children) {
+      return item.children.some((child) => child.id === activeView);
+    }
+    return item.id === activeView;
   };
 
   return (
@@ -92,29 +152,87 @@ const Dashboard = () => {
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 py-4 px-3 space-y-1">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleMenuClick(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200",
-                activeView === item.id
-                  ? "bg-emerald-700 text-white"
-                  : "text-emerald-100 hover:bg-emerald-700/50"
-              )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {sidebarOpen && (
-                <span className="flex-1 text-left">{item.label}</span>
-              )}
-              {sidebarOpen && item.badge && (
-                <span className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          ))}
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          {menuItems.map((item) => {
+            const hasChildren = item.children && item.children.length > 0;
+            const isExpanded = expandedMenus.includes(item.id);
+            const isActive = isMenuActive(item);
+
+            if (hasChildren) {
+              return (
+                <Collapsible
+                  key={item.id}
+                  open={isExpanded}
+                  onOpenChange={() => toggleExpanded(item.id)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <button
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200",
+                        isActive
+                          ? "bg-emerald-700 text-white"
+                          : "text-emerald-100 hover:bg-emerald-700/50"
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      {sidebarOpen && (
+                        <>
+                          <span className="flex-1 text-left">{item.label}</span>
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </>
+                      )}
+                    </button>
+                  </CollapsibleTrigger>
+                  {sidebarOpen && (
+                    <CollapsibleContent className="pl-8 space-y-1 mt-1">
+                      {item.children?.map((child) => (
+                        <button
+                          key={child.id}
+                          onClick={() => handleMenuClick(child.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-sm",
+                            activeView === child.id
+                              ? "bg-amber-500 text-white font-medium"
+                              : "text-emerald-200 hover:bg-emerald-700/50"
+                          )}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                          {child.label}
+                        </button>
+                      ))}
+                    </CollapsibleContent>
+                  )}
+                </Collapsible>
+              );
+            }
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleMenuClick(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200",
+                  activeView === item.id
+                    ? "bg-emerald-700 text-white"
+                    : "text-emerald-100 hover:bg-emerald-700/50"
+                )}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {sidebarOpen && (
+                  <span className="flex-1 text-left">{item.label}</span>
+                )}
+                {sidebarOpen && item.badge && (
+                  <span className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Logout */}
