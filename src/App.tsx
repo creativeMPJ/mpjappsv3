@@ -15,6 +15,7 @@ import MediaDashboard from "./pages/MediaDashboard";
 import CrewDashboard from "./pages/CrewDashboard";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import MajelisMilitanDashboard from "./pages/MajelisMilitanDashboard";
+import AdminRegionalDetail from "./pages/AdminRegionalDetail";
 import CheckInstitution from "./pages/CheckInstitution";
 import InstitutionSubmission from "./pages/InstitutionSubmission";
 import NotFound from "./pages/NotFound";
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/finance/*" element={<FinanceDashboard />} />
           <Route path="/majelis-militan" element={<MajelisMilitanDashboard />} />
           <Route path="/majelis-militan/*" element={<MajelisMilitanDashboard />} />
+          <Route path="/admin/regional/:id" element={<AdminRegionalDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
