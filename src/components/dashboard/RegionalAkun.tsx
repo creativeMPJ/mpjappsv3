@@ -413,7 +413,7 @@ const RegionalAkun = () => {
                       {selectedUser ? (
                         <span>{selectedUser.name} - {selectedUser.email}</span>
                       ) : (
-                        <span className="text-muted-foreground">Cari nama atau email user...</span>
+                        <span className="text-muted-foreground">Cari user... ({availableUsers.length} tersedia)</span>
                       )}
                       <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
