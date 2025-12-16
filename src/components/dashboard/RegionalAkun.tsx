@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Mail, Phone, Shield, Edit2, Plus, Eye, EyeOff, Search, Check } from "lucide-react";
+import { Users, Mail, Phone, Shield, Edit2, Plus, Eye, EyeOff, Search, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -401,23 +401,24 @@ const RegionalAkun = () => {
           <div className="space-y-4 py-4">
             {!editingAccount && (
               <div className="space-y-2">
-                <Label>Cari User *</Label>
-                <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={userSearchOpen}
-                      className="w-full justify-between font-normal"
-                    >
-                      {selectedUser ? (
-                        <span>{selectedUser.name} - {selectedUser.email}</span>
-                      ) : (
-                        <span className="text-muted-foreground">Cari user... ({availableUsers.length} tersedia)</span>
-                      )}
-                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
+                <Label>Cari User {!selectedUser && "*"}</Label>
+                <div className="flex gap-2">
+                  <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={userSearchOpen}
+                        className="flex-1 justify-between font-normal"
+                      >
+                        {selectedUser ? (
+                          <span>{selectedUser.name} - {selectedUser.email}</span>
+                        ) : (
+                          <span className="text-muted-foreground">Cari user... ({availableUsers.length} tersedia)</span>
+                        )}
+                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
                   <PopoverContent className="w-[400px] p-0 bg-white" align="start">
                     <Command>
                       <CommandInput placeholder="Ketik nama atau email..." />
@@ -454,6 +455,21 @@ const RegionalAkun = () => {
                     </Command>
                   </PopoverContent>
                 </Popover>
+                {selectedUser && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setFormData({ ...formData, name: "", email: "", phone: "" });
+                    }}
+                    className="shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+                </div>
               </div>
             )}
 
