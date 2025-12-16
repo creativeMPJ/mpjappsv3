@@ -58,7 +58,7 @@ const stats = [
   { label: "Total Anggota", value: "12,500", icon: Users, trend: "+12.5%", color: "text-emerald-600", bg: "bg-emerald-50" },
   { label: "Total Pesantren", value: "340", icon: Building2, trend: "+18", color: "text-blue-600", bg: "bg-blue-50" },
   { label: "Wilayah Aktif", value: "28", icon: Shield, trend: "+3", color: "text-purple-600", bg: "bg-purple-50" },
-  { label: "Omset (Hidden)", value: "—", icon: DollarSign, trend: "N/A", color: "text-slate-400", bg: "bg-slate-50" },
+  { label: "Total Omset", value: "Rp 336Jt", icon: DollarSign, trend: "+15.2%", color: "text-amber-600", bg: "bg-amber-50" },
 ];
 
 const PusatLevel = () => {
