@@ -3,8 +3,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ClusterMap from "./ClusterMap";
 
+type ViewType = 
+  | "dashboard" 
+  | "regional-akun" 
+  | "regional-mapping" 
+  | "monitoring-validasi" 
+  | "pusat-unduhan"
+  | "database-pesantren" 
+  | "gamifikasi"
+  | "pengaturan";
+
 interface Props {
-  onNavigate?: (view: string) => void;
+  onNavigate?: (view: ViewType) => void;
 }
 
 const DashboardHome = ({ onNavigate }: Props) => {
