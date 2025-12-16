@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import RegionalDashboard from "./pages/RegionalDashboard";
 import MediaDashboard from "./pages/MediaDashboard";
 import CrewDashboard from "./pages/CrewDashboard";
+import FinanceDashboard from "./pages/FinanceDashboard";
 import CheckInstitution from "./pages/CheckInstitution";
 import InstitutionSubmission from "./pages/InstitutionSubmission";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,8 @@ const App = () => (
           <Route path="/media-dashboard/*" element={<MediaDashboard />} />
           <Route path="/crew-dashboard" element={<CrewDashboard />} />
           <Route path="/crew-dashboard/*" element={<CrewDashboard />} />
+          <Route path="/finance" element={<FinanceDashboard />} />
+          <Route path="/finance/*" element={<FinanceDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
