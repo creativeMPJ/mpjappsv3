@@ -2,14 +2,26 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -19,338 +31,339 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  Eye, 
   Check, 
   X, 
   Clock,
   CheckCircle,
-  XCircle
+  RefreshCw,
+  Inbox
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 
-// Mock verification queue data
-const initialQueueData = [
-  {
-    id: 1,
-    timestamp: "10:30 AM",
-    user: { name: "Ahmad", location: "Malang", avatar: "" },
-    sku: "E-ID Card",
-    nominal: 50000,
-    status: "waiting",
-    buktiUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400",
-  },
-  {
-    id: 2,
-    timestamp: "10:45 AM",
-    user: { name: "Siti", location: "Surabaya", avatar: "" },
-    sku: "Cetak ID",
-    nominal: 25000,
-    status: "waiting",
-    buktiUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400",
-  },
-  {
-    id: 3,
-    timestamp: "11:00 AM",
-    user: { name: "Rudi", location: "Jember", avatar: "" },
-    sku: "Crew Upgrade",
-    nominal: 100000,
-    status: "waiting",
-    buktiUrl: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400",
-  },
-];
+interface PendingProfile {
+  id: string;
+  nama_pesantren: string | null;
+  nama_pengasuh: string | null;
+  city_id: string | null;
+  created_at: string | null;
+  city?: {
+    name: string;
+  } | null;
+}
 
-const historyData = [
-  {
-    id: 4,
-    timestamp: "09:15 AM",
-    user: { name: "Dewi", location: "Kediri", avatar: "" },
-    sku: "E-ID Card",
-    nominal: 50000,
-    status: "verified",
-    verifiedAt: "09:20 AM",
-  },
-  {
-    id: 5,
-    timestamp: "09:00 AM",
-    user: { name: "Budi", location: "Blitar", avatar: "" },
-    sku: "Cetak ID",
-    nominal: 25000,
-    status: "rejected",
-    verifiedAt: "09:05 AM",
-  },
-];
-
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(value);
-};
-
-const getSkuBadgeColor = (sku: string) => {
-  switch (sku) {
-    case "E-ID Card":
-      return "bg-blue-500";
-    case "Cetak ID":
-      return "bg-purple-500";
-    case "Crew Upgrade":
-      return "bg-amber-500";
-    default:
-      return "bg-muted";
-  }
+// Generate NIP: MPJ-YYYY-XXXX
+const generateNIP = () => {
+  const year = new Date().getFullYear();
+  const random = Math.floor(1000 + Math.random() * 9000);
+  return `MPJ-${year}-${random}`;
 };
 
 const ClearingHouse = () => {
-  const [queueData, setQueueData] = useState(initialQueueData);
-  const [selectedBukti, setSelectedBukti] = useState<string | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<PendingProfile | null>(null);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const pendingCount = queueData.filter(item => item.status === "waiting").length;
-  const verifiedCount = historyData.filter(item => item.status === "verified").length;
+  // Fetch pending profiles
+  const { data: pendingProfiles, isLoading, refetch } = useQuery({
+    queryKey: ['pending-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          nama_pesantren,
+          nama_pengasuh,
+          city_id,
+          created_at,
+          city:cities(name)
+        `)
+        .eq('status_account', 'pending')
+        .order('created_at', { ascending: true });
 
-  const handleVerify = (id: number) => {
-    setQueueData(prev => prev.filter(item => item.id !== id));
-    toast({
-      title: "Pembayaran Diverifikasi",
-      description: "Status pengguna telah diperbarui dan notifikasi dikirim.",
-    });
+      if (error) {
+        console.error('Error fetching pending profiles:', error);
+        throw error;
+      }
+
+      return (data || []) as PendingProfile[];
+    },
+  });
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      const nip = generateNIP();
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          status_account: 'active',
+          status_payment: 'paid',
+          nip: nip,
+        })
+        .eq('id', profileId);
+
+      if (error) throw error;
+      return { nip };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Akun Diaktifkan",
+        description: `NIP: ${data.nip} berhasil dibuat. Status akun: Active & Paid.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['pending-profiles'] });
+      setShowApproveDialog(false);
+      setSelectedProfile(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Gagal Mengaktifkan Akun",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Reject mutation
+  const rejectMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          status_account: 'rejected',
+        })
+        .eq('id', profileId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Akun Ditolak",
+        description: "Status akun telah diubah menjadi Rejected.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['pending-profiles'] });
+      setShowRejectDialog(false);
+      setSelectedProfile(null);
+      setRejectReason("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Gagal Menolak Akun",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleApproveClick = (profile: PendingProfile) => {
+    setSelectedProfile(profile);
+    setShowApproveDialog(true);
   };
 
-  const handleReject = (id: number) => {
-    setQueueData(prev => prev.filter(item => item.id !== id));
-    toast({
-      title: "Pembayaran Ditolak",
-      description: "Pengguna akan diberitahu untuk mengunggah ulang bukti.",
-      variant: "destructive",
-    });
+  const handleRejectClick = (profile: PendingProfile) => {
+    setSelectedProfile(profile);
+    setShowRejectDialog(true);
   };
+
+  const handleConfirmApprove = () => {
+    if (selectedProfile) {
+      approveMutation.mutate(selectedProfile.id);
+    }
+  };
+
+  const handleConfirmReject = () => {
+    if (selectedProfile && rejectReason.trim()) {
+      rejectMutation.mutate(selectedProfile.id);
+    }
+  };
+
+  const pendingCount = pendingProfiles?.length || 0;
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Clearing House</h1>
-        <p className="text-muted-foreground">Verifikasi pembayaran dan kelola antrian</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Verifikasi Pendaftaran</h1>
+          <p className="text-muted-foreground">Antrian verifikasi akun baru</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => refetch()}
+          disabled={isLoading}
+          className="gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="w-8 h-8 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
-                <p className="text-sm text-muted-foreground">Menunggu Verifikasi</p>
-              </div>
+      <Card className="border-l-4 border-l-orange-500">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <Clock className="w-8 h-8 text-orange-500" />
+            <div>
+              <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
+              <p className="text-sm text-muted-foreground">Menunggu Verifikasi</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-8 h-8 text-emerald-500" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">{verifiedCount}</p>
-                <p className="text-sm text-muted-foreground">Terverifikasi Hari Ini</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="queue" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="queue" className="gap-2">
-            Antrian Verifikasi
-            {pendingCount > 0 && (
-              <Badge className="bg-orange-500 text-white">{pendingCount}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="history">Riwayat</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="queue">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Antrian Pembayaran</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Waktu</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Nominal</TableHead>
-                      <TableHead>Bukti</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {queueData.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          Tidak ada antrian verifikasi
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      queueData.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-muted-foreground">
-                            {item.timestamp}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src={item.user.avatar} />
-                                <AvatarFallback className="bg-sidebar text-white text-xs">
-                                  {item.user.name.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{item.user.name}</p>
-                                <p className="text-xs text-muted-foreground">{item.user.location}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${getSkuBadgeColor(item.sku)} text-white`}>
-                              {item.sku}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            {formatCurrency(item.nominal)}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedBukti(item.buktiUrl)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Lihat
-                            </Button>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                size="sm"
-                                className="bg-emerald-500 hover:bg-emerald-600"
-                                onClick={() => handleVerify(item.id)}
-                              >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => handleReject(item.id)}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Riwayat Verifikasi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Waktu</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Nominal</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Diverifikasi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {historyData.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="text-muted-foreground">
-                          {item.timestamp}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="w-8 h-8">
-                              <AvatarImage src={item.user.avatar} />
-                              <AvatarFallback className="bg-sidebar text-white text-xs">
-                                {item.user.name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{item.user.name}</p>
-                              <p className="text-xs text-muted-foreground">{item.user.location}</p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${getSkuBadgeColor(item.sku)} text-white`}>
-                            {item.sku}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(item.nominal)}
-                        </TableCell>
-                        <TableCell>
-                          {item.status === "verified" ? (
-                            <Badge className="bg-emerald-500 text-white gap-1">
-                              <CheckCircle className="w-3 h-3" />
-                              Verified
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" className="gap-1">
-                              <XCircle className="w-3 h-3" />
-                              Rejected
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {item.verifiedAt}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Bukti Modal */}
-      <Dialog open={!!selectedBukti} onOpenChange={() => setSelectedBukti(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Bukti Transfer</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            <img
-              src={selectedBukti || ""}
-              alt="Bukti Transfer"
-              className="w-full rounded-lg border"
-            />
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Gambar terkompresi (max 100KB) untuk loading cepat
-            </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Queue Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Inbox className="w-5 h-5" />
+            Antrian Pendaftaran
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : pendingCount === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <CheckCircle className="w-12 h-12 text-emerald-500 mb-4" />
+              <p className="text-lg font-medium text-foreground">Semua Beres!</p>
+              <p className="text-muted-foreground">Tidak ada antrian verifikasi saat ini.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pesantren</TableHead>
+                    <TableHead>Nama Pendaftar</TableHead>
+                    <TableHead>Kota</TableHead>
+                    <TableHead>Waktu Daftar</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingProfiles?.map((profile) => (
+                    <TableRow key={profile.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback className="bg-sidebar text-white text-xs">
+                              {profile.nama_pesantren?.charAt(0) || "P"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">
+                            {profile.nama_pesantren || "-"}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {profile.nama_pengasuh || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {profile.city?.name || "-"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {profile.created_at 
+                          ? format(new Date(profile.created_at), "dd MMM yyyy, HH:mm", { locale: localeId })
+                          : "-"
+                        }
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-emerald-500 hover:bg-emerald-600 gap-1"
+                            onClick={() => handleApproveClick(profile)}
+                          >
+                            <Check className="w-4 h-4" />
+                            <span className="hidden sm:inline">Approve</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="gap-1"
+                            onClick={() => handleRejectClick(profile)}
+                          >
+                            <X className="w-4 h-4" />
+                            <span className="hidden sm:inline">Reject</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Terima & Aktifkan Akun?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Akun <strong>{selectedProfile?.nama_pesantren}</strong> akan diaktifkan dengan status:
+              <ul className="mt-2 space-y-1 list-disc list-inside">
+                <li>Status Akun: <strong>Active</strong></li>
+                <li>Status Pembayaran: <strong>Paid</strong></li>
+                <li>NIP akan digenerate otomatis</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmApprove}
+              disabled={approveMutation.isPending}
+              className="bg-emerald-500 hover:bg-emerald-600"
+            >
+              {approveMutation.isPending ? "Memproses..." : "Ya, Aktifkan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Dialog with Reason */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tolak Pendaftaran</DialogTitle>
+            <DialogDescription>
+              Berikan alasan penolakan untuk <strong>{selectedProfile?.nama_pesantren}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Masukkan alasan penolakan..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={!rejectReason.trim() || rejectMutation.isPending}
+            >
+              {rejectMutation.isPending ? "Memproses..." : "Tolak Akun"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
