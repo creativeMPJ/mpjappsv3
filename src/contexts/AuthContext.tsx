@@ -5,10 +5,14 @@ import type { Database } from '@/integrations/supabase/types';
 
 type AccountStatus = Database['public']['Enums']['account_status'];
 type AppRole = Database['public']['Enums']['app_role'];
+type ProfileLevel = Database['public']['Enums']['profile_level'];
+type PaymentStatus = 'paid' | 'unpaid';
 
 /**
- * Minimal profile object for access control.
- * Contains ONLY fields needed for the global access gate.
+ * Minimal profile object for access control and UI state.
+ * Contains fields needed for:
+ * - Global access gate (role, status_account)
+ * - Dashboard UI state (profile_level, status_payment)
  * Business fields (names, media, assets) are NOT included here.
  */
 interface AuthProfile {
@@ -16,6 +20,8 @@ interface AuthProfile {
   role: AppRole;
   status_account: AccountStatus;
   region_id: string | null;
+  profile_level: ProfileLevel;
+  status_payment: PaymentStatus;
 }
 
 interface AuthContextType {
@@ -50,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, role, status_account, region_id')
+        .select('id, role, status_account, region_id, profile_level, status_payment')
         .eq('id', userId)
         .maybeSingle();
 
@@ -65,7 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: data.id,
           role: data.role,
           status_account: data.status_account,
-          region_id: data.region_id
+          region_id: data.region_id,
+          profile_level: data.profile_level,
+          status_payment: data.status_payment as PaymentStatus
         });
       } else {
         setProfile(null);

@@ -108,6 +108,7 @@ export type Database = {
           sk_pesantren_url: string | null
           social_links: Json | null
           status_account: Database["public"]["Enums"]["account_status"]
+          status_payment: Database["public"]["Enums"]["payment_status"]
           tipe_pesantren: string | null
           updated_at: string | null
           visi_misi: string | null
@@ -135,6 +136,7 @@ export type Database = {
           sk_pesantren_url?: string | null
           social_links?: Json | null
           status_account?: Database["public"]["Enums"]["account_status"]
+          status_payment?: Database["public"]["Enums"]["payment_status"]
           tipe_pesantren?: string | null
           updated_at?: string | null
           visi_misi?: string | null
@@ -162,6 +164,7 @@ export type Database = {
           sk_pesantren_url?: string | null
           social_links?: Json | null
           status_account?: Database["public"]["Enums"]["account_status"]
+          status_payment?: Database["public"]["Enums"]["payment_status"]
           tipe_pesantren?: string | null
           updated_at?: string | null
           visi_misi?: string | null
@@ -280,6 +283,7 @@ export type Database = {
     Enums: {
       account_status: "pending" | "active" | "rejected"
       app_role: "user" | "admin_regional" | "admin_pusat"
+      payment_status: "paid" | "unpaid"
       profile_level: "basic" | "silver" | "gold" | "platinum"
     }
     CompositeTypes: {
@@ -410,6 +414,7 @@ export const Constants = {
     Enums: {
       account_status: ["pending", "active", "rejected"],
       app_role: ["user", "admin_regional", "admin_pusat"],
+      payment_status: ["paid", "unpaid"],
       profile_level: ["basic", "silver", "gold", "platinum"],
     },
   },
