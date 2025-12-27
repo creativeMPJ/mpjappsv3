@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { 
   LayoutDashboard, 
   MapPin, 
@@ -14,7 +14,8 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Gamepad2
+  Gamepad2,
+  Zap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,9 @@ import Gamifikasi from "@/components/dashboard/Gamifikasi";
 import DatabasePesantren from "@/components/dashboard/DatabasePesantren";
 import PengaturanAdmin from "@/components/dashboard/PengaturanAdmin";
 import PusatUnduhan from "@/components/dashboard/PusatUnduhan";
+
+// Super Admin email check
+const SUPER_ADMIN_EMAIL = "superadmin@mpj.com";
 
 type ViewType = 
   | "dashboard" 
@@ -73,8 +77,9 @@ const menuItems: MenuItem[] = [
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
+  const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["regional-akun"]);
@@ -255,6 +260,21 @@ const Dashboard = () => {
             );
           })}
         </nav>
+
+        {/* Super Admin Link (only for superadmin@mpj.com) */}
+        {isSuperAdmin && (
+          <div className="px-3 py-2">
+            <Link
+              to="/super-admin"
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 hover:text-red-200 transition-colors border border-red-500/30"
+            >
+              <Zap className="h-5 w-5 flex-shrink-0" />
+              {sidebarOpen && (
+                <span className="font-semibold">⚡ SUPER ADMIN</span>
+              )}
+            </Link>
+          </div>
+        )}
 
         {/* Logout */}
         <div className="p-3 border-t border-emerald-700">
