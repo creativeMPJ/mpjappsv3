@@ -103,6 +103,7 @@ export type Database = {
           profile_level: Database["public"]["Enums"]["profile_level"]
           program_unggulan: string[] | null
           region_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
           sejarah: string | null
           sk_pesantren_url: string | null
           social_links: Json | null
@@ -129,6 +130,7 @@ export type Database = {
           profile_level?: Database["public"]["Enums"]["profile_level"]
           program_unggulan?: string[] | null
           region_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
           sejarah?: string | null
           sk_pesantren_url?: string | null
           social_links?: Json | null
@@ -155,6 +157,7 @@ export type Database = {
           profile_level?: Database["public"]["Enums"]["profile_level"]
           program_unggulan?: string[] | null
           region_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
           sejarah?: string | null
           sk_pesantren_url?: string | null
           social_links?: Json | null

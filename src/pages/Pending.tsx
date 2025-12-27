@@ -5,6 +5,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import logoMPJ from "@/assets/logo-mpj.png";
 
+/**
+ * PENDING STATUS PAGE
+ * 
+ * Read-only access to:
+ * - status_account ONLY
+ * 
+ * NO access to any other tables or business fields.
+ * Allowed actions: Logout, Back
+ */
 const Pending = () => {
   const { profile, signOut } = useAuth();
 
@@ -39,28 +48,16 @@ const Pending = () => {
               Anda akan mendapat notifikasi setelah akun diaktifkan.
             </p>
 
-            {/* Status Info */}
+            {/* Status Info - Read-only access to status_account ONLY */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
               <h4 className="font-semibold text-amber-800 mb-2">Status Akun</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
                   <span className="font-medium text-amber-600 capitalize">
-                    {profile?.status_account || 'Pending'}
+                    {profile?.status_account === 'pending' ? 'Menunggu Verifikasi' : profile?.status_account}
                   </span>
                 </div>
-                {profile?.nama_pesantren && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pesantren:</span>
-                    <span className="font-medium">{profile.nama_pesantren}</span>
-                  </div>
-                )}
-                {profile?.nama_media && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Media:</span>
-                    <span className="font-medium">{profile.nama_media}</span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -86,7 +83,7 @@ const Pending = () => {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions - Only Logout and Back allowed */}
             <div className="flex flex-col gap-3 pt-4">
               <Button
                 variant="outline"

@@ -6,19 +6,22 @@ import type { Database } from '@/integrations/supabase/types';
 type AccountStatus = Database['public']['Enums']['account_status'];
 type AppRole = Database['public']['Enums']['app_role'];
 
-interface UserProfile {
+/**
+ * Minimal profile object for access control.
+ * Contains ONLY fields needed for the global access gate.
+ * Business fields (names, media, assets) are NOT included here.
+ */
+interface AuthProfile {
   id: string;
+  role: AppRole;
   status_account: AccountStatus;
-  nama_pesantren: string | null;
-  nama_media: string | null;
   region_id: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  profile: UserProfile | null;
-  role: AppRole | null;
+  profile: AuthProfile | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
 }
@@ -36,43 +39,40 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [role, setRole] = useState<AppRole | null>(null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserData = async (userId: string) => {
+  /**
+   * Fetch ONLY access control fields from profiles.
+   * This is the SINGLE SOURCE OF TRUTH for role and status.
+   */
+  const fetchProfile = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, status_account, nama_pesantren, nama_media, region_id')
+        .select('id, role, status_account, region_id')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setProfile(null);
         return;
       }
 
-      setProfile(profileData);
-
-      // Fetch role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-
-      if (roleError) {
-        console.error('Error fetching role:', roleError);
-        // Default to 'user' if no role found
-        setRole('user');
-        return;
+      if (data) {
+        setProfile({
+          id: data.id,
+          role: data.role,
+          status_account: data.status_account,
+          region_id: data.region_id
+        });
+      } else {
+        setProfile(null);
       }
-
-      setRole(roleData.role);
     } catch (error) {
-      console.error('Error in fetchUserData:', error);
+      console.error('Error in fetchProfile:', error);
+      setProfile(null);
     }
   };
 
@@ -86,13 +86,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Defer Supabase calls with setTimeout to prevent deadlock
         if (currentSession?.user) {
           setTimeout(() => {
-            fetchUserData(currentSession.user.id).finally(() => {
+            fetchProfile(currentSession.user.id).finally(() => {
               setIsLoading(false);
             });
           }, 0);
         } else {
           setProfile(null);
-          setRole(null);
           setIsLoading(false);
         }
       }
@@ -104,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(existingSession?.user ?? null);
 
       if (existingSession?.user) {
-        fetchUserData(existingSession.user.id).finally(() => {
+        fetchProfile(existingSession.user.id).finally(() => {
           setIsLoading(false);
         });
       } else {
@@ -120,11 +119,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setSession(null);
     setProfile(null);
-    setRole(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, role, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, isLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

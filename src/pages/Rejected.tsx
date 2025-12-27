@@ -1,12 +1,19 @@
-import { XCircle, Phone, ArrowLeft, RefreshCw } from "lucide-react";
+import { XCircle, Phone, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import logoMPJ from "@/assets/logo-mpj.png";
 
+/**
+ * REJECTED STATUS PAGE
+ * 
+ * Read-only message.
+ * No retries, no auto-routing.
+ * Allowed actions: Logout, Back
+ */
 const Rejected = () => {
-  const { profile, signOut } = useAuth();
+  const { signOut } = useAuth();
 
   const handleLogout = async () => {
     await signOut();
@@ -39,22 +46,16 @@ const Rejected = () => {
               Silakan hubungi Admin Regional untuk informasi lebih lanjut.
             </p>
 
-            {/* Status Info */}
+            {/* Status Info - Read-only, no business data */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-left">
-              <h4 className="font-semibold text-red-800 mb-2">Detail Penolakan</h4>
+              <h4 className="font-semibold text-red-800 mb-2">Status Akun</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="font-medium text-red-600 capitalize">
+                  <span className="font-medium text-red-600">
                     Ditolak
                   </span>
                 </div>
-                {profile?.nama_pesantren && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pesantren:</span>
-                    <span className="font-medium">{profile.nama_pesantren}</span>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -70,7 +71,7 @@ const Rejected = () => {
               </ul>
             </div>
 
-            {/* Actions */}
+            {/* Actions - Only Logout, Back, and Contact allowed */}
             <div className="flex flex-col gap-3 pt-4">
               <Button
                 className="w-full"
@@ -84,16 +85,6 @@ const Rejected = () => {
                   <Phone className="mr-2 h-4 w-4" />
                   Hubungi Admin untuk Klarifikasi
                 </a>
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                asChild
-              >
-                <Link to="/institution-submission">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Ajukan Pendaftaran Ulang
-                </Link>
               </Button>
               <Link to="/">
                 <Button variant="ghost" className="w-full">
