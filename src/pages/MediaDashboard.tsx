@@ -197,9 +197,9 @@ const MediaDashboard = () => {
           </Alert>
         )}
 
-        {/* Top Bar - High Contrast */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30 shadow-sm">
-          <div className="flex items-center gap-4">
+        {/* Top Bar - Mobile First, High Contrast */}
+        <header className="h-14 md:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-3 md:px-6 sticky top-0 z-30 shadow-sm">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
@@ -208,7 +208,12 @@ const MediaDashboard = () => {
             >
               <Menu className="h-6 w-6" />
             </Button>
-            <div>
+            {/* Mobile: Simple title only */}
+            <h2 className="text-base md:text-lg font-bold text-slate-900 md:hidden">
+              MPJ MEDIA
+            </h2>
+            {/* Desktop: Full title with badge */}
+            <div className="hidden md:block">
               <h2 className="text-lg font-bold text-slate-900">
                 Dashboard Koordinator
               </h2>
@@ -220,29 +225,24 @@ const MediaDashboard = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* E-ID Badge */}
-            <div className="flex items-center gap-1.5 bg-[#166534] text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold">
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* E-ID Badge - Icon only on mobile */}
+            <div className="flex items-center gap-1.5 bg-[#166534] text-white px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold">
               <IdCard className="h-4 w-4" />
-              <span className="hidden sm:inline">E-ID</span>
+              <span className="hidden md:inline">E-ID</span>
             </div>
-            {/* XP Badge - Golden Orange */}
-            <div className="flex items-center gap-1 bg-[#f59e0b] text-slate-900 px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
+            {/* XP Badge - Hidden on very small screens */}
+            <div className="hidden sm:flex items-center gap-1 bg-[#f59e0b] text-slate-900 px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
               <Zap className="h-4 w-4" />
               <span>150 XP</span>
             </div>
-            <Button variant="ghost" size="icon" className="relative">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9">
               <Bell className="h-5 w-5 text-slate-600" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
             </Button>
             {/* User Avatar */}
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#166534] flex items-center justify-center text-white font-semibold text-sm">
-                MP
-              </div>
-              <span className="text-sm font-medium text-slate-900 hidden md:block">
-                Koordinator
-              </span>
+            <div className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-[#166534] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+              MP
             </div>
           </div>
         </header>
