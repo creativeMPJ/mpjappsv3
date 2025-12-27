@@ -308,14 +308,19 @@ const AdminPusatPengaturan = () => {
       {/* SUPER ADMIN ZONE */}
       <Card className="bg-white border-2 border-red-200 shadow-sm">
         <CardHeader className="pb-3 bg-red-50 rounded-t-lg">
-          <CardTitle className="text-lg text-red-800 font-semibold flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            SUPER ADMIN ZONE: MANAJEMEN AKSES
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg text-red-800 font-semibold flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              MANAJEMEN AKSES & HIERARKI
+            </CardTitle>
+            <Badge className="bg-red-600 text-white hover:bg-red-600">
+              SUPER ADMIN AREA
+            </Badge>
+          </div>
           <div className="flex items-center gap-2 mt-2">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <span className="text-sm text-red-600 font-medium">
-              Fitur ini hanya untuk Super Admin. Perubahan role bersifat permanen.
+              Perhatian: Area ini memberikan akses penuh ke sistem. Hanya untuk Super Admin.
             </span>
           </div>
         </CardHeader>
