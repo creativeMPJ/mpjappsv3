@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   MapPin, 
@@ -22,6 +23,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardHome from "@/components/dashboard/DashboardHome";
 import MappingArea from "@/components/dashboard/MappingArea";
 import MonitoringValidasi from "@/components/dashboard/MonitoringValidasi";
@@ -68,10 +71,22 @@ const menuItems: MenuItem[] = [
 ];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { signOut } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["regional-akun"]);
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: "Berhasil keluar",
+      description: "Anda telah logout dari sistem",
+    });
+    navigate('/login', { replace: true });
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -244,7 +259,8 @@ const Dashboard = () => {
         {/* Logout */}
         <div className="p-3 border-t border-emerald-700">
           <button
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-emerald-100 hover:bg-emerald-700/50 transition-colors"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
             {sidebarOpen && <span>Logout</span>}

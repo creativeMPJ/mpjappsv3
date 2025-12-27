@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import MediaDashboardHome from "@/components/media-dashboard/MediaDashboardHome";
@@ -42,14 +43,18 @@ const MediaDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>("beranda");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  
+  const { toast } = useToast();
   // Get payment and level from AuthContext profile
   const paymentStatus = profile?.status_payment ?? 'unpaid';
   const profileLevel = profile?.profile_level ?? 'basic';
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/login');
+    toast({
+      title: "Berhasil keluar",
+      description: "Anda telah logout dari sistem",
+    });
+    navigate('/login', { replace: true });
   };
 
   const renderContent = () => {
@@ -176,7 +181,7 @@ const MediaDashboard = () => {
         <div className="p-3 border-t border-sidebar-border">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
             {sidebarOpen && <span>Logout</span>}
