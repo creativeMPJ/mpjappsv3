@@ -118,8 +118,11 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* ══════════════════════════════════════════════════════ */}
+            {/* SUPER ADMIN ROUTES - Majelis Militan Dashboard         */}
+            {/* ══════════════════════════════════════════════════════ */}
             <Route 
-              path="/admin-pusat/majelis-militan" 
+              path="/super-admin" 
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <MajelisMilitanDashboard />
@@ -127,7 +130,24 @@ const App = () => (
               } 
             />
             <Route 
-              path="/admin-pusat/majelis-militan/*" 
+              path="/super-admin/*" 
+              element={
+                <ProtectedRoute allowedRoles={['admin_pusat']}>
+                  <MajelisMilitanDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Legacy redirect from majelis-militan to super-admin */}
+            <Route 
+              path="/majelis-militan" 
+              element={
+                <ProtectedRoute allowedRoles={['admin_pusat']}>
+                  <MajelisMilitanDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin-pusat/majelis-militan" 
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <MajelisMilitanDashboard />
@@ -142,7 +162,6 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-
             {/* ══════════════════════════════════════════════════════ */}
             {/* ADMIN REGIONAL ROUTES - role === 'admin_regional' ONLY */}
             {/* ══════════════════════════════════════════════════════ */}
