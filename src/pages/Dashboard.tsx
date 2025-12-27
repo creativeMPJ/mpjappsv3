@@ -12,7 +12,9 @@ import {
   Bell,
   Menu,
   X,
-  Zap
+  Zap,
+  Map,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,12 @@ interface MenuItem {
   badge?: number;
 }
 
+interface ExternalLink {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
 const menuItems: MenuItem[] = [
   { id: "dashboard", label: "DASHBOARD BERANDA", icon: LayoutDashboard },
   { id: "verifikasi", label: "VERIFIKASI", icon: CheckCircle, badge: 6 },
@@ -53,6 +61,11 @@ const menuItems: MenuItem[] = [
   { id: "manajemen-militansi", label: "MANAJEMEN MILITANSI", icon: Medal },
   { id: "mpj-hub", label: "MPJ-HUB", icon: Layers },
   { id: "pengaturan", label: "PENGATURAN", icon: Settings },
+];
+
+const externalLinks: ExternalLink[] = [
+  { to: "/admin-pusat/regional-mapping", label: "REGIONAL MAPPING", icon: Map },
+  { to: "/admin-pusat/regional-akun", label: "DATA AKUN REGIONAL", icon: Users },
 ];
 
 const Dashboard = () => {
@@ -165,6 +178,27 @@ const Dashboard = () => {
             </button>
           ))}
         </nav>
+
+        {/* External Page Links */}
+        <div className="px-3 py-2 border-t border-emerald-600">
+          {sidebarOpen && (
+            <span className="text-xs text-emerald-300 uppercase tracking-wider px-3 mb-2 block">
+              Manajemen Regional
+            </span>
+          )}
+          {externalLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-white hover:bg-emerald-600 transition-colors mb-1"
+            >
+              <link.icon className="h-5 w-5 flex-shrink-0" />
+              {sidebarOpen && (
+                <span className="text-sm">{link.label}</span>
+              )}
+            </Link>
+          ))}
+        </div>
 
         {/* Super Admin Link */}
         {isSuperAdmin && (
