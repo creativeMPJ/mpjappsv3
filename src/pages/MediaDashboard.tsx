@@ -1,55 +1,89 @@
 import { useState } from "react";
 import { 
   LayoutDashboard, 
-  Building, 
+  Building2, 
   Users, 
-  IdCard, 
-  Award, 
+  CreditCard, 
+  FolderOpen, 
+  Settings,
   LogOut, 
   Bell,
   Menu,
   X,
-  Zap
+  Zap,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import MediaDashboardHome from "@/components/media-dashboard/MediaDashboardHome";
-import ProfilPesantren from "@/components/media-dashboard/ProfilPesantren";
+import IdentitasPesantren from "@/components/media-dashboard/IdentitasPesantren";
 import ManajemenKru from "@/components/media-dashboard/ManajemenKru";
-import EIDCard from "@/components/media-dashboard/EIDCard";
-import EventSertifikat from "@/components/media-dashboard/EventSertifikat";
+import Administrasi from "@/components/media-dashboard/Administrasi";
+import MPJHub from "@/components/media-dashboard/MPJHub";
+import Pengaturan from "@/components/media-dashboard/Pengaturan";
 
-type ViewType = "beranda" | "profil" | "kru" | "eidcard" | "event";
+type ViewType = "beranda" | "identitas" | "kru" | "administrasi" | "hub" | "pengaturan";
+type PaymentStatus = "paid" | "unpaid";
+type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
 
 const menuItems = [
   { id: "beranda" as ViewType, label: "Beranda", icon: LayoutDashboard },
-  { id: "profil" as ViewType, label: "Profil Pesantren", icon: Building },
-  { id: "kru" as ViewType, label: "Manajemen Kru", icon: Users },
-  { id: "eidcard" as ViewType, label: "E-ID Card", icon: IdCard },
-  { id: "event" as ViewType, label: "Event & Sertifikat", icon: Award },
+  { id: "identitas" as ViewType, label: "Identitas Pesantren", icon: Building2 },
+  { id: "kru" as ViewType, label: "Manajemen Crew", icon: Users },
+  { id: "administrasi" as ViewType, label: "Administrasi", icon: CreditCard },
+  { id: "hub" as ViewType, label: "MPJ-Hub", icon: FolderOpen },
+  { id: "pengaturan" as ViewType, label: "Pengaturan", icon: Settings },
 ];
 
 const MediaDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>("beranda");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [isGoldStatus, setIsGoldStatus] = useState(false);
+  
+  // Global State Simulation
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("unpaid");
+  const [profileLevel, setProfileLevel] = useState<ProfileLevel>("basic");
 
   const renderContent = () => {
     switch (activeView) {
       case "beranda":
-        return <MediaDashboardHome isGold={isGoldStatus} onNavigate={handleMenuClick} />;
-      case "profil":
-        return <ProfilPesantren />;
+        return (
+          <MediaDashboardHome 
+            paymentStatus={paymentStatus} 
+            profileLevel={profileLevel}
+            onNavigate={handleMenuClick} 
+          />
+        );
+      case "identitas":
+        return (
+          <IdentitasPesantren 
+            paymentStatus={paymentStatus}
+            profileLevel={profileLevel}
+            onProfileLevelChange={setProfileLevel}
+          />
+        );
       case "kru":
-        return <ManajemenKru />;
-      case "eidcard":
-        return <EIDCard isGold={isGoldStatus} />;
-      case "event":
-        return <EventSertifikat />;
+        return <ManajemenKru paymentStatus={paymentStatus} />;
+      case "administrasi":
+        return (
+          <Administrasi 
+            paymentStatus={paymentStatus}
+            onPaymentStatusChange={setPaymentStatus}
+          />
+        );
+      case "hub":
+        return <MPJHub />;
+      case "pengaturan":
+        return <Pengaturan />;
       default:
-        return <MediaDashboardHome isGold={isGoldStatus} onNavigate={handleMenuClick} />;
+        return (
+          <MediaDashboardHome 
+            paymentStatus={paymentStatus} 
+            profileLevel={profileLevel}
+            onNavigate={handleMenuClick} 
+          />
+        );
     }
   };
 
@@ -59,12 +93,33 @@ const MediaDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
-      {/* Status Toggle for Testing */}
-      <div className="fixed bottom-4 right-4 z-[100] bg-white rounded-lg shadow-lg p-3 flex items-center gap-3">
-        <span className="text-xs font-medium text-slate-600">Basic</span>
-        <Switch checked={isGoldStatus} onCheckedChange={setIsGoldStatus} />
-        <span className="text-xs font-medium text-amber-600">Gold</span>
+    <div className="min-h-screen bg-[#f3f4f6] flex">
+      {/* Dev Status Toggle */}
+      <div className="fixed bottom-4 right-4 z-[100] bg-white rounded-lg shadow-lg p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-slate-600">Payment:</span>
+          <select 
+            value={paymentStatus} 
+            onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)}
+            className="text-xs border rounded px-2 py-1"
+          >
+            <option value="unpaid">Unpaid</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-slate-600">Level:</span>
+          <select 
+            value={profileLevel} 
+            onChange={(e) => setProfileLevel(e.target.value as ProfileLevel)}
+            className="text-xs border rounded px-2 py-1"
+          >
+            <option value="basic">Basic</option>
+            <option value="silver">Silver</option>
+            <option value="gold">Gold</option>
+            <option value="platinum">Platinum</option>
+          </select>
+        </div>
       </div>
 
       {/* Mobile Overlay */}
@@ -75,7 +130,7 @@ const MediaDashboard = () => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Deep Emerald Green #166534 */}
       <aside
         className={cn(
           "fixed lg:static inset-y-0 left-0 z-50 flex flex-col bg-[#166534] text-white transition-all duration-300",
@@ -115,16 +170,13 @@ const MediaDashboard = () => {
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200",
                 activeView === item.id
-                  ? "bg-[#064e3b] text-white border-l-4 border-amber-500"
-                  : "text-emerald-100 hover:bg-emerald-700/50"
+                  ? "bg-[#064e3b] text-white border-l-4 border-[#f59e0b]"
+                  : "text-emerald-100 hover:bg-emerald-700"
               )}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
               {sidebarOpen && (
                 <span className="flex-1 text-left">{item.label}</span>
-              )}
-              {item.id === "eidcard" && !isGoldStatus && sidebarOpen && (
-                <span className="text-xs bg-slate-500 px-2 py-0.5 rounded">🔒</span>
               )}
             </button>
           ))}
@@ -133,7 +185,7 @@ const MediaDashboard = () => {
         {/* Logout */}
         <div className="p-3 border-t border-emerald-700">
           <button
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-emerald-100 hover:bg-emerald-700/50 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-emerald-100 hover:bg-emerald-700 transition-colors"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
             {sidebarOpen && <span>Logout</span>}
@@ -143,20 +195,23 @@ const MediaDashboard = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Warning Banner for Basic Status */}
-        {!isGoldStatus && (
-          <div className="bg-amber-100 border-b border-amber-300 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-amber-600">⚠️</span>
-              <span className="text-sm text-amber-800">
-                Status Akun: <strong>BASIC</strong>. Complete payment to unlock ID Card.{" "}
-                <button className="underline font-semibold hover:text-amber-900">Klik di sini</button> untuk selesaikan pembayaran.
+        {/* Sticky Payment Alert */}
+        {paymentStatus === "unpaid" && (
+          <Alert className="rounded-none border-x-0 border-t-0 bg-red-50 border-red-200">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="flex items-center justify-between w-full">
+              <span className="text-red-800">
+                <strong>Masa Aktif Habis.</strong> Harap lunasi tagihan di menu Administrasi.
               </span>
-            </div>
-            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white">
-              Bayar Sekarang
-            </Button>
-          </div>
+              <Button 
+                size="sm" 
+                className="bg-red-600 hover:bg-red-700 text-white ml-4"
+                onClick={() => handleMenuClick("administrasi")}
+              >
+                Bayar Sekarang
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Top Bar */}
@@ -174,12 +229,12 @@ const MediaDashboard = () => {
               <h2 className="text-lg font-semibold text-slate-800">
                 Dashboard Koordinator
               </h2>
-              <p className="text-sm text-slate-500">Media Pondok Jawa Timur</p>
+              <p className="text-sm text-slate-500">Pondok Pesantren Al-Hikmah</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* XP Badge */}
-            <div className="flex items-center gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-md">
+            {/* XP Badge - Golden Orange */}
+            <div className="flex items-center gap-1 bg-gradient-to-r from-[#f59e0b] to-amber-500 text-white px-3 py-1.5 rounded-full text-sm font-bold shadow-md">
               <Zap className="h-4 w-4" />
               <span>150 XP</span>
             </div>
@@ -189,7 +244,7 @@ const MediaDashboard = () => {
             </Button>
             {/* User Avatar */}
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold">
+              <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-[#166534] font-semibold">
                 AF
               </div>
               <span className="text-sm font-medium text-slate-700 hidden md:block">Ahmad Fauzi</span>
