@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Home, 
   UserCheck, 
@@ -14,6 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import RegionalDashboardHome from "@/components/regional-dashboard/RegionalDashboardHome";
 import ValidasiPendaftar from "@/components/regional-dashboard/ValidasiPendaftar";
 import ManajemenEvent from "@/components/regional-dashboard/ManajemenEvent";
@@ -34,8 +37,20 @@ const menuItems = [
 ];
 
 const RegionalDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { signOut } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("beranda");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: "Berhasil keluar",
+      description: "Anda telah logout dari sistem",
+    });
+    navigate('/login', { replace: true });
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -104,8 +119,8 @@ const RegionalDashboard = () => {
       {/* Logout */}
       <div className="p-4 mt-auto">
         <button
-          onClick={() => window.location.href = "/"}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 min-h-[44px]"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all duration-200 min-h-[44px]"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium text-sm">Logout</span>

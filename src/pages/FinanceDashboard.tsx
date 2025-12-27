@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   LogOut, 
   Menu, 
@@ -12,8 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import FinanceOverview from "@/components/finance-dashboard/FinanceOverview";
 import ClearingHouse from "@/components/finance-dashboard/ClearingHouse";
 import FinanceReporting from "@/components/finance-dashboard/FinanceReporting";
@@ -27,13 +28,19 @@ const menuItems = [
 ];
 
 const FinanceDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeView, setActiveView] = useState<ViewType>("verification");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    await signOut();
+    toast({
+      title: "Berhasil keluar",
+      description: "Anda telah logout dari sistem",
+    });
+    navigate('/login', { replace: true });
   };
 
   const renderContent = () => {
@@ -106,7 +113,7 @@ const FinanceDashboard = () => {
       <div className="p-4 mt-auto">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all duration-200 min-h-[44px]"
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all duration-200 min-h-[44px]"
         >
           <LogOut className="w-5 h-5" />
           <span className="font-medium text-sm">Logout</span>

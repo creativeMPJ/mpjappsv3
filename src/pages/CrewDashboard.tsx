@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Home, Calendar, Award, User, Bell, ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Home, Calendar, Award, User, Bell, ChevronLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import CrewBerandaPage from "@/components/crew-dashboard/CrewBerandaPage";
 import CrewEventPage from "@/components/crew-dashboard/CrewEventPage";
 import CrewSertifikatPage from "@/components/crew-dashboard/CrewSertifikatPage";
@@ -20,8 +23,20 @@ const navItems = [
 ];
 
 const CrewDashboard = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { signOut } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("beranda");
   const [institutionPaid, setInstitutionPaid] = useState(true);
+
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: "Berhasil keluar",
+      description: "Anda telah logout dari sistem",
+    });
+    navigate('/login', { replace: true });
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -60,10 +75,20 @@ const CrewDashboard = () => {
       {showHeader && (
         <header className="sticky top-0 z-30 bg-card shadow-sm px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-foreground">{getPageTitle()}</h1>
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </header>
       )}
 
