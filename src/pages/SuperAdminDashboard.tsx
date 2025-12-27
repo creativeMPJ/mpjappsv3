@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -11,13 +11,12 @@ import {
   DollarSign,
   UserCheck,
   Activity,
-  Menu,
-  X
+  Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -28,7 +27,9 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import logoMpj from "@/assets/logo-mpj.png";
+import UserManagement from "@/components/super-admin/UserManagement";
 
 type ViewType = 'dashboard' | 'users' | 'audit' | 'settings';
 
@@ -37,12 +38,6 @@ const menuItems = [
   { id: 'users' as ViewType, label: 'User Management', icon: Users },
   { id: 'audit' as ViewType, label: 'Audit Log', icon: FileText },
   { id: 'settings' as ViewType, label: 'Settings', icon: Settings },
-];
-
-const stats = [
-  { title: 'Total Users', value: '1,247', icon: Users, color: 'text-blue-500' },
-  { title: 'Total Pesantren', value: '384', icon: Building2, color: 'text-emerald-500' },
-  { title: 'Total Revenue', value: 'Rp 127.5M', icon: DollarSign, color: 'text-amber-500' },
 ];
 
 const quickActions = [
@@ -62,9 +57,45 @@ const recentActivity = [
 const SuperAdminDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [stats, setStats] = useState([
+    { title: 'Total Users', value: '...', icon: Users, color: 'text-blue-500' },
+    { title: 'Total Pesantren', value: '...', icon: Building2, color: 'text-emerald-500' },
+    { title: 'Total Revenue', value: 'Rp 0', icon: DollarSign, color: 'text-amber-500' },
+  ]);
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      // Fetch total users
+      const { count: totalUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+
+      // Fetch total pesantren (users with nama_pesantren)
+      const { count: totalPesantren } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .not("nama_pesantren", "is", null);
+
+      // Fetch paid users for revenue estimate (dummy calc)
+      const { count: paidUsers } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("status_payment", "paid");
+
+      const revenue = (paidUsers || 0) * 350000; // Rp 350k per user
+
+      setStats([
+        { title: 'Total Users', value: String(totalUsers || 0), icon: Users, color: 'text-blue-500' },
+        { title: 'Total Pesantren', value: String(totalPesantren || 0), icon: Building2, color: 'text-emerald-500' },
+        { title: 'Total Revenue', value: `Rp ${(revenue / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-amber-500' },
+      ]);
+    };
+
+    fetchStats();
+  }, []);
 
   const handleLogout = async () => {
     await signOut();
@@ -89,16 +120,7 @@ const SuperAdminDashboard = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'users':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Fitur manajemen user akan segera tersedia.</p>
-            </CardContent>
-          </Card>
-        );
+        return <UserManagement />;
       case 'audit':
         return (
           <Card>
