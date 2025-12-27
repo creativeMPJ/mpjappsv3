@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,33 +6,63 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Demo accounts for testing
-const demoAccounts = [
-  { email: "admin@mpj.com", password: "admin123", role: "super-admin", redirect: "/dashboard" },
-  { email: "regional@mpj.com", password: "regional123", role: "regional", redirect: "/regional-dashboard" },
-  { email: "media@mpj.com", password: "media123", role: "coordinator", redirect: "/media-dashboard" },
-  { email: "kru@mpj.com", password: "kru123", role: "crew", redirect: "/crew-dashboard" },
-];
-
+/**
+ * LOGIN PAGE
+ * 
+ * Authenticates user via Supabase Auth.
+ * After successful login, redirects based on role:
+ * - admin_pusat → /admin-pusat
+ * - admin_regional → /admin-regional
+ * - user → /user
+ * 
+ * Pending/rejected status handling is done by ProtectedRoute.
+ */
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    emailOrPhone: "",
+    email: "",
     password: "",
     rememberMe: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, profile, isLoading: authLoading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && user && profile) {
+      // Status gates are handled by ProtectedRoute
+      // Here we just redirect to the appropriate dashboard
+      redirectToDashboard(profile.role);
+    }
+  }, [user, profile, authLoading]);
+
+  const redirectToDashboard = (role: string) => {
+    switch (role) {
+      case 'admin_pusat':
+        navigate('/admin-pusat', { replace: true });
+        break;
+      case 'admin_regional':
+        navigate('/admin-regional', { replace: true });
+        break;
+      case 'user':
+      default:
+        navigate('/user', { replace: true });
+        break;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.emailOrPhone || !formData.password) {
+    if (!formData.email || !formData.password) {
       toast({
         title: "Form tidak lengkap",
-        description: "Mohon masukkan email/No. HP dan password",
+        description: "Mohon masukkan email dan password",
         variant: "destructive",
       });
       return;
@@ -40,34 +70,57 @@ const Login = () => {
 
     setIsLoading(true);
     
-    // Check demo accounts
-    const demoAccount = demoAccounts.find(
-      acc => acc.email === formData.emailOrPhone && acc.password === formData.password
-    );
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
 
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      if (demoAccount) {
+      if (error) {
         toast({
-          title: "Login Berhasil!",
-          description: `Selamat datang, ${demoAccount.role}`,
+          title: "Login Gagal",
+          description: error.message === "Invalid login credentials" 
+            ? "Email atau password salah" 
+            : error.message,
+          variant: "destructive",
         });
-        navigate(demoAccount.redirect);
-      } else {
-        // Default navigation for any other login
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.user) {
         toast({
           title: "Login Berhasil!",
           description: "Selamat datang di MPJ Apps",
         });
-        navigate("/media-dashboard");
+        // Auth context will update and useEffect will redirect
       }
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: "Terjadi Kesalahan",
+        description: "Silakan coba lagi nanti",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Show loading if auth is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-white">Memuat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary/90 to-primary">
-      {/* Header - No Logo */}
+      {/* Header */}
       <div className="flex-shrink-0 pt-10 pb-6 px-6 text-center">
         <h1 className="text-2xl font-bold text-primary-foreground">Selamat Datang</h1>
         <p className="text-sm text-primary-foreground/70 mt-1">Masuk ke akun MPJ Apps</p>
@@ -77,14 +130,15 @@ const Login = () => {
       <div className="flex-1 bg-card rounded-t-3xl px-6 pt-6 pb-8 mt-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="emailOrPhone" className="text-sm text-foreground">Email atau No. HP</Label>
+            <Label htmlFor="email" className="text-sm text-foreground">Email</Label>
             <Input
-              id="emailOrPhone"
-              type="text"
-              placeholder="email@example.com atau 08xxx"
-              value={formData.emailOrPhone}
-              onChange={(e) => setFormData({ ...formData, emailOrPhone: e.target.value })}
+              id="email"
+              type="email"
+              placeholder="email@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="h-12 rounded-xl border-border/50 bg-muted/30"
+              autoComplete="email"
             />
           </div>
 
@@ -98,6 +152,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="h-12 rounded-xl border-border/50 pr-12 bg-muted/30"
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -158,21 +213,10 @@ const Login = () => {
         {/* Register Link */}
         <p className="text-center text-sm text-muted-foreground">
           Baru di MPJ Apps?{" "}
-          <Link to="/check-institution" className="text-emerald-500 font-semibold">
+          <Link to="/register" className="text-emerald-500 font-semibold">
             Buat Akun Baru
           </Link>
         </p>
-
-        {/* Demo Accounts Info */}
-        <div className="mt-6 p-3 bg-muted/30 rounded-xl">
-          <p className="text-xs text-center text-muted-foreground mb-2 font-medium">Demo Akun:</p>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>• admin@mpj.com / admin123 (Super Admin)</p>
-            <p>• regional@mpj.com / regional123 (Regional)</p>
-            <p>• media@mpj.com / media123 (Koordinator)</p>
-            <p>• kru@mpj.com / kru123 (Kru)</p>
-          </div>
-        </div>
       </div>
     </div>
   );

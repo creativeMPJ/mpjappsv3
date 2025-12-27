@@ -10,8 +10,23 @@ interface ProtectedRouteProps {
   allowedRoles?: AppRole[];
 }
 
+/**
+ * TWO-LAYER GLOBAL ACCESS GATE
+ * 
+ * LAYER 1 - STATUS GATE (Global):
+ * - NOT authenticated → /login
+ * - status = 'pending' → /pending
+ * - status = 'rejected' → /rejected
+ * 
+ * LAYER 2 - ROLE GATE (Prefix-based):
+ * - /admin-pusat/* → role === 'admin_pusat'
+ * - /admin-regional/* → role === 'admin_regional'
+ * - /user/* → role === 'user'
+ * 
+ * All enforcement happens BEFORE render, not after.
+ */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { user, profile, role, isLoading } = useAuth();
+  const { user, profile, isLoading } = useAuth();
   const location = useLocation();
 
   // Show loading state while fetching auth data
@@ -26,12 +41,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     );
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // LAYER 1: STATUS GATE (executes BEFORE any role logic)
+  // ═══════════════════════════════════════════════════════════════
+
   // Not authenticated → redirect to login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // No profile found → something is wrong, redirect to login
+  // No profile found → redirect to login
   if (!profile) {
     return <Navigate to="/login" replace />;
   }
@@ -54,13 +73,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to="/rejected" replace />;
   }
 
-  // Status is active - now check role authorization
+  // ═══════════════════════════════════════════════════════════════
+  // LAYER 2: ROLE GATE (executes ONLY after status is 'active')
+  // ═══════════════════════════════════════════════════════════════
+
+  // Allow access to /403 page for active users
+  if (location.pathname === '/403') {
+    return <>{children}</>;
+  }
+
+  // Check role authorization if allowedRoles specified
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!role || !allowedRoles.includes(role)) {
+    if (!allowedRoles.includes(profile.role)) {
+      // Role mismatch → redirect to /403
+      // Do NOT infer or redirect to other dashboards
       return <Navigate to="/403" replace />;
     }
   }
 
+  // All gates passed - render children
   return <>{children}</>;
 };
 

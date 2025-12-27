@@ -1,29 +1,29 @@
-import { ShieldX, ArrowLeft, Home } from "lucide-react";
+import { ShieldX, ArrowLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import logoMPJ from "@/assets/logo-mpj.png";
 
+/**
+ * FORBIDDEN (403) PAGE
+ * 
+ * Terminal page.
+ * No dashboard auto-redirect.
+ * Only Back / Logout allowed.
+ */
 const Forbidden = () => {
-  const { role, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut();
   };
 
-  // Determine correct dashboard based on role
-  const getDashboardPath = () => {
-    switch (role) {
-      case 'admin_pusat':
-        return '/dashboard';
-      case 'admin_regional':
-        return '/regional-dashboard';
-      case 'user':
-      default:
-        return '/media-dashboard';
-    }
+  // Format role for display
+  const formatRole = (role: string | undefined) => {
+    if (!role) return 'User';
+    return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (
@@ -32,6 +32,7 @@ const Forbidden = () => {
       <header className="p-4 flex justify-between items-center">
         <img src={logoMPJ} alt="MPJ Logo" className="h-10" />
         <Button variant="ghost" onClick={handleLogout}>
+          <LogOut className="mr-2 h-4 w-4" />
           Keluar
         </Button>
       </header>
@@ -50,15 +51,14 @@ const Forbidden = () => {
           <CardContent className="space-y-6">
             <p className="text-muted-foreground">
               Anda tidak memiliki izin untuk mengakses halaman ini.
-              Silakan kembali ke dashboard yang sesuai dengan peran Anda.
             </p>
 
-            {/* Role Info */}
+            {/* Role Info - Read-only */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Peran Anda:</span>
-                <span className="font-medium capitalize">
-                  {role?.replace('_', ' ') || 'User'}
+                <span className="font-medium">
+                  {formatRole(profile?.role)}
                 </span>
               </div>
             </div>
@@ -66,17 +66,10 @@ const Forbidden = () => {
             {/* Error Code */}
             <div className="text-6xl font-bold text-slate-200">403</div>
 
-            {/* Actions */}
+            {/* Actions - Only Back and Logout allowed */}
             <div className="flex flex-col gap-3 pt-4">
               <Button
-                className="w-full"
-                onClick={() => navigate(getDashboardPath())}
-              >
-                <Home className="mr-2 h-4 w-4" />
-                Ke Dashboard Saya
-              </Button>
-              <Button
-                variant="ghost"
+                variant="outline"
                 className="w-full"
                 onClick={() => navigate(-1)}
               >
