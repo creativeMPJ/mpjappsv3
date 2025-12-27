@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  Home, 
-  UserCheck, 
-  Calendar, 
   LogOut, 
   Menu,
   Bell,
   Database,
   Settings,
   LayoutDashboard,
-  FileText
+  CheckCircle,
+  Calendar,
+  Share2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,19 +20,18 @@ import RegionalDashboardHome from "@/components/regional-dashboard/RegionalDashb
 import ValidasiPendaftar from "@/components/regional-dashboard/ValidasiPendaftar";
 import ManajemenEvent from "@/components/regional-dashboard/ManajemenEvent";
 import DataMasterRegional from "@/components/regional-dashboard/DataMasterRegional";
-import LaporanDokumentasi from "@/components/regional-dashboard/LaporanDokumentasi";
+import RegionalHub from "@/components/regional-dashboard/RegionalHub";
 import Pengaturan from "@/components/regional-dashboard/Pengaturan";
-import logoMpj from "@/assets/logo-mpj.png";
 
-type ViewType = "beranda" | "validasi" | "datamaster" | "event" | "laporan" | "pengaturan";
+type ViewType = "beranda" | "verifikasi" | "data-utama" | "event" | "regional-hub" | "pengaturan";
 
 const menuItems = [
-  { id: "beranda" as ViewType, label: "Beranda", icon: LayoutDashboard },
-  { id: "validasi" as ViewType, label: "Validasi Anggota", icon: UserCheck, badge: 5 },
-  { id: "event" as ViewType, label: "Manajemen Event", icon: Calendar },
-  { id: "datamaster" as ViewType, label: "Database Wilayah", icon: Database },
-  { id: "laporan" as ViewType, label: "Laporan & Dokumentasi", icon: FileText },
-  { id: "pengaturan" as ViewType, label: "Pengaturan", icon: Settings },
+  { id: "beranda" as ViewType, label: "DASHBOARD BERANDA", icon: LayoutDashboard },
+  { id: "verifikasi" as ViewType, label: "VERIFIKASI PESANTREN", icon: CheckCircle, badge: 5 },
+  { id: "data-utama" as ViewType, label: "DATA UTAMA", icon: Database },
+  { id: "event" as ViewType, label: "MANAJEMEN EVENT", icon: Calendar },
+  { id: "regional-hub" as ViewType, label: "REGIONAL-HUB", icon: Share2 },
+  { id: "pengaturan" as ViewType, label: "PENGATURAN", icon: Settings },
 ];
 
 const RegionalDashboard = () => {
@@ -56,14 +54,14 @@ const RegionalDashboard = () => {
     switch (activeView) {
       case "beranda":
         return <RegionalDashboardHome />;
-      case "validasi":
+      case "verifikasi":
         return <ValidasiPendaftar />;
-      case "datamaster":
+      case "data-utama":
         return <DataMasterRegional />;
       case "event":
         return <ManajemenEvent />;
-      case "laporan":
-        return <LaporanDokumentasi />;
+      case "regional-hub":
+        return <RegionalHub />;
       case "pengaturan":
         return <Pengaturan />;
       default:
@@ -78,15 +76,10 @@ const RegionalDashboard = () => {
 
   const SidebarContent = () => (
     <>
-      {/* Logo */}
-      <div className="p-6">
-        <div className="flex items-center gap-3">
-          <img src={logoMpj} alt="MPJ Logo" className="w-10 h-10 rounded-lg" />
-          <div>
-            <h1 className="text-lg font-bold text-white tracking-wide">MPJ Regional</h1>
-            <p className="text-xs text-white/70">Malang Raya</p>
-          </div>
-        </div>
+      {/* Text-Only Branding */}
+      <div className="p-6 border-b border-white/10">
+        <h1 className="text-xl font-bold text-white tracking-wider">MPJ REGIONAL</h1>
+        <p className="text-xs text-white/60 mt-1 font-medium">Admin Panel</p>
       </div>
 
       {/* Menu Items */}
