@@ -227,6 +227,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_legacy_claim: {
+        Args: {
+          p_alamat_singkat: string
+          p_city_id: string
+          p_nama_pengasuh: string
+          p_nama_pesantren: string
+          p_nip?: string
+          p_no_wa_pendaftar: string
+          p_region_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      admin_update_account_status: {
+        Args: {
+          p_new_status: Database["public"]["Enums"]["account_status"]
+          p_target_user_id: string
+        }
+        Returns: boolean
+      }
       get_user_region_id: { Args: { _user_id: string }; Returns: string }
       get_user_status: {
         Args: { _user_id: string }
