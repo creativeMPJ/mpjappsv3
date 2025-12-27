@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, ArrowRight, Phone, Lock, KeyRound } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Phone, Lock, KeyRound, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,10 +20,11 @@ import logoMpj from "@/assets/logo-mpj.png";
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    identifier: "", // Can be email or WhatsApp number
+    identifier: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading } = useAuth();
@@ -128,7 +129,44 @@ const Login = () => {
     }
   };
 
-  // Show loading if auth is initializing
+  // Seed dummy users for development
+  const handleSeedUsers = async () => {
+    setIsSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-dev-users');
+      
+      if (error) {
+        toast({
+          title: "Seed Gagal",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.success) {
+        const successCount = data.results?.filter((r: { success: boolean }) => r.success).length || 0;
+        toast({
+          title: "Success! Accounts Created",
+          description: `${successCount} akun berhasil dibuat. Password: password123`,
+        });
+      } else {
+        toast({
+          title: "Seed Gagal",
+          description: data?.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal menjalankan seeder",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -266,6 +304,28 @@ const Login = () => {
           </p>
         </CardContent>
       </Card>
+
+      {/* Dev Mode: Seed Button */}
+      {import.meta.env.DEV && (
+        <Button
+          variant="outline"
+          onClick={handleSeedUsers}
+          disabled={isSeeding}
+          className="mt-6 gap-2 border-dashed border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+        >
+          {isSeeding ? (
+            <>
+              <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+              Seeding...
+            </>
+          ) : (
+            <>
+              <Zap className="w-4 h-4" />
+              ⚡ SEED DUMMY USERS
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 };
