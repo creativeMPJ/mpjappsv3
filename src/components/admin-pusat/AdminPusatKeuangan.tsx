@@ -65,6 +65,8 @@ interface PaymentRecord {
     pesantren_name: string;
     nama_pengelola: string;
     jenis_pengajuan: string;
+    region_id: string;
+    mpj_id_number: string | null;
   };
 }
 
@@ -134,7 +136,9 @@ const AdminPusatKeuangan = () => {
           pesantren_claims (
             pesantren_name,
             nama_pengelola,
-            jenis_pengajuan
+            jenis_pengajuan,
+            region_id,
+            mpj_id_number
           )
         `)
         .order('created_at', { ascending: false });
@@ -205,6 +209,46 @@ const AdminPusatKeuangan = () => {
     setIsProcessing(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const regionId = selectedPayment.pesantren_claims?.region_id;
+
+      if (!regionId) {
+        throw new Error('Region ID tidak ditemukan pada claim ini');
+      }
+
+      // Check if region has valid 2-digit code
+      const { data: regionData, error: regionError } = await supabase
+        .from('regions')
+        .select('code, name')
+        .eq('id', regionId)
+        .single();
+
+      if (regionError || !regionData) {
+        throw new Error('Region tidak ditemukan');
+      }
+
+      if (!/^[0-9]{2}$/.test(regionData.code)) {
+        toast({
+          title: "Kode RR Belum Valid",
+          description: `Regional "${regionData.name}" belum memiliki kode RR 2 digit. Silakan set kode terlebih dahulu di menu Master Data > Wilayah.`,
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      // Generate NIP using the database function
+      const { data: nipData, error: nipError } = await supabase
+        .rpc('generate_nip', {
+          p_claim_id: selectedPayment.pesantren_claim_id,
+          p_region_id: regionId
+        });
+
+      if (nipError) {
+        console.error('NIP generation error:', nipError);
+        throw new Error(nipError.message || 'Gagal generate NIP');
+      }
+
+      const generatedNIP = nipData;
       
       // Update payment status
       const { error: paymentError } = await supabase
@@ -218,10 +262,14 @@ const AdminPusatKeuangan = () => {
 
       if (paymentError) throw paymentError;
 
-      // Update pesantren_claims status to approved
+      // Update pesantren_claims status to approved (NIP already set by function)
       const { error: claimError } = await supabase
         .from('pesantren_claims')
-        .update({ status: 'approved' })
+        .update({ 
+          status: 'approved',
+          approved_by: user?.id,
+          approved_at: new Date().toISOString()
+        })
         .eq('id', selectedPayment.pesantren_claim_id);
 
       if (claimError) throw claimError;
@@ -232,6 +280,7 @@ const AdminPusatKeuangan = () => {
         .update({
           status_account: 'active',
           status_payment: 'paid',
+          nip: generatedNIP, // Also store NIP in profile for quick access
         })
         .eq('id', selectedPayment.user_id);
 
@@ -239,17 +288,17 @@ const AdminPusatKeuangan = () => {
 
       toast({
         title: "Pembayaran Diverifikasi",
-        description: "Status akun telah diaktifkan",
+        description: `NIP Lembaga: ${generatedNIP} - Status akun telah diaktifkan`,
       });
 
       setConfirmDialogOpen(false);
       setProofModalOpen(false);
       fetchPayments();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving payment:', error);
       toast({
         title: "Error",
-        description: "Gagal memverifikasi pembayaran",
+        description: error.message || "Gagal memverifikasi pembayaran",
         variant: "destructive",
       });
     } finally {

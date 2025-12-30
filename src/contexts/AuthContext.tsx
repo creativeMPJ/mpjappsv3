@@ -22,6 +22,8 @@ interface AuthProfile {
   region_id: string | null;
   profile_level: ProfileLevel;
   status_payment: PaymentStatus;
+  nip: string | null; // NIP Lembaga for display
+  nama_pesantren: string | null;
 }
 
 interface AuthContextType {
@@ -56,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, role, status_account, region_id, profile_level, status_payment')
+        .select('id, role, status_account, region_id, profile_level, status_payment, nip, nama_pesantren')
         .eq('id', userId)
         .maybeSingle();
 
@@ -73,7 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status_account: data.status_account,
           region_id: data.region_id,
           profile_level: data.profile_level,
-          status_payment: data.status_payment as PaymentStatus
+          status_payment: data.status_payment as PaymentStatus,
+          nip: data.nip,
+          nama_pesantren: data.nama_pesantren
         });
       } else {
         setProfile(null);

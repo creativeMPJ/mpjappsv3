@@ -171,6 +171,26 @@ const AdminPusatMasterData = () => {
       return;
     }
 
+    // Validate RR code is exactly 2 digits
+    if (!/^[0-9]{2}$/.test(newRegionCode)) {
+      toast({
+        title: "Error",
+        description: "Kode RR harus tepat 2 digit angka (contoh: 01, 07, 15)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for duplicate code
+    if (regions.some(r => r.code === newRegionCode)) {
+      toast({
+        title: "Error",
+        description: `Kode RR "${newRegionCode}" sudah digunakan oleh regional lain`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const { data, error } = await supabase
@@ -455,38 +475,49 @@ const AdminPusatMasterData = () => {
               <CardContent>
                 <div className="space-y-2">
                   {regions.length > 0 ? (
-                    regions.map((region) => (
-                      <div 
-                        key={region.id}
-                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                          selectedRegion?.id === region.id 
-                            ? "bg-emerald-50 border-2 border-[#166534]" 
-                            : "bg-slate-50 hover:bg-slate-100 border-2 border-transparent"
-                        }`}
-                        onClick={() => setSelectedRegion(region)}
-                      >
-                        <div>
-                          <p className="font-medium text-slate-900">{region.name}</p>
-                          <p className="text-sm text-slate-500">Kode: {region.code}</p>
+                    regions.map((region) => {
+                      const isValidCode = /^[0-9]{2}$/.test(region.code);
+                      return (
+                        <div 
+                          key={region.id}
+                          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedRegion?.id === region.id 
+                              ? "bg-emerald-50 border-2 border-[#166534]" 
+                              : "bg-slate-50 hover:bg-slate-100 border-2 border-transparent"
+                          }`}
+                          onClick={() => setSelectedRegion(region)}
+                        >
+                          <div>
+                            <p className="font-medium text-slate-900">{region.name}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-sm text-slate-500">Kode RR:</span>
+                              <Badge className={isValidCode ? "bg-emerald-100 text-emerald-800 font-mono" : "bg-red-100 text-red-800 font-mono"}>
+                                {region.code}
+                              </Badge>
+                              {!isValidCode && (
+                                <span className="text-xs text-red-500">⚠️ Harus 2 digit angka!</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-blue-100 text-blue-800">
+                              {cities.filter(c => c.region_id === region.id).length} Kota
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteRegion(region);
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className="bg-blue-100 text-blue-800">
-                            {cities.filter(c => c.region_id === region.id).length} Kota
-                          </Badge>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteRegion(region);
-                            }}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-center text-slate-500 py-8">
                       Belum ada data regional
@@ -568,18 +599,25 @@ const AdminPusatMasterData = () => {
               <Input
                 value={newRegionName}
                 onChange={(e) => setNewRegionName(e.target.value)}
-                placeholder="Contoh: Tapal Kuda"
+                placeholder="Contoh: Regional Tapal Kuda"
               />
+              <p className="text-xs text-slate-500">Nama regional sesuai kesepakatan pengurus</p>
             </div>
             <div className="space-y-2">
-              <Label>Kode Regional</Label>
+              <Label>Kode RR (2 Digit Angka) <span className="text-red-500">*</span></Label>
               <Input
                 value={newRegionCode}
-                onChange={(e) => setNewRegionCode(e.target.value)}
-                placeholder="Contoh: TK"
-                maxLength={5}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+                  setNewRegionCode(val);
+                }}
+                placeholder="Contoh: 07"
+                maxLength={2}
+                className="font-mono text-lg tracking-widest"
               />
-              <p className="text-xs text-slate-500">Kode singkat untuk identifikasi (max 5 karakter)</p>
+              <p className="text-xs text-amber-600 font-medium">
+                ⚠️ WAJIB 2 digit angka unik (01-99). Kode ini akan digunakan untuk generate NIP Lembaga.
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -588,7 +626,7 @@ const AdminPusatMasterData = () => {
             </Button>
             <Button 
               onClick={handleAddRegion} 
-              disabled={isSaving}
+              disabled={isSaving || newRegionCode.length !== 2}
               className="bg-[#166534] hover:bg-emerald-700 text-white"
             >
               {isSaving ? "Menyimpan..." : "Simpan"}
