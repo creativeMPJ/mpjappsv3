@@ -90,7 +90,11 @@ export type Database = {
           approved_by: string | null
           claimed_at: string
           created_at: string
+          dokumen_bukti_url: string | null
+          email_pengelola: string | null
           id: string
+          kecamatan: string | null
+          nama_pengelola: string | null
           notes: string | null
           pesantren_name: string
           region_id: string | null
@@ -103,7 +107,11 @@ export type Database = {
           approved_by?: string | null
           claimed_at?: string
           created_at?: string
+          dokumen_bukti_url?: string | null
+          email_pengelola?: string | null
           id?: string
+          kecamatan?: string | null
+          nama_pengelola?: string | null
           notes?: string | null
           pesantren_name: string
           region_id?: string | null
@@ -116,7 +124,11 @@ export type Database = {
           approved_by?: string | null
           claimed_at?: string
           created_at?: string
+          dokumen_bukti_url?: string | null
+          email_pengelola?: string | null
           id?: string
+          kecamatan?: string | null
+          nama_pengelola?: string | null
           notes?: string | null
           pesantren_name?: string
           region_id?: string | null
