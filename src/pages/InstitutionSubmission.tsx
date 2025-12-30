@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -6,14 +6,12 @@ import {
   Building2,
   User,
   MapPin,
-  Mail,
   CheckCircle,
   Phone,
   Lock,
   Eye,
   EyeOff,
   Loader2,
-  Map,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +20,17 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CityCombobox } from "@/components/registration/CityCombobox";
 import { LocationPicker } from "@/components/registration/LocationPicker";
+import { useAuth } from "@/contexts/AuthContext";
 
 const InstitutionSubmission = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
   const searchedName = location.state?.searchedName || "";
+
+  // Guard state
+  const [isCheckingOwnership, setIsCheckingOwnership] = useState(true);
 
   // Wizard step
   const [currentStep, setCurrentStep] = useState(1);
@@ -52,6 +55,56 @@ const InstitutionSubmission = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  /**
+   * GLOBAL GUARD: Check if user already has an approved pesantren claim
+   * If yes, block access and redirect to dashboard
+   */
+  useEffect(() => {
+    const checkPesantrenOwnership = async () => {
+      if (authLoading) return;
+      
+      // If user is logged in, check their claim status
+      if (user) {
+        try {
+          const { data: claim, error } = await supabase
+            .from('pesantren_claims')
+            .select('status, pesantren_name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error checking ownership:', error);
+            setIsCheckingOwnership(false);
+            return;
+          }
+
+          if (claim && (claim.status === 'approved' || claim.status === 'pusat_approved')) {
+            // LOCK: User already has an approved pesantren
+            toast({
+              title: "Akses Ditolak",
+              description: `Akun Anda sudah terdaftar sebagai pengelola "${claim.pesantren_name}". Satu akun hanya boleh mengelola satu pesantren.`,
+              variant: "destructive",
+            });
+            navigate('/user', { replace: true });
+            return;
+          }
+
+          // If user has pending claim, redirect to verification
+          if (claim && (claim.status === 'pending' || claim.status === 'regional_approved')) {
+            navigate('/verification-pending', { replace: true });
+            return;
+          }
+        } catch (error) {
+          console.error('Error in ownership check:', error);
+        }
+      }
+      
+      setIsCheckingOwnership(false);
+    };
+
+    checkPesantrenOwnership();
+  }, [user, authLoading, navigate, toast]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -79,7 +132,7 @@ const InstitutionSubmission = () => {
     );
   };
 
-  // Handle Step 1 completion - Create user and profile
+  // Handle Step 1 completion - Create user, profile, AND pesantren_claim
   const handleStep1Complete = async () => {
     if (!isStep1Valid()) return;
 
@@ -103,8 +156,14 @@ const InstitutionSubmission = () => {
         throw new Error("Gagal membuat akun");
       }
 
+      // Get region_id from city
+      const { data: cityData } = await supabase
+        .from('cities')
+        .select('region_id')
+        .eq('id', formData.cityId)
+        .single();
+
       // Update profile with pesantren data
-      // Note: region_id will be auto-filled by DB trigger based on city_id
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -113,13 +172,26 @@ const InstitutionSubmission = () => {
           alamat_singkat: formData.alamatSingkat,
           city_id: formData.cityId,
           no_wa_pendaftar: formData.noWhatsapp,
-          // status_account defaults to 'pending' in DB
-          // region_id auto-calculated by enforce_region_immutability trigger
         })
         .eq("id", authData.user.id);
 
       if (profileError) {
         throw profileError;
+      }
+
+      // Create pesantren_claim entry (1 User = 1 Pesantren)
+      const { error: claimError } = await supabase
+        .from("pesantren_claims")
+        .insert({
+          user_id: authData.user.id,
+          pesantren_name: formData.namaPesantren,
+          status: 'pending',
+          region_id: cityData?.region_id || null,
+        });
+
+      if (claimError) {
+        console.error('Claim error:', claimError);
+        // Don't throw - claim might already exist from trigger
       }
 
       // Move to Step 2
@@ -206,6 +278,18 @@ const InstitutionSubmission = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading while checking ownership
+  if (authLoading || isCheckingOwnership) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <p className="text-muted-foreground">Memeriksa status kepemilikan...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Success State
   if (isSuccess) {
@@ -499,7 +583,7 @@ const InstitutionSubmission = () => {
           </>
         )}
 
-        {/* Step 2: Location Map */}
+        {/* Step 2: Lokasi */}
         {currentStep === 2 && (
           <>
             {/* Header */}
@@ -508,33 +592,28 @@ const InstitutionSubmission = () => {
                 Lokasi Pesantren
               </h1>
               <p className="text-muted-foreground text-sm">
-                Langkah 2: Tentukan Lokasi di Peta
+                Langkah 2: Tandai Lokasi (Opsional)
               </p>
             </div>
 
-            <div className="space-y-6">
-              {/* Map Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                    <Map className="w-3.5 h-3.5" />
-                  </div>
-                  <h2 className="font-semibold text-foreground">
-                    Lokasi di Peta
-                  </h2>
-                </div>
+            {/* Location Picker */}
+            <div className="space-y-4">
+              <LocationPicker
+                latitude={latitude}
+                longitude={longitude}
+                onLocationChange={handleLocationChange}
+              />
 
-                <div className="bg-muted/50 rounded-xl p-4">
-                  <LocationPicker
-                    latitude={latitude}
-                    longitude={longitude}
-                    onLocationChange={handleLocationChange}
-                  />
+              {latitude && longitude && (
+                <div className="bg-muted rounded-lg p-3 text-sm">
+                  <p className="text-muted-foreground">
+                    Koordinat: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                  </p>
                 </div>
-              </div>
+              )}
 
-              {/* Buttons */}
-              <div className="space-y-3">
+              {/* Action Buttons */}
+              <div className="space-y-3 pt-4">
                 <Button
                   onClick={handleStep2Complete}
                   disabled={isSubmitting}
@@ -547,19 +626,19 @@ const InstitutionSubmission = () => {
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
+                      Simpan & Selesai
                       <CheckCircle className="w-4 h-4" />
-                      Selesaikan Pendaftaran
                     </span>
                   )}
                 </Button>
 
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={handleSkipStep2}
                   disabled={isSubmitting}
-                  className="w-full h-12 rounded-xl"
+                  className="w-full h-12 text-muted-foreground"
                 >
-                  Lewati, Atur Nanti
+                  Lewati, isi nanti
                 </Button>
               </div>
             </div>

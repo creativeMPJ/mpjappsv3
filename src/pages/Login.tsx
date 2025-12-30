@@ -14,17 +14,20 @@ import logoMpj from "@/assets/logo-mpj.png";
  * LOGIN PAGE
  * 
  * Authenticates user via Supabase Auth.
- * After successful login, redirects based on role.
- * Status handling is done by ProtectedRoute.
+ * After successful login, checks pesantren_claims table to determine redirect:
+ * - approved/pusat_approved -> dashboard
+ * - pending/regional_approved -> verification-pending
+ * - no claim -> check-institution
  */
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    identifier: "", // Can be email or WhatsApp number
+    identifier: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isCheckingClaim, setIsCheckingClaim] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, isLoading: authLoading } = useAuth();
@@ -59,10 +62,76 @@ const Login = () => {
     }
   };
 
+  /**
+   * Check pesantren_claims and redirect based on claim status
+   * This is the core logic for "1 User = 1 Pesantren" workflow
+   */
+  const checkClaimAndRedirect = async (userId: string, userRole: string) => {
+    setIsCheckingClaim(true);
+    
+    try {
+      // Admin roles bypass claim check - go directly to their dashboards
+      if (userRole === 'admin_pusat' || userRole === 'admin_regional' || userRole === 'admin_finance') {
+        redirectToDashboard(userRole);
+        return;
+      }
+
+      // For regular users, check pesantren_claims
+      const { data: claim, error } = await supabase
+        .from('pesantren_claims')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking claim:', error);
+        // On error, default to check-institution
+        navigate('/check-institution', { replace: true });
+        return;
+      }
+
+      if (!claim) {
+        // No claim exists - user needs to register pesantren
+        navigate('/check-institution', { replace: true });
+        return;
+      }
+
+      // Route based on claim status
+      switch (claim.status) {
+        case 'approved':
+        case 'pusat_approved':
+          // Full access - go to dashboard
+          navigate('/user', { replace: true });
+          break;
+        case 'pending':
+        case 'regional_approved':
+          // Still in verification - go to pending page
+          navigate('/verification-pending', { replace: true });
+          break;
+        case 'rejected':
+          // Claim rejected - show toast and logout
+          toast({
+            title: "Klaim Ditolak",
+            description: "Pengajuan klaim pesantren Anda ditolak. Silakan hubungi admin.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
+          break;
+        default:
+          navigate('/check-institution', { replace: true });
+      }
+    } catch (error) {
+      console.error('Error in claim check:', error);
+      navigate('/check-institution', { replace: true });
+    } finally {
+      setIsCheckingClaim(false);
+    }
+  };
+
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && user && profile) {
-      redirectToDashboard(profile.role);
+      checkClaimAndRedirect(user.id, profile.role);
     }
   }, [user, profile, authLoading]);
 
@@ -86,16 +155,13 @@ const Login = () => {
 
   // Convert WhatsApp number to email format if needed
   const formatIdentifier = (identifier: string): string => {
-    // If it looks like a phone number (starts with 0 or 62), convert to email format
     if (/^(0|62)\d+$/.test(identifier.replace(/\D/g, ''))) {
       const phoneNumber = identifier.replace(/\D/g, '');
-      // Normalize: remove leading 62, keep leading 0
       const normalizedPhone = phoneNumber.startsWith('62') 
         ? '0' + phoneNumber.slice(2) 
         : phoneNumber;
       return `${normalizedPhone}@mpj.local`;
     }
-    // Otherwise, assume it's an email
     return identifier;
   };
 
@@ -144,9 +210,9 @@ const Login = () => {
       if (data.user) {
         toast({
           title: "Login Berhasil!",
-          description: "Selamat datang di MPJ Apps",
+          description: "Memeriksa status akun...",
         });
-        // Auth context will update and useEffect will redirect
+        // Auth context will update and useEffect will trigger checkClaimAndRedirect
       }
     } catch (error) {
       toast({
@@ -159,13 +225,15 @@ const Login = () => {
     }
   };
 
-  // Show loading if auth is initializing
-  if (authLoading) {
+  // Show loading if auth is initializing or checking claim
+  if (authLoading || isCheckingClaim) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">Memuat...</p>
+          <p className="text-muted-foreground">
+            {isCheckingClaim ? "Memeriksa status kepemilikan..." : "Memuat..."}
+          </p>
         </div>
       </div>
     );
@@ -291,7 +359,7 @@ const Login = () => {
           {/* Register Link */}
           <p className="text-center text-sm text-muted-foreground mt-6">
             Baru di MPJ Apps?{" "}
-            <Link to="/register" className="text-primary font-semibold hover:underline">
+            <Link to="/check-institution" className="text-primary font-semibold hover:underline">
               Daftar Sekarang
             </Link>
           </p>

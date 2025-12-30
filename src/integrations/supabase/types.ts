@@ -84,6 +84,56 @@ export type Database = {
           },
         ]
       }
+      pesantren_claims: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          claimed_at: string
+          created_at: string
+          id: string
+          notes: string | null
+          pesantren_name: string
+          region_id: string | null
+          status: Database["public"]["Enums"]["claim_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pesantren_name: string
+          region_id?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pesantren_name?: string
+          region_id?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pesantren_claims_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           alamat_singkat: string | null
@@ -253,11 +303,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      get_user_claim_status: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["claim_status"]
+      }
       get_user_region_id: { Args: { _user_id: string }; Returns: string }
       get_user_status: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["account_status"]
       }
+      has_approved_claim: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -283,6 +338,12 @@ export type Database = {
     Enums: {
       account_status: "pending" | "active" | "rejected"
       app_role: "user" | "admin_regional" | "admin_pusat" | "admin_finance"
+      claim_status:
+        | "pending"
+        | "regional_approved"
+        | "pusat_approved"
+        | "approved"
+        | "rejected"
       payment_status: "paid" | "unpaid"
       profile_level: "basic" | "silver" | "gold" | "platinum"
     }
@@ -414,6 +475,13 @@ export const Constants = {
     Enums: {
       account_status: ["pending", "active", "rejected"],
       app_role: ["user", "admin_regional", "admin_pusat", "admin_finance"],
+      claim_status: [
+        "pending",
+        "regional_approved",
+        "pusat_approved",
+        "approved",
+        "rejected",
+      ],
       payment_status: ["paid", "unpaid"],
       profile_level: ["basic", "silver", "gold", "platinum"],
     },

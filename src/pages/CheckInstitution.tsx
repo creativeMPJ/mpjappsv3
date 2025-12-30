@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Search, Info, Plus, MapPin, UserCheck } from "lucide-react";
+import { Building2, Search, Info, Plus, MapPin, UserCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Mock data pesantren terdaftar
+// Mock data pesantren terdaftar (will be replaced with real data later)
 const registeredPesantren = [
   { id: 1, name: "Darul Ulum Jombang", region: "Jombang", alamat: "Jl. Raya Peterongan, Jombang" },
   { id: 2, name: "Darul Ulum Peterongan", region: "Jombang", alamat: "Jl. Peterongan No. 10, Jombang" },
@@ -17,9 +20,62 @@ const registeredPesantren = [
 
 const CheckInstitution = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPesantren, setSelectedPesantren] = useState<typeof registeredPesantren[0] | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isCheckingOwnership, setIsCheckingOwnership] = useState(true);
+
+  /**
+   * GLOBAL GUARD: Check if user already has an approved pesantren claim
+   * If yes, block access and redirect to dashboard
+   */
+  useEffect(() => {
+    const checkPesantrenOwnership = async () => {
+      if (authLoading) return;
+      
+      // If user is logged in, check their claim status
+      if (user) {
+        try {
+          const { data: claim, error } = await supabase
+            .from('pesantren_claims')
+            .select('status, pesantren_name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error checking ownership:', error);
+            setIsCheckingOwnership(false);
+            return;
+          }
+
+          if (claim && (claim.status === 'approved' || claim.status === 'pusat_approved')) {
+            // LOCK: User already has an approved pesantren
+            toast({
+              title: "Akses Ditolak",
+              description: `Akun Anda sudah terdaftar sebagai pengelola "${claim.pesantren_name}". Satu akun hanya boleh mengelola satu pesantren.`,
+              variant: "destructive",
+            });
+            navigate('/user', { replace: true });
+            return;
+          }
+
+          // If user has pending claim, redirect to verification
+          if (claim && (claim.status === 'pending' || claim.status === 'regional_approved')) {
+            navigate('/verification-pending', { replace: true });
+            return;
+          }
+        } catch (error) {
+          console.error('Error in ownership check:', error);
+        }
+      }
+      
+      setIsCheckingOwnership(false);
+    };
+
+    checkPesantrenOwnership();
+  }, [user, authLoading, navigate, toast]);
 
   const filteredPesantren = registeredPesantren.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -51,19 +107,31 @@ const CheckInstitution = () => {
 
   const showNotFoundState = searchQuery.length > 0 && filteredPesantren.length === 0;
 
+  // Show loading while checking ownership
+  if (authLoading || isCheckingOwnership) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <p className="text-muted-foreground">Memeriksa status kepemilikan...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Cari Pesantren</h1>
-          <p className="text-gray-500 text-sm">Jadi bagian dari MPJ</p>
+          <h1 className="text-2xl font-bold text-foreground mb-1">Cari Pesantren</h1>
+          <p className="text-muted-foreground text-sm">Jadi bagian dari MPJ</p>
         </div>
 
         {/* Main Content */}
         <div className="space-y-4">
           {/* Label */}
-          <div className="flex items-center gap-2 text-gray-800 font-semibold">
+          <div className="flex items-center gap-2 text-foreground font-semibold">
             <Building2 className="w-5 h-5" />
             <span>Pilih Pesantren</span>
           </div>
@@ -71,7 +139,7 @@ const CheckInstitution = () => {
           {/* Search Input */}
           <div className="relative">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Cari nama pesantren..."
@@ -82,22 +150,22 @@ const CheckInstitution = () => {
                   setShowDropdown(e.target.value.length > 0);
                 }}
                 onFocus={() => searchQuery.length > 0 && setShowDropdown(true)}
-                className="pl-10 h-12 text-base border-gray-200 focus:border-[#166534] focus:ring-[#166534]"
+                className="pl-10 h-12 text-base"
               />
             </div>
 
             {/* Dropdown Results */}
             {showDropdown && filteredPesantren.length > 0 && !selectedPesantren && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
                 {filteredPesantren.map((pesantren) => (
                   <button
                     key={pesantren.id}
                     onClick={() => handleSelectPesantren(pesantren)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between border-b border-gray-100 last:border-b-0"
+                    className="w-full px-4 py-3 text-left hover:bg-muted flex items-center justify-between border-b border-border last:border-b-0"
                   >
                     <div>
-                      <p className="font-medium text-gray-900">{pesantren.name}</p>
-                      <p className="text-sm text-gray-500">{pesantren.region}</p>
+                      <p className="font-medium text-foreground">{pesantren.name}</p>
+                      <p className="text-sm text-muted-foreground">{pesantren.region}</p>
                     </div>
                   </button>
                 ))}
@@ -107,15 +175,15 @@ const CheckInstitution = () => {
 
           {/* Selected Pesantren Card - FOUND STATE */}
           {selectedPesantren && (
-            <Card className="border-[#166534]/30 bg-[#166534]/5">
+            <Card className="border-primary/30 bg-primary/5">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="w-10 h-10 bg-[#166534]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-5 h-5 text-[#166534]" />
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Building2 className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{selectedPesantren.name}</p>
-                    <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
+                    <p className="font-semibold text-foreground">{selectedPesantren.name}</p>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                       <MapPin className="w-3.5 h-3.5" />
                       <span>{selectedPesantren.alamat}</span>
                     </div>
@@ -123,7 +191,7 @@ const CheckInstitution = () => {
                 </div>
                 <Button
                   onClick={handleClaimAccount}
-                  className="w-full h-11 bg-[#f59e0b] hover:bg-[#d97706] text-white font-semibold rounded-xl"
+                  className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl"
                 >
                   <UserCheck className="w-4 h-4 mr-2" />
                   Klaim Akun Ini
@@ -135,14 +203,14 @@ const CheckInstitution = () => {
           {/* Not Found State */}
           {showNotFoundState && (
             <div className="text-center py-6">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-8 h-8 text-gray-400" />
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-gray-600 font-medium mb-1">Pesantren tidak ditemukan</p>
-              <p className="text-gray-500 text-sm mb-4">"{searchQuery}" belum terdaftar di sistem</p>
+              <p className="text-foreground font-medium mb-1">Pesantren tidak ditemukan</p>
+              <p className="text-muted-foreground text-sm mb-4">"{searchQuery}" belum terdaftar di sistem</p>
               <Button
                 onClick={handleNewSubmission}
-                className="w-full h-12 bg-[#166534] hover:bg-[#14532d] text-white font-semibold rounded-xl"
+                className="w-full h-12 font-semibold rounded-xl"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Ajukan Pesantren & Buat Akun
@@ -154,7 +222,7 @@ const CheckInstitution = () => {
           {!selectedPesantren && !showNotFoundState && (
             <button
               onClick={handleNewSubmission}
-              className="w-full text-[#166534] font-semibold text-sm flex items-center justify-center gap-1 py-2 hover:underline"
+              className="w-full text-primary font-semibold text-sm flex items-center justify-center gap-1 py-2 hover:underline"
             >
               <Plus className="w-4 h-4" />
               Ajukan Pesantren Baru
@@ -163,12 +231,12 @@ const CheckInstitution = () => {
         </div>
 
         {/* Warning Box */}
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3">
+        <div className="mt-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3">
           <div className="flex-shrink-0">
-            <Info className="w-5 h-5 text-amber-600 mt-0.5" />
+            <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
           </div>
           <div>
-            <p className="text-amber-800 text-sm leading-relaxed">
+            <p className="text-amber-800 dark:text-amber-200 text-sm leading-relaxed">
               <span className="font-semibold">Catatan:</span> Sebelum mengajukan pesantren baru, pastikan untuk memeriksa daftar terlebih dahulu. Ajukan hanya jika pesantren Anda benar-benar belum terdaftar.
             </p>
           </div>
@@ -176,11 +244,11 @@ const CheckInstitution = () => {
 
         {/* Back to Login */}
         <div className="mt-6 text-center">
-          <p className="text-gray-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             Sudah punya akun?{" "}
             <button
               onClick={() => navigate("/login")}
-              className="text-[#166534] font-semibold hover:underline"
+              className="text-primary font-semibold hover:underline"
             >
               Masuk
             </button>
