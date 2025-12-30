@@ -305,6 +305,7 @@ const InstitutionSubmission = () => {
           nama_pengelola: formData.namaPengelola,
           email_pengelola: formData.emailPengelola,
           dokumen_bukti_url: documentUrl,
+          jenis_pengajuan: 'pesantren_baru',
         });
 
       if (claimError) {

@@ -14,7 +14,8 @@ import {
   X,
   Zap,
   Map,
-  Users
+  Users,
+  Wallet
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ import AdminPusatEvent from "@/components/admin-pusat/AdminPusatEvent";
 import AdminPusatMilitansi from "@/components/admin-pusat/AdminPusatMilitansi";
 import AdminPusatHub from "@/components/admin-pusat/AdminPusatHub";
 import AdminPusatPengaturan from "@/components/admin-pusat/AdminPusatPengaturan";
+import AdminPusatKeuangan from "@/components/admin-pusat/AdminPusatKeuangan";
 
 // Super Admin email check
 const SUPER_ADMIN_EMAIL = "superadmin@mpj.com";
@@ -38,7 +40,8 @@ type ViewType =
   | "manajemen-event"
   | "manajemen-militansi" 
   | "mpj-hub"
-  | "pengaturan";
+  | "pengaturan"
+  | "keuangan";
 
 interface MenuItem {
   id: ViewType;
@@ -56,6 +59,7 @@ interface ExternalLink {
 const menuItems: MenuItem[] = [
   { id: "dashboard", label: "DASHBOARD BERANDA", icon: LayoutDashboard },
   { id: "verifikasi", label: "VERIFIKASI", icon: CheckCircle, badge: 6 },
+  { id: "keuangan", label: "ADMINISTRASI KEUANGAN", icon: Wallet },
   { id: "master-data", label: "MASTER DATA", icon: Database },
   { id: "manajemen-event", label: "MANAJEMEN EVENT", icon: Calendar },
   { id: "manajemen-militansi", label: "MANAJEMEN MILITANSI", icon: Medal },
@@ -92,6 +96,8 @@ const Dashboard = () => {
         return <AdminPusatHome onNavigate={setActiveView} />;
       case "verifikasi":
         return <AdminPusatVerifikasi />;
+      case "keuangan":
+        return <AdminPusatKeuangan />;
       case "master-data":
         return <AdminPusatMasterData />;
       case "manajemen-event":

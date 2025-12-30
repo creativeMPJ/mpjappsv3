@@ -84,6 +84,62 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          base_amount: number
+          created_at: string | null
+          id: string
+          pesantren_claim_id: string
+          proof_file_url: string | null
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["payment_verification_status"]
+          total_amount: number
+          unique_code: number
+          updated_at: string | null
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          base_amount: number
+          created_at?: string | null
+          id?: string
+          pesantren_claim_id: string
+          proof_file_url?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["payment_verification_status"]
+          total_amount: number
+          unique_code: number
+          updated_at?: string | null
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          base_amount?: number
+          created_at?: string | null
+          id?: string
+          pesantren_claim_id?: string
+          proof_file_url?: string | null
+          rejection_reason?: string | null
+          status?: Database["public"]["Enums"]["payment_verification_status"]
+          total_amount?: number
+          unique_code?: number
+          updated_at?: string | null
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_pesantren_claim_id_fkey"
+            columns: ["pesantren_claim_id"]
+            isOneToOne: false
+            referencedRelation: "pesantren_claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pesantren_claims: {
         Row: {
           approved_at: string | null
@@ -93,6 +149,7 @@ export type Database = {
           dokumen_bukti_url: string | null
           email_pengelola: string | null
           id: string
+          jenis_pengajuan: Database["public"]["Enums"]["registration_type"]
           kecamatan: string | null
           nama_pengelola: string | null
           notes: string | null
@@ -110,6 +167,7 @@ export type Database = {
           dokumen_bukti_url?: string | null
           email_pengelola?: string | null
           id?: string
+          jenis_pengajuan?: Database["public"]["Enums"]["registration_type"]
           kecamatan?: string | null
           nama_pengelola?: string | null
           notes?: string | null
@@ -127,6 +185,7 @@ export type Database = {
           dokumen_bukti_url?: string | null
           email_pengelola?: string | null
           id?: string
+          jenis_pengajuan?: Database["public"]["Enums"]["registration_type"]
           kecamatan?: string | null
           nama_pengelola?: string | null
           notes?: string | null
@@ -269,6 +328,33 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -357,7 +443,13 @@ export type Database = {
         | "approved"
         | "rejected"
       payment_status: "paid" | "unpaid"
+      payment_verification_status:
+        | "pending_payment"
+        | "pending_verification"
+        | "verified"
+        | "rejected"
       profile_level: "basic" | "silver" | "gold" | "platinum"
+      registration_type: "klaim" | "pesantren_baru"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -495,7 +587,14 @@ export const Constants = {
         "rejected",
       ],
       payment_status: ["paid", "unpaid"],
+      payment_verification_status: [
+        "pending_payment",
+        "pending_verification",
+        "verified",
+        "rejected",
+      ],
       profile_level: ["basic", "silver", "gold", "platinum"],
+      registration_type: ["klaim", "pesantren_baru"],
     },
   },
 } as const
