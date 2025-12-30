@@ -48,7 +48,9 @@ export type Database = {
           created_at: string | null
           id: string
           jabatan: string | null
+          jabatan_code_id: string | null
           nama: string
+          niam: string | null
           profile_id: string
           skill: string[] | null
           updated_at: string | null
@@ -58,7 +60,9 @@ export type Database = {
           created_at?: string | null
           id?: string
           jabatan?: string | null
+          jabatan_code_id?: string | null
           nama: string
+          niam?: string | null
           profile_id: string
           skill?: string[] | null
           updated_at?: string | null
@@ -68,13 +72,22 @@ export type Database = {
           created_at?: string | null
           id?: string
           jabatan?: string | null
+          jabatan_code_id?: string | null
           nama?: string
+          niam?: string | null
           profile_id?: string
           skill?: string[] | null
           updated_at?: string | null
           xp_level?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crews_jabatan_code_id_fkey"
+            columns: ["jabatan_code_id"]
+            isOneToOne: false
+            referencedRelation: "jabatan_codes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crews_profile_id_fkey"
             columns: ["profile_id"]
@@ -83,6 +96,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      jabatan_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
@@ -151,6 +188,7 @@ export type Database = {
           id: string
           jenis_pengajuan: Database["public"]["Enums"]["registration_type"]
           kecamatan: string | null
+          mpj_id_number: string | null
           nama_pengelola: string | null
           notes: string | null
           pesantren_name: string
@@ -169,6 +207,7 @@ export type Database = {
           id?: string
           jenis_pengajuan?: Database["public"]["Enums"]["registration_type"]
           kecamatan?: string | null
+          mpj_id_number?: string | null
           nama_pengelola?: string | null
           notes?: string | null
           pesantren_name: string
@@ -187,6 +226,7 @@ export type Database = {
           id?: string
           jenis_pengajuan?: Database["public"]["Enums"]["registration_type"]
           kecamatan?: string | null
+          mpj_id_number?: string | null
           nama_pengelola?: string | null
           notes?: string | null
           pesantren_name?: string
@@ -400,6 +440,18 @@ export type Database = {
           p_target_user_id: string
         }
         Returns: boolean
+      }
+      generate_niam: {
+        Args: {
+          p_crew_id: string
+          p_jabatan_code_id: string
+          p_profile_id: string
+        }
+        Returns: string
+      }
+      generate_nip: {
+        Args: { p_claim_id: string; p_region_id: string }
+        Returns: string
       }
       get_user_claim_status: {
         Args: { _user_id: string }

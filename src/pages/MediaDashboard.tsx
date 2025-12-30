@@ -16,6 +16,7 @@ import {
   IdCard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -212,13 +213,22 @@ const MediaDashboard = () => {
             <h2 className="text-base md:text-lg font-bold text-slate-900 md:hidden">
               MPJ MEDIA
             </h2>
-            {/* Desktop: Full title with badge */}
+            {/* Desktop: Full title with badge and NIP */}
             <div className="hidden md:block">
-              <h2 className="text-lg font-bold text-slate-900">
-                Dashboard Koordinator
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-slate-900">
+                  Dashboard Koordinator
+                </h2>
+                {profile?.nip && (
+                  <Badge className="bg-emerald-100 text-emerald-800 font-mono text-sm">
+                    NIP: {profile.nip}
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2">
-                <p className="text-sm text-slate-600">Media Pesantren</p>
+                <p className="text-sm text-slate-600">
+                  {profile?.nama_pesantren || 'Media Pesantren'}
+                </p>
                 <span className={cn("text-xs px-2 py-0.5 rounded-full text-white font-medium", levelBadge.class)}>
                   {levelBadge.label}
                 </span>
@@ -226,6 +236,12 @@ const MediaDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
+            {/* NIP Badge - Mobile */}
+            {profile?.nip && (
+              <div className="flex md:hidden items-center gap-1.5 bg-emerald-100 text-emerald-800 px-2 py-1.5 rounded-lg text-xs font-mono">
+                {profile.nip}
+              </div>
+            )}
             {/* E-ID Badge - Icon only on mobile */}
             <div className="flex items-center gap-1.5 bg-[#166534] text-white px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold">
               <IdCard className="h-4 w-4" />
