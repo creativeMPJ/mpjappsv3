@@ -15,7 +15,8 @@ import {
   Zap,
   Map,
   Users,
-  Wallet
+  Wallet,
+  Search
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ import AdminPusatMilitansi from "@/components/admin-pusat/AdminPusatMilitansi";
 import AdminPusatHub from "@/components/admin-pusat/AdminPusatHub";
 import AdminPusatPengaturan from "@/components/admin-pusat/AdminPusatPengaturan";
 import AdminPusatKeuangan from "@/components/admin-pusat/AdminPusatKeuangan";
+import GlobalSearchNIPNIAM from "@/components/admin-pusat/GlobalSearchNIPNIAM";
 
 // Super Admin email check
 const SUPER_ADMIN_EMAIL = "superadmin@mpj.com";
@@ -251,6 +253,10 @@ const Dashboard = () => {
             </h2>
           </div>
           <div className="flex items-center gap-3">
+            {/* Global Search */}
+            <div className="hidden lg:block w-80">
+              <GlobalSearchNIPNIAM />
+            </div>
             <Button variant="ghost" size="icon" className="relative text-slate-500 hover:text-slate-700">
               <Bell className="h-5 w-5" />
               <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full" />

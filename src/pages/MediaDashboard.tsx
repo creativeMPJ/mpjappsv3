@@ -27,13 +27,15 @@ import ManajemenKru from "@/components/media-dashboard/ManajemenKru";
 import Administrasi from "@/components/media-dashboard/Administrasi";
 import MPJHub from "@/components/media-dashboard/MPJHub";
 import Pengaturan from "@/components/media-dashboard/Pengaturan";
+import EIDCard from "@/components/media-dashboard/EIDCard";
 
-type ViewType = "beranda" | "identitas" | "kru" | "administrasi" | "hub" | "pengaturan";
+type ViewType = "beranda" | "identitas" | "kru" | "administrasi" | "hub" | "pengaturan" | "eid";
 
 const menuItems = [
   { id: "beranda" as ViewType, label: "DASHBOARD BERANDA", icon: LayoutDashboard },
   { id: "identitas" as ViewType, label: "IDENTITAS PESANTREN", icon: Building },
   { id: "kru" as ViewType, label: "MANAJEMEN CREW (TIM MEDIA)", icon: Users },
+  { id: "eid" as ViewType, label: "E-ID CARD", icon: IdCard },
   { id: "administrasi" as ViewType, label: "ADMINISTRASI", icon: CreditCard },
   { id: "hub" as ViewType, label: "MPJ-HUB", icon: Layers },
   { id: "pengaturan" as ViewType, label: "PENGATURAN", icon: Settings },
@@ -78,6 +80,8 @@ const MediaDashboard = () => {
         );
       case "kru":
         return <ManajemenKru paymentStatus={paymentStatus} />;
+      case "eid":
+        return <EIDCard isGold={profileLevel === 'gold' || profileLevel === 'platinum'} />;
       case "administrasi":
         return (
           <Administrasi 

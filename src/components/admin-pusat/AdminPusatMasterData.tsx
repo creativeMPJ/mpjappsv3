@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, MapPin, Plus, Trash2 } from "lucide-react";
+import { Building2, Users, MapPin, Plus, Trash2, Settings2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import JabatanCodesManagement from "./JabatanCodesManagement";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -364,6 +365,10 @@ const AdminPusatMasterData = () => {
             <MapPin className="h-4 w-4" />
             Data Wilayah
           </TabsTrigger>
+          <TabsTrigger value="jabatan" className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            Kode Jabatan
+          </TabsTrigger>
         </TabsList>
 
         {/* Data Lembaga Tab */}
@@ -581,6 +586,11 @@ const AdminPusatMasterData = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Kode Jabatan Tab */}
+        <TabsContent value="jabatan">
+          <JabatanCodesManagement />
         </TabsContent>
       </Tabs>
 
