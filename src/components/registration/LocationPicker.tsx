@@ -1,62 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Fix for default marker icon
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
+import { useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MapPin } from "lucide-react";
 
 interface LocationPickerProps {
   latitude: number | null;
   longitude: number | null;
   onLocationChange: (lat: number, lng: number) => void;
-}
-
-function DraggableMarker({
-  position,
-  onDragEnd,
-}: {
-  position: [number, number];
-  onDragEnd: (lat: number, lng: number) => void;
-}) {
-  const markerRef = useRef<L.Marker>(null);
-
-  const eventHandlers = {
-    dragend() {
-      const marker = markerRef.current;
-      if (marker) {
-        const pos = marker.getLatLng();
-        onDragEnd(pos.lat, pos.lng);
-      }
-    },
-  };
-
-  return (
-    <Marker
-      draggable
-      eventHandlers={eventHandlers}
-      position={position}
-      ref={markerRef}
-    />
-  );
-}
-
-function MapClickHandler({
-  onClick,
-}: {
-  onClick: (lat: number, lng: number) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      onClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
 }
 
 export function LocationPicker({
@@ -68,52 +18,74 @@ export function LocationPicker({
   const defaultLat = -7.5;
   const defaultLng = 112.75;
 
-  const [position, setPosition] = useState<[number, number]>([
-    latitude ?? defaultLat,
-    longitude ?? defaultLng,
-  ]);
+  const [latValue, setLatValue] = useState<string>(
+    latitude !== null ? latitude.toString() : defaultLat.toString()
+  );
+  const [lngValue, setLngValue] = useState<string>(
+    longitude !== null ? longitude.toString() : defaultLng.toString()
+  );
 
   useEffect(() => {
-    if (latitude !== null && longitude !== null) {
-      setPosition([latitude, longitude]);
+    if (latitude !== null) {
+      setLatValue(latitude.toString());
+    }
+    if (longitude !== null) {
+      setLngValue(longitude.toString());
     }
   }, [latitude, longitude]);
 
-  const handleLocationChange = (lat: number, lng: number) => {
-    setPosition([lat, lng]);
-    onLocationChange(lat, lng);
+  const handleLatChange = (value: string) => {
+    setLatValue(value);
+    const lat = parseFloat(value);
+    const lng = parseFloat(lngValue);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      onLocationChange(lat, lng);
+    }
+  };
+
+  const handleLngChange = (value: string) => {
+    setLngValue(value);
+    const lat = parseFloat(latValue);
+    const lng = parseFloat(value);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      onLocationChange(lat, lng);
+    }
   };
 
   return (
-    <div className="space-y-3">
-      <div className="relative rounded-xl overflow-hidden border border-gray-200">
-        <MapContainer
-          center={position}
-          zoom={10}
-          scrollWheelZoom={true}
-          style={{ height: "300px", width: "100%" }}
-          className="z-0"
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapClickHandler onClick={handleLocationChange} />
-          <DraggableMarker position={position} onDragEnd={handleLocationChange} />
-        </MapContainer>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg border">
+        <MapPin className="h-4 w-4" />
+        <span>Masukkan koordinat lokasi pesantren secara manual</span>
       </div>
       
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-md">
-          <span className="font-medium">Lat:</span> {position[0].toFixed(6)}
-        </span>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-md">
-          <span className="font-medium">Lng:</span> {position[1].toFixed(6)}
-        </span>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="latitude">Latitude</Label>
+          <Input
+            id="latitude"
+            type="number"
+            step="any"
+            placeholder="-7.5"
+            value={latValue}
+            onChange={(e) => handleLatChange(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="longitude">Longitude</Label>
+          <Input
+            id="longitude"
+            type="number"
+            step="any"
+            placeholder="112.75"
+            value={lngValue}
+            onChange={(e) => handleLngChange(e.target.value)}
+          />
+        </div>
       </div>
       
       <p className="text-xs text-muted-foreground">
-        Klik pada peta atau seret pin untuk menentukan lokasi pesantren
+        Tip: Anda bisa mendapatkan koordinat dari Google Maps dengan klik kanan pada lokasi dan pilih koordinat.
       </p>
     </div>
   );
