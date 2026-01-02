@@ -9,6 +9,27 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import logoMpj from "@/assets/logo-mpj.png";
+import { z } from "zod";
+
+// Validation schema
+const loginSchema = z.object({
+  identifier: z.string()
+    .trim()
+    .min(1, "Email atau No. WhatsApp wajib diisi")
+    .refine((val) => {
+      // Check if it's a valid email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(val)) return true;
+      
+      // Check if it's a valid Indonesian phone number (08xx or 628xx)
+      const phoneRegex = /^(0|62)\d{9,13}$/;
+      const cleanPhone = val.replace(/\D/g, '');
+      return phoneRegex.test(cleanPhone);
+    }, "Format email atau nomor WhatsApp tidak valid"),
+  password: z.string()
+    .min(6, "Password minimal 6 karakter")
+    .max(100, "Password maksimal 100 karakter"),
+});
 
 /**
  * LOGIN PAGE
@@ -25,8 +46,8 @@ const Login = () => {
     identifier: "",
     password: "",
   });
+  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  
   const [isCheckingClaim, setIsCheckingClaim] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -137,13 +158,18 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     
-    if (!formData.identifier || !formData.password) {
-      toast({
-        title: "Form tidak lengkap",
-        description: "Mohon masukkan email/No WA dan password",
-        variant: "destructive",
+    // Validate with zod
+    const result = loginSchema.safeParse(formData);
+    
+    if (!result.success) {
+      const fieldErrors: { identifier?: string; password?: string } = {};
+      result.error.errors.forEach((err) => {
+        const field = err.path[0] as 'identifier' | 'password';
+        fieldErrors[field] = err.message;
       });
+      setErrors(fieldErrors);
       return;
     }
 
@@ -236,10 +262,16 @@ const Login = () => {
                 type="text"
                 placeholder="contoh@email.com atau 08xxxxxxxxxx"
                 value={formData.identifier}
-                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
-                className="h-12"
+                onChange={(e) => {
+                  setFormData({ ...formData, identifier: e.target.value });
+                  if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: undefined }));
+                }}
+                className={`h-12 ${errors.identifier ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 autoComplete="email"
               />
+              {errors.identifier && (
+                <p className="text-sm text-destructive">{errors.identifier}</p>
+              )}
             </div>
 
             {/* Password */}
@@ -252,10 +284,13 @@ const Login = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Masukkan password"
+                  placeholder="Masukkan password (min. 6 karakter)"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="h-12 pr-12"
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+                  }}
+                  className={`h-12 pr-12 ${errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   autoComplete="current-password"
                 />
                 <button
@@ -266,6 +301,9 @@ const Login = () => {
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password}</p>
+              )}
             </div>
 
             {/* Forgot Password Link */}
