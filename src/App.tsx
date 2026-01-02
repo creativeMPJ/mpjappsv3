@@ -28,12 +28,12 @@ import Forbidden from "./pages/Forbidden";
 // ═══════════════════════════════════════════════════════════════
 // PROTECTED DASHBOARDS (Role-gated)
 // ═══════════════════════════════════════════════════════════════
-import Dashboard from "./pages/Dashboard";           // Admin Pusat
+import AdminPusatDashboard from "./pages/AdminPusatDashboard"; // Admin Pusat
 import RegionalDashboard from "./pages/RegionalDashboard"; // Admin Regional
 import MediaDashboard from "./pages/MediaDashboard"; // User
 import CrewDashboard from "./pages/CrewDashboard";   // User
 import FinanceDashboard from "./pages/FinanceDashboard"; // Admin Pusat
-import MajelisMilitanDashboard from "./pages/MajelisMilitanDashboard"; // Admin Pusat
+// MajelisMilitanDashboard merged into SuperAdminDashboard
 import SuperAdminDashboard from "./pages/SuperAdminDashboard"; // Super Admin (God Mode)
 import AdminRegionalDetail from "./pages/AdminRegionalDetail"; // Admin Pusat
 
@@ -88,7 +88,7 @@ const App = () => (
               path="/admin-pusat" 
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
-                  <Dashboard />
+                  <AdminPusatDashboard />
                 </ProtectedRoute>
               } 
             />
@@ -96,7 +96,7 @@ const App = () => (
               path="/admin-pusat/*" 
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
-                  <Dashboard />
+                  <AdminPusatDashboard />
                 </ProtectedRoute>
               } 
             />
@@ -138,23 +138,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            {/* Legacy redirect from majelis-militan to super-admin */}
-            <Route 
-              path="/majelis-militan" 
-              element={
-                <ProtectedRoute allowedRoles={['admin_pusat']}>
-                  <MajelisMilitanDashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin-pusat/majelis-militan" 
-              element={
-                <ProtectedRoute allowedRoles={['admin_pusat']}>
-                  <MajelisMilitanDashboard />
-                </ProtectedRoute>
-              } 
-            />
+            {/* Majelis Militan merged into SuperAdminDashboard as "Hierarki Data" */}
             <Route 
               path="/admin-pusat/regional/:id" 
               element={

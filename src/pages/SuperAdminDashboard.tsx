@@ -11,7 +11,8 @@ import {
   DollarSign,
   UserCheck,
   Activity,
-  Menu
+  Menu,
+  Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,11 +31,13 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import logoMpj from "@/assets/logo-mpj.png";
 import UserManagement from "@/components/super-admin/UserManagement";
+import MajelisOverview from "@/components/majelis-dashboard/MajelisOverview";
 
-type ViewType = 'dashboard' | 'users' | 'audit' | 'settings';
+type ViewType = 'dashboard' | 'users' | 'audit' | 'settings' | 'hierarchy';
 
 const menuItems = [
   { id: 'dashboard' as ViewType, label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'hierarchy' as ViewType, label: 'Hierarki Data', icon: Layers },
   { id: 'users' as ViewType, label: 'User Management', icon: Users },
   { id: 'audit' as ViewType, label: 'Audit Log', icon: FileText },
   { id: 'settings' as ViewType, label: 'Settings', icon: Settings },
@@ -117,10 +120,17 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleHierarchyNavigate = (view: string) => {
+    // Navigate within hierarchy - can be extended later
+    console.log('Hierarchy navigate:', view);
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case 'users':
         return <UserManagement />;
+      case 'hierarchy':
+        return <MajelisOverview onNavigate={handleHierarchyNavigate} />;
       case 'audit':
         return (
           <Card>

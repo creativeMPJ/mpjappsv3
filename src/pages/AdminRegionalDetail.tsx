@@ -1,422 +1,230 @@
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Building2, Calendar, TrendingUp, MapPin, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Users, Building2, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Area, AreaChart, Bar, BarChart, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
-const regionalData: Record<string, {
+interface RegionDetail {
+  id: string;
   name: string;
   code: string;
-  members: number;
-  pesantren: number;
-  events: number;
-  growth: string;
-  coordinator: string;
-  phone: string;
-  email: string;
-  cities: string[];
-}> = {
-  "malang-raya": {
-    name: "Malang Raya",
-    code: "01",
-    members: 1250,
-    pesantren: 85,
-    events: 12,
-    growth: "+15%",
-    coordinator: "KH. Ahmad Fauzi",
-    phone: "081234567890",
-    email: "malang@mpj.id",
-    cities: ["Kota Malang", "Kabupaten Malang", "Kota Batu"]
-  },
-  "surabaya-gresik": {
-    name: "Surabaya Gresik",
-    code: "02",
-    members: 2100,
-    pesantren: 120,
-    events: 18,
-    growth: "+22%",
-    coordinator: "KH. Muhammad Ridwan",
-    phone: "081234567891",
-    email: "surabaya@mpj.id",
-    cities: ["Kota Surabaya", "Kabupaten Gresik"]
-  },
-  "sidoarjo": {
-    name: "Sidoarjo",
-    code: "03",
-    members: 890,
-    pesantren: 65,
-    events: 8,
-    growth: "+12%",
-    coordinator: "KH. Abdul Karim",
-    phone: "081234567892",
-    email: "sidoarjo@mpj.id",
-    cities: ["Kabupaten Sidoarjo"]
-  },
-  "pasuruan": {
-    name: "Pasuruan",
-    code: "04",
-    members: 1450,
-    pesantren: 95,
-    events: 14,
-    growth: "+18%",
-    coordinator: "KH. Hasan Basri",
-    phone: "081234567893",
-    email: "pasuruan@mpj.id",
-    cities: ["Kota Pasuruan", "Kabupaten Pasuruan"]
-  },
-  "mojokerto": {
-    name: "Mojokerto",
-    code: "05",
-    members: 720,
-    pesantren: 48,
-    events: 6,
-    growth: "+10%",
-    coordinator: "KH. Syaiful Anwar",
-    phone: "081234567894",
-    email: "mojokerto@mpj.id",
-    cities: ["Kota Mojokerto", "Kabupaten Mojokerto"]
-  },
-  "jombang": {
-    name: "Jombang",
-    code: "06",
-    members: 1680,
-    pesantren: 110,
-    events: 16,
-    growth: "+20%",
-    coordinator: "KH. Mahfud Siddiq",
-    phone: "081234567895",
-    email: "jombang@mpj.id",
-    cities: ["Kabupaten Jombang"]
-  },
-  "kediri": {
-    name: "Kediri",
-    code: "07",
-    members: 1320,
-    pesantren: 88,
-    events: 11,
-    growth: "+14%",
-    coordinator: "KH. Nur Hadi",
-    phone: "081234567896",
-    email: "kediri@mpj.id",
-    cities: ["Kota Kediri", "Kabupaten Kediri"]
-  },
-  "blitar": {
-    name: "Blitar Raya",
-    code: "08",
-    members: 680,
-    pesantren: 42,
-    events: 5,
-    growth: "+8%",
-    coordinator: "KH. Imam Ghozali",
-    phone: "081234567897",
-    email: "blitar@mpj.id",
-    cities: ["Kota Blitar", "Kabupaten Blitar"]
-  },
-  "tulungagung": {
-    name: "Tulungagung",
-    code: "09",
-    members: 540,
-    pesantren: 35,
-    events: 4,
-    growth: "+7%",
-    coordinator: "KH. Zainal Abidin",
-    phone: "081234567898",
-    email: "tulungagung@mpj.id",
-    cities: ["Kabupaten Tulungagung"]
-  },
-  "trenggalek": {
-    name: "Trenggalek",
-    code: "10",
-    members: 320,
-    pesantren: 22,
-    events: 3,
-    growth: "+5%",
-    coordinator: "KH. Sholeh Bahruddin",
-    phone: "081234567899",
-    email: "trenggalek@mpj.id",
-    cities: ["Kabupaten Trenggalek"]
-  }
-};
+  cities: { name: string }[];
+}
 
-const memberGrowthData = [
-  { month: "Jul", members: 850 },
-  { month: "Agu", members: 920 },
-  { month: "Sep", members: 980 },
-  { month: "Okt", members: 1050 },
-  { month: "Nov", members: 1150 },
-  { month: "Des", members: 1250 },
-];
+interface Stats {
+  memberCount: number;
+  pesantrenCount: number;
+  adminCount: number;
+}
 
-const monthlyRegistrationData = [
-  { month: "Jul", pesantren: 8, kru: 25 },
-  { month: "Agu", members: 12, pesantren: 10, kru: 32 },
-  { month: "Sep", members: 15, pesantren: 12, kru: 38 },
-  { month: "Okt", members: 18, pesantren: 14, kru: 45 },
-  { month: "Nov", members: 22, pesantren: 18, kru: 52 },
-  { month: "Des", members: 28, pesantren: 22, kru: 60 },
-];
-
-const recentPesantren = [
-  { id: 1, name: "PP. Nurul Huda", kyai: "KH. Ahmad", members: 45, status: "active" },
-  { id: 2, name: "PP. Darul Ulum", kyai: "KH. Mahmud", members: 38, status: "active" },
-  { id: 3, name: "PP. Al-Hikam", kyai: "KH. Farid", members: 52, status: "active" },
-  { id: 4, name: "PP. Roudlotul Quran", kyai: "KH. Sholeh", members: 28, status: "pending" },
-  { id: 5, name: "PP. Miftahul Ulum", kyai: "KH. Ridwan", members: 33, status: "active" },
-];
-
-const chartConfig = {
-  members: { label: "Member", color: "hsl(160, 84%, 39%)" },
-  pesantren: { label: "Pesantren", color: "hsl(217, 91%, 60%)" },
-  kru: { label: "Kru", color: "hsl(38, 92%, 50%)" },
-};
+interface RecentPesantren {
+  id: string;
+  nama_pesantren: string | null;
+  nama_pengasuh: string | null;
+  status_account: string;
+  created_at: string | null;
+}
 
 const AdminRegionalDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  const region = id ? regionalData[id] : null;
-  
+  const [loading, setLoading] = useState(true);
+  const [region, setRegion] = useState<RegionDetail | null>(null);
+  const [stats, setStats] = useState<Stats>({ memberCount: 0, pesantrenCount: 0, adminCount: 0 });
+  const [recentPesantren, setRecentPesantren] = useState<RecentPesantren[]>([]);
+
+  useEffect(() => {
+    if (!id) return;
+    fetchRegionData();
+  }, [id]);
+
+  const fetchRegionData = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Ambil Info Regional & Kota
+      const { data: regionData, error: regionError } = await supabase
+        .from("regions")
+        .select(`id, name, code, cities (name)`)
+        .eq("id", id)
+        .single();
+
+      if (regionError) throw regionError;
+      setRegion(regionData as RegionDetail);
+
+      // 2. Hitung Statistik (Realtime Count)
+      const { count: memberCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("region_id", id)
+        .eq("role", "user");
+
+      const { count: pesantrenCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("region_id", id)
+        .not("nama_pesantren", "is", null);
+
+      const { count: adminCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("region_id", id)
+        .eq("role", "admin_regional");
+
+      setStats({
+        memberCount: memberCount || 0,
+        pesantrenCount: pesantrenCount || 0,
+        adminCount: adminCount || 0
+      });
+
+      // 3. Ambil List Pesantren Terbaru (5 Terakhir)
+      const { data: latestPesantren } = await supabase
+        .from("profiles")
+        .select("id, nama_pesantren, nama_pengasuh, status_account, created_at")
+        .eq("region_id", id)
+        .not("nama_pesantren", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      setRecentPesantren((latestPesantren as RecentPesantren[]) || []);
+
+    } catch (error) {
+      console.error("Error fetching detail:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!region) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground mb-4">Regional tidak ditemukan</p>
-            <Button onClick={() => navigate("/dashboard")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Kembali ke Dashboard
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Data tidak ditemukan.</p>
+        <Button onClick={() => navigate("/admin-pusat")}>Kembali</Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-emerald-700 text-white">
+      <div className="bg-card border-b">
         <div className="container mx-auto px-4 py-6">
           <Button 
             variant="ghost" 
-            className="text-white hover:bg-emerald-600 mb-4"
-            onClick={() => navigate("/dashboard")}
+            className="mb-4 gap-2"
+            onClick={() => navigate("/admin-pusat")}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4" />
             Kembali ke Dashboard
           </Button>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          
+          <div className="flex items-start justify-between">
             <div>
-              <Badge className="bg-amber-500 text-white mb-2">
-                Regional {region.code}
-              </Badge>
-              <h1 className="text-2xl md:text-3xl font-bold">{region.name}</h1>
-              <p className="text-emerald-100 mt-1">
-                Koordinator: {region.coordinator}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm">
-                <Phone className="h-4 w-4 mr-2" />
-                {region.phone}
-              </Button>
-              <Button variant="secondary" size="sm">
-                <Mail className="h-4 w-4 mr-2" />
-                Email
-              </Button>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline">KODE RR: {region.code}</Badge>
+                <Badge variant="secondary">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  {region.cities.length} Kota Cakupan
+                </Badge>
+              </div>
+              <h1 className="text-3xl font-bold">{region.name}</h1>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      {/* Content */}
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Stats Grid */}
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 rounded-lg">
-                  <Users className="h-5 w-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Member</p>
-                  <p className="text-2xl font-bold">{region.members.toLocaleString()}</p>
-                </div>
-              </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Pesantren</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pesantrenCount}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pesantren</p>
-                  <p className="text-2xl font-bold">{region.pesantren}</p>
-                </div>
-              </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Member/Kru</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.memberCount}</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Calendar className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Event</p>
-                  <p className="text-2xl font-bold">{region.events}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Pertumbuhan</p>
-                  <p className="text-2xl font-bold text-green-600">{region.growth}</p>
-                </div>
-              </div>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Admin Regional</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.adminCount}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          {/* Member Growth Trend */}
+        {/* City Coverage & Recent Pesantren */}
+        <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
-                Tren Pertumbuhan Member
-              </CardTitle>
-              <CardDescription>6 bulan terakhir</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <AreaChart data={memberGrowthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="memberGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(160, 84%, 39%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis 
-                    dataKey="month" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 12 }} 
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 12 }} 
-                    width={40}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="members"
-                    stroke="hsl(160, 84%, 39%)"
-                    strokeWidth={2}
-                    fill="url(#memberGradient)"
-                  />
-                </AreaChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Registrations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                Pendaftaran Bulanan
-              </CardTitle>
-              <CardDescription>Pesantren & Kru baru per bulan</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <BarChart data={monthlyRegistrationData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <XAxis 
-                    dataKey="month" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 12 }} 
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 12 }} 
-                    width={40}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="pesantren" fill="hsl(217, 91%, 60%)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="kru" fill="hsl(38, 92%, 50%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* Coverage Area */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-emerald-600" />
-                Cakupan Wilayah
-              </CardTitle>
-              <CardDescription>Kota/Kabupaten dalam regional ini</CardDescription>
+              <CardTitle>Cakupan Kota</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {region.cities.map((city, index) => (
-                  <Badge key={index} variant="secondary">
-                    {city}
-                  </Badge>
+                {region.cities.map((city, idx) => (
+                  <Badge key={idx} variant="secondary">{city.name}</Badge>
                 ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Recent Pesantren Table */}
-          <Card className="md:col-span-2">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Pesantren Terbaru</CardTitle>
+              <CardTitle>Pesantren Terbaru</CardTitle>
               <CardDescription>5 pesantren terakhir terdaftar</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nama</TableHead>
+                    <TableHead>Nama Pesantren</TableHead>
                     <TableHead>Pengasuh</TableHead>
-                    <TableHead className="text-center">Member</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentPesantren.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell>{p.kyai}</TableCell>
-                      <TableCell className="text-center">{p.members}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={p.status === "active" ? "default" : "secondary"}>
-                          {p.status === "active" ? "Aktif" : "Pending"}
+                      <TableCell className="font-medium">{p.nama_pesantren}</TableCell>
+                      <TableCell>{p.nama_pengasuh || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={p.status_account === 'active' ? 'default' : 'secondary'}>
+                          {p.status_account}
                         </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {recentPesantren.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        Belum ada pesantren terdaftar
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
