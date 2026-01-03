@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Users, MapPin, Plus, Trash2, Settings2 } from "lucide-react";
+import { Building2, Users, MapPin, Plus, Settings2, Pencil } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import JabatanCodesManagement from "./JabatanCodesManagement";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -52,9 +52,15 @@ const AdminPusatMasterData = () => {
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [isAddRegionOpen, setIsAddRegionOpen] = useState(false);
   const [isAddCityOpen, setIsAddCityOpen] = useState(false);
+  const [isEditRegionOpen, setIsEditRegionOpen] = useState(false);
+  const [isEditCityOpen, setIsEditCityOpen] = useState(false);
   const [newRegionName, setNewRegionName] = useState("");
   const [newRegionCode, setNewRegionCode] = useState("");
   const [newCityName, setNewCityName] = useState("");
+  const [editingRegion, setEditingRegion] = useState<Region | null>(null);
+  const [editingCity, setEditingCity] = useState<City | null>(null);
+  const [editRegionName, setEditRegionName] = useState("");
+  const [editCityName, setEditCityName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchData = async () => {
@@ -223,38 +229,51 @@ const AdminPusatMasterData = () => {
     }
   };
 
-  // Delete region
-  const handleDeleteRegion = async (region: Region) => {
-    if (!confirm(`Hapus regional "${region.name}"? Semua kota di dalamnya juga akan terhapus.`)) {
+  // Edit region
+  const handleEditRegion = async () => {
+    if (!editingRegion || !editRegionName.trim()) {
+      toast({
+        title: "Error",
+        description: "Nama regional harus diisi",
+        variant: "destructive",
+      });
       return;
     }
 
+    setIsSaving(true);
     try {
       const { error } = await supabase
         .from("regions")
-        .delete()
-        .eq("id", region.id);
+        .update({ name: editRegionName.trim() })
+        .eq("id", editingRegion.id);
 
       if (error) throw error;
 
-      setRegions(prev => prev.filter(r => r.id !== region.id));
-      setCities(prev => prev.filter(c => c.region_id !== region.id));
+      setRegions(prev => prev.map(r => 
+        r.id === editingRegion.id ? { ...r, name: editRegionName.trim() } : r
+      ));
       
-      if (selectedRegion?.id === region.id) {
-        setSelectedRegion(regions.find(r => r.id !== region.id) || null);
+      if (selectedRegion?.id === editingRegion.id) {
+        setSelectedRegion(prev => prev ? { ...prev, name: editRegionName.trim() } : null);
       }
-
+      
+      setIsEditRegionOpen(false);
+      setEditingRegion(null);
+      setEditRegionName("");
+      
       toast({
         title: "Berhasil",
-        description: `Regional "${region.name}" berhasil dihapus.`,
+        description: "Nama regional berhasil diperbarui.",
       });
     } catch (error: any) {
-      console.error("Error deleting region:", error);
+      console.error("Error editing region:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Tidak dapat menghapus regional yang masih memiliki pesantren.",
+        description: error.message || "Terjadi kesalahan saat mengubah regional.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -299,34 +318,63 @@ const AdminPusatMasterData = () => {
     }
   };
 
-  // Delete city
-  const handleDeleteCity = async (city: City) => {
-    if (!confirm(`Hapus kota "${city.name}"?`)) {
+  // Edit city
+  const handleEditCity = async () => {
+    if (!editingCity || !editCityName.trim()) {
+      toast({
+        title: "Error",
+        description: "Nama kota harus diisi",
+        variant: "destructive",
+      });
       return;
     }
 
+    setIsSaving(true);
     try {
       const { error } = await supabase
         .from("cities")
-        .delete()
-        .eq("id", city.id);
+        .update({ name: editCityName.trim() })
+        .eq("id", editingCity.id);
 
       if (error) throw error;
 
-      setCities(prev => prev.filter(c => c.id !== city.id));
-
+      setCities(prev => prev.map(c => 
+        c.id === editingCity.id ? { ...c, name: editCityName.trim() } : c
+      ));
+      
+      setIsEditCityOpen(false);
+      setEditingCity(null);
+      setEditCityName("");
+      
       toast({
         title: "Berhasil",
-        description: `Kota "${city.name}" berhasil dihapus.`,
+        description: "Nama kota berhasil diperbarui.",
       });
     } catch (error: any) {
-      console.error("Error deleting city:", error);
+      console.error("Error editing city:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Tidak dapat menghapus kota yang masih memiliki pesantren.",
+        description: error.message || "Terjadi kesalahan saat mengubah kota.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  // Open edit region dialog
+  const openEditRegion = (region: Region, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingRegion(region);
+    setEditRegionName(region.name);
+    setIsEditRegionOpen(true);
+  };
+
+  // Open edit city dialog
+  const openEditCity = (city: City) => {
+    setEditingCity(city);
+    setEditCityName(city.name);
+    setIsEditCityOpen(true);
   };
 
   // Filter cities by selected region
@@ -511,13 +559,11 @@ const AdminPusatMasterData = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteRegion(region);
-                              }}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={(e) => openEditRegion(region, e)}
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              title="Edit Nama Regional"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -565,10 +611,11 @@ const AdminPusatMasterData = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteCity(city)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => openEditCity(city)}
+                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            title="Edit Nama Kota"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
                       ))
@@ -645,6 +692,46 @@ const AdminPusatMasterData = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Region Dialog */}
+      <Dialog open={isEditRegionOpen} onOpenChange={setIsEditRegionOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Nama Regional</DialogTitle>
+            <DialogDescription>
+              Ubah nama regional. Kode RR tidak dapat diubah untuk menjaga integritas NIP.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nama Regional</Label>
+              <Input
+                value={editRegionName}
+                onChange={(e) => setEditRegionName(e.target.value)}
+                placeholder="Masukkan nama regional"
+              />
+            </div>
+            {editingRegion && (
+              <div className="p-3 bg-slate-100 rounded-lg">
+                <p className="text-xs text-slate-500">Kode RR (Tidak dapat diubah)</p>
+                <p className="font-mono font-bold text-lg">{editingRegion.code}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditRegionOpen(false)}>
+              Batal
+            </Button>
+            <Button 
+              onClick={handleEditRegion} 
+              disabled={isSaving || !editRegionName.trim()}
+              className="bg-[#166534] hover:bg-emerald-700 text-white"
+            >
+              {isSaving ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Add City Dialog */}
       <Dialog open={isAddCityOpen} onOpenChange={setIsAddCityOpen}>
         <DialogContent className="sm:max-w-md">
@@ -671,6 +758,40 @@ const AdminPusatMasterData = () => {
             <Button 
               onClick={handleAddCity} 
               disabled={isSaving}
+              className="bg-[#166534] hover:bg-emerald-700 text-white"
+            >
+              {isSaving ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit City Dialog */}
+      <Dialog open={isEditCityOpen} onOpenChange={setIsEditCityOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Nama Kota</DialogTitle>
+            <DialogDescription>
+              Ubah nama kota dalam regional {selectedRegion?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nama Kota</Label>
+              <Input
+                value={editCityName}
+                onChange={(e) => setEditCityName(e.target.value)}
+                placeholder="Masukkan nama kota"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditCityOpen(false)}>
+              Batal
+            </Button>
+            <Button 
+              onClick={handleEditCity} 
+              disabled={isSaving || !editCityName.trim()}
               className="bg-[#166534] hover:bg-emerald-700 text-white"
             >
               {isSaving ? "Menyimpan..." : "Simpan"}
