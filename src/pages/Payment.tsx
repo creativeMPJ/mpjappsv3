@@ -37,11 +37,11 @@ const Payment = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
 
-  const bankInfo = {
+  const [bankInfo, setBankInfo] = useState({
     bank: "Bank Syariah Indonesia (BSI)",
     accountNumber: "7171234567890",
     accountName: "MEDIA PONDOK JAWA TIMUR",
-  };
+  });
 
   // Check access and load payment data
   useEffect(() => {
@@ -112,8 +112,27 @@ const Payment = () => {
 
         if (priceError) throw priceError;
 
-        const fetchedBaseAmount = parseInt(String(priceSetting.value)) || 50000;
+        const fetchedBaseAmount = parseInt(String(priceSetting.value).replace(/"/g, '')) || 50000;
         setBaseAmount(fetchedBaseAmount);
+
+        // Fetch bank info from system_settings
+        const { data: bankSettings } = await supabase
+          .from('system_settings')
+          .select('key, value')
+          .in('key', ['bank_name', 'bank_account_number', 'bank_account_name']);
+
+        if (bankSettings && bankSettings.length > 0) {
+          const bankData: Record<string, string> = {};
+          bankSettings.forEach(setting => {
+            bankData[setting.key] = String(setting.value).replace(/"/g, '');
+          });
+          
+          setBankInfo({
+            bank: bankData.bank_name || "Bank Syariah Indonesia (BSI)",
+            accountNumber: bankData.bank_account_number || "7171234567890",
+            accountName: bankData.bank_account_name || "MEDIA PONDOK JAWA TIMUR",
+          });
+        }
 
         // 3. Check if payment record already exists (for persisted unique code)
         const { data: existingPayment, error: paymentError } = await supabase

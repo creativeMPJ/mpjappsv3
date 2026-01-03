@@ -279,7 +279,7 @@ const InstitutionSubmission = () => {
       }
       setIsUploadingDoc(false);
 
-      // Update profile with pesantren data
+      // Update profile with pesantren data (including region_id from city)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -287,6 +287,7 @@ const InstitutionSubmission = () => {
           nama_pengasuh: formData.namaPengasuh,
           alamat_singkat: formData.alamatLengkap,
           city_id: formData.cityId,
+          region_id: regionId, // Explicitly set region_id for Admin Regional visibility
           no_wa_pendaftar: formData.noWhatsapp,
         })
         .eq("id", authData.user.id);

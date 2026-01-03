@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import logoMpj from "@/assets/logo-mpj.png";
 import UserManagement from "@/components/super-admin/UserManagement";
 import MajelisOverview from "@/components/majelis-dashboard/MajelisOverview";
+import SuperAdminSettings from "@/components/super-admin/SuperAdminSettings";
 
 type ViewType = 'dashboard' | 'users' | 'audit' | 'settings' | 'hierarchy';
 
@@ -143,16 +144,7 @@ const SuperAdminDashboard = () => {
           </Card>
         );
       case 'settings':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Pengaturan sistem akan segera tersedia.</p>
-            </CardContent>
-          </Card>
-        );
+        return <SuperAdminSettings />;
       default:
         return (
           <div className="space-y-6">
