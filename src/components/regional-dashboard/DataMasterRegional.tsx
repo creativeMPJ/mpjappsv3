@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Download, Building2, Users, UserCircle } from "lucide-react";
+import { maskPhoneNumber, maskEmail, maskName } from "@/lib/privacy-utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,22 +156,15 @@ const DataMasterRegional = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {koordinatorData.map((item) => (
+                {koordinatorData.map((item) => (
                     <TableRow key={item.no} className="hover:bg-muted/30">
                       <TableCell className="font-medium">{item.no}</TableCell>
-                      <TableCell className="font-medium text-foreground">{item.nama}</TableCell>
+                      <TableCell className="font-medium text-foreground">{maskName(item.nama)}</TableCell>
                       <TableCell>{item.asalPesantren}</TableCell>
-                      <TableCell>
-                        <a 
-                          href={`https://wa.me/${item.wa}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sidebar hover:underline"
-                        >
-                          {item.wa}
-                        </a>
+                      <TableCell className="text-sidebar">
+                        {maskPhoneNumber(item.wa)}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{item.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{maskEmail(item.email)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
