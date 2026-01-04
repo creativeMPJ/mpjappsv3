@@ -31,6 +31,7 @@ interface MenuItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
+  comingSoon?: boolean;
 }
 
 const RegionalDashboard = () => {
@@ -65,8 +66,8 @@ const RegionalDashboard = () => {
     { id: "beranda", label: "DASHBOARD BERANDA", icon: LayoutDashboard },
     { id: "verifikasi", label: "VERIFIKASI PESANTREN", icon: CheckCircle, badge: pendingCount > 0 ? pendingCount : undefined },
     { id: "data-utama", label: "DATA UTAMA", icon: Database },
-    { id: "event", label: "MANAJEMEN EVENT", icon: Calendar },
-    { id: "regional-hub", label: "REGIONAL-HUB", icon: Share2 },
+    { id: "event", label: "MANAJEMEN EVENT", icon: Calendar, comingSoon: true },
+    { id: "regional-hub", label: "REGIONAL-HUB", icon: Share2, comingSoon: true },
     { id: "pengaturan", label: "PENGATURAN", icon: Settings },
   ];
 
@@ -79,6 +80,24 @@ const RegionalDashboard = () => {
     navigate('/login', { replace: true });
   };
 
+  // Coming Soon placeholder component
+  const ComingSoonPlaceholder = ({ title }: { title: string }) => (
+    <div className="flex flex-col items-center justify-center min-h-[400px] bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-100">
+      <div className="text-center space-y-4">
+        <div className="w-20 h-20 mx-auto bg-emerald-100 rounded-full flex items-center justify-center">
+          <Calendar className="w-10 h-10 text-emerald-600" />
+        </div>
+        <h3 className="text-2xl font-bold text-emerald-800">{title}</h3>
+        <p className="text-emerald-600 max-w-md">
+          Fitur ini sedang dalam pengembangan dan akan segera tersedia pada update berikutnya.
+        </p>
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 px-4 py-2">
+          Coming Soon
+        </Badge>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeView) {
       case "beranda":
@@ -88,9 +107,9 @@ const RegionalDashboard = () => {
       case "data-utama":
         return <DataMasterRegional />;
       case "event":
-        return <ManajemenEvent />;
+        return <ComingSoonPlaceholder title="Manajemen Event" />;
       case "regional-hub":
-        return <RegionalHub />;
+        return <ComingSoonPlaceholder title="Regional Hub" />;
       case "pengaturan":
         return <Pengaturan />;
       default:
@@ -128,6 +147,11 @@ const RegionalDashboard = () => {
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
               <span className="font-medium text-sm flex-1">{item.label}</span>
+              {item.comingSoon && (
+                <Badge className="bg-amber-500/80 text-white text-[10px] px-1.5">
+                  Soon
+                </Badge>
+              )}
               {item.badge && (
                 <Badge className="bg-red-500 text-white text-xs px-2">
                   {item.badge}
@@ -179,7 +203,7 @@ const RegionalDashboard = () => {
             <div>
               <p className="text-sm text-gray-500">Selamat datang kembali,</p>
               <h2 className="text-lg md:text-xl font-bold text-emerald-700">
-                Halo, Admin Malang Raya 👋
+                Halo, {profile?.nama_pesantren || 'Admin'} 👋
               </h2>
             </div>
           </div>
@@ -190,13 +214,13 @@ const RegionalDashboard = () => {
             </button>
             <div className="flex items-center gap-2 md:gap-3">
               <Avatar className="w-9 h-9 md:w-10 md:h-10 border-2 border-emerald-600">
-                <AvatarImage src="/placeholder.svg" />
+                <AvatarImage src={profile?.logo_url || "/placeholder.svg"} />
                 <AvatarFallback className="bg-emerald-600 text-white text-sm">
-                  AM
+                  {profile?.nama_pesantren?.substring(0, 2).toUpperCase() || 'AR'}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">Admin Malang</p>
+                <p className="text-sm font-medium text-gray-900">{profile?.nama_pesantren || 'Admin Regional'}</p>
                 <p className="text-xs text-gray-500">Regional Admin</p>
               </div>
             </div>

@@ -55,6 +55,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { maskPhoneNumber, maskEmail, maskName } from "@/lib/privacy-utils";
 
 interface PesantrenClaim {
   id: string;
@@ -434,7 +435,7 @@ const ValidasiPendaftar = () => {
                       {item.pesantren_name}
                     </TableCell>
                     <TableCell className="text-foreground hidden sm:table-cell">
-                      {item.nama_pengelola || '-'}
+                      {maskName(item.nama_pengelola) || '-'}
                     </TableCell>
                     <TableCell className="text-foreground hidden md:table-cell">
                       {item.kecamatan || '-'}
