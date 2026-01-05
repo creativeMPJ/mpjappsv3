@@ -134,6 +134,7 @@ const MediaDashboard = () => {
           <Administrasi 
             paymentStatus={paymentStatus}
             onPaymentStatusChange={() => {}}
+            debugProfile={isDebugMode ? profile : undefined}
           />
         );
       case "event":

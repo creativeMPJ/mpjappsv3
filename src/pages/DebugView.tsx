@@ -75,9 +75,58 @@ const MOCK_DATA = {
   },
   // Full crew slots (3/3) for testing Golden 3 rule
   fullCrewSlots: [
-    { id: '1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', xp_level: 1500 },
-    { id: '2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', xp_level: 2500 },
-    { id: '3', nama: 'Cahya Dewi', niam: 'AN260100103', jabatan: 'Desainer', xp_level: 800 },
+    { id: '1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', xp_level: 1500, skill: ['Videografi'], jabatan_code_id: null },
+    { id: '2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', xp_level: 2500, skill: ['Editing'], jabatan_code_id: null },
+    { id: '3', nama: 'Cahya Dewi', niam: 'AN260100103', jabatan: 'Desainer', xp_level: 800, skill: ['Desain Grafis'], jabatan_code_id: null },
+  ],
+  // Payment history mock data for Administrasi testing
+  paymentsPaid: [
+    {
+      id: 'pay-001',
+      base_amount: 500000,
+      unique_code: 123,
+      total_amount: 500123,
+      status: 'verified' as const,
+      created_at: '2025-01-15T10:00:00Z',
+      verified_at: '2025-01-16T14:30:00Z',
+      proof_file_url: '/placeholder.svg',
+      rejection_reason: null,
+    },
+    {
+      id: 'pay-002',
+      base_amount: 450000,
+      unique_code: 456,
+      total_amount: 450456,
+      status: 'verified' as const,
+      created_at: '2024-01-10T09:00:00Z',
+      verified_at: '2024-01-11T11:00:00Z',
+      proof_file_url: '/placeholder.svg',
+      rejection_reason: null,
+    },
+  ],
+  paymentsUnpaid: [
+    {
+      id: 'pay-003',
+      base_amount: 500000,
+      unique_code: 789,
+      total_amount: 500789,
+      status: 'pending_payment' as const,
+      created_at: '2025-01-20T08:00:00Z',
+      verified_at: null,
+      proof_file_url: null,
+      rejection_reason: null,
+    },
+    {
+      id: 'pay-004',
+      base_amount: 450000,
+      unique_code: 321,
+      total_amount: 450321,
+      status: 'pending_verification' as const,
+      created_at: '2025-01-18T10:00:00Z',
+      verified_at: null,
+      proof_file_url: '/placeholder.svg',
+      rejection_reason: null,
+    },
   ],
 };
 
