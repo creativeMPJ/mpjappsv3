@@ -108,12 +108,13 @@ const MediaDashboard = () => {
             paymentStatus={paymentStatus}
             profileLevel={profileLevel}
             onProfileLevelChange={() => {}}
+            debugProfile={isDebugMode ? profile : undefined}
           />
         );
       case "kru":
-        return <ManajemenKru paymentStatus={paymentStatus} />;
+        return <ManajemenKru paymentStatus={paymentStatus} debugProfile={isDebugMode ? profile : undefined} />;
       case "eid":
-        return <EIDCard isGold={profileLevel === 'gold' || profileLevel === 'platinum'} />;
+        return <EIDCard isGold={profileLevel === 'gold' || profileLevel === 'platinum'} debugProfile={isDebugMode ? profile : undefined} />;
       case "administrasi":
         return (
           <Administrasi 

@@ -6,10 +6,19 @@ import EIDCardGenerator from "@/components/shared/EIDCardGenerator";
 
 interface EIDCardProps {
   isGold: boolean;
+  debugProfile?: {
+    nip?: string;
+    nama_pesantren?: string;
+    nama_pengasuh?: string;
+    profile_level?: string;
+  };
 }
 
-const EIDCard = ({ isGold }: EIDCardProps) => {
-  const { profile } = useAuth();
+const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
+  const { profile: authProfile } = useAuth();
+  
+  // Use debug profile if provided, otherwise use auth profile
+  const profile = debugProfile || authProfile;
 
   if (!isGold) {
     return (

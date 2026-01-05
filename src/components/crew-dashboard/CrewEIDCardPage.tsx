@@ -14,15 +14,24 @@ import logoMpj from "@/assets/logo-mpj.png";
 interface CrewEIDCardPageProps {
   isGold: boolean;
   onBack: () => void;
+  debugCrew?: {
+    nama?: string;
+    niam?: string;
+    jabatan?: string;
+    xp_level?: number;
+    skill?: string[];
+    institution_name?: string;
+  };
 }
 
-const CrewEIDCardPage = ({ isGold, onBack }: CrewEIDCardPageProps) => {
+const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCardPageProps) => {
   const location = useLocation();
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Support debug mode via location.state
-  const debugCrew = (location.state as any)?.debugCrew;
-  const isDebugMode = (location.state as any)?.isDebugMode;
+  // Support debug mode via location.state OR props
+  const stateDebugCrew = (location.state as any)?.debugCrew;
+  const isDebugMode = (location.state as any)?.isDebugMode || !!propDebugCrew;
+  const debugCrew = propDebugCrew || stateDebugCrew;
 
   const userData = isDebugMode && debugCrew ? {
     name: debugCrew.nama,

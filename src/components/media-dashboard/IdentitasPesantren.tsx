@@ -44,17 +44,24 @@ interface IdentitasPesantrenProps {
   paymentStatus: "paid" | "unpaid";
   profileLevel: "basic" | "silver" | "gold" | "platinum";
   onProfileLevelChange: (level: "basic" | "silver" | "gold" | "platinum") => void;
+  debugProfile?: {
+    nama_pesantren?: string;
+    nama_pengasuh?: string;
+    alamat_singkat?: string;
+    nip?: string;
+  };
 }
 
 const IdentitasPesantren = ({ 
   paymentStatus, 
   profileLevel,
-  onProfileLevelChange 
+  onProfileLevelChange,
+  debugProfile 
 }: IdentitasPesantrenProps) => {
   const [formData, setFormData] = useState({
-    namaPesantren: "Pondok Pesantren Al-Hikmah",
-    pengasuh: "KH. Ahmad Dahlan",
-    alamat: "Jl. Raya No. 123, Malang",
+    namaPesantren: debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah",
+    pengasuh: debugProfile?.nama_pengasuh || "KH. Ahmad Dahlan",
+    alamat: debugProfile?.alamat_singkat || "Jl. Raya No. 123, Malang",
     smartRegion: "",
     sejarah: "",
     visiMisi: "",

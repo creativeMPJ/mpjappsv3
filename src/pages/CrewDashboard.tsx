@@ -56,11 +56,11 @@ const CrewDashboard = () => {
       case "sertifikat":
         return <CrewSertifikatPage />;
       case "eid":
-        return <CrewEIDCardPage isGold={institutionPaid} onBack={() => setActiveView("profil")} />;
+        return <CrewEIDCardPage isGold={institutionPaid} onBack={() => setActiveView("profil")} debugCrew={debugCrew} />;
       case "profil":
-        return <CrewProfilPage onNavigate={setActiveView} />;
+        return <CrewProfilPage onNavigate={setActiveView} debugCrew={debugCrew} />;
       default:
-        return <CrewBerandaPage onNavigate={setActiveView} />;
+        return <CrewBerandaPage onNavigate={setActiveView} debugCrew={debugCrew} />;
     }
   };
 

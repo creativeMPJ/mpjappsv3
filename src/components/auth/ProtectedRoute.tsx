@@ -14,6 +14,10 @@ interface ProtectedRouteProps {
 /**
  * TWO-LAYER GLOBAL ACCESS GATE
  * 
+ * DEBUG MODE BYPASS:
+ * - If location.state.isDebugMode === true, skip all auth checks
+ * - This allows /debug-view to navigate to dashboards with mock data
+ * 
  * LAYER 1 - STATUS GATE (Global):
  * - NOT authenticated → /login
  * - status = 'pending' → /verification-pending
@@ -23,9 +27,6 @@ interface ProtectedRouteProps {
  * - /admin-pusat/* → role === 'admin_pusat'
  * - /admin-regional/* → role === 'admin_regional'
  * - /user/* → role === 'user'
- * 
- * All enforcement happens BEFORE render, not after.
- * Session persistence: checks status on every auth state change.
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { user, profile, isLoading, signOut } = useAuth();
@@ -33,8 +34,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   const { toast } = useToast();
   const hasHandledRejection = useRef(false);
 
+  // Check for debug mode bypass from /debug-view
+  const locationState = location.state as { isDebugMode?: boolean } | null;
+  const isDebugMode = locationState?.isDebugMode === true;
+
   // Handle rejected status with logout
   useEffect(() => {
+    // Skip rejection handling in debug mode
+    if (isDebugMode) return;
+    
     if (
       profile?.status_account === 'rejected' && 
       !hasHandledRejection.current &&
@@ -51,7 +59,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
       
       signOut();
     }
-  }, [profile?.status_account, signOut, toast, location.pathname]);
+  }, [profile?.status_account, signOut, toast, location.pathname, isDebugMode]);
 
   // Reset rejection handler when user changes
   useEffect(() => {
@@ -59,6 +67,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
       hasHandledRejection.current = false;
     }
   }, [user]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // DEBUG MODE BYPASS: Skip all auth checks when coming from /debug-view
+  // ═══════════════════════════════════════════════════════════════
+  if (isDebugMode) {
+    return <>{children}</>;
+  }
 
   // Show loading state while fetching auth data
   if (isLoading) {
