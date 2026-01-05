@@ -36,13 +36,14 @@ import EIDAsetPage from "@/components/media-dashboard/EIDAsetPage";
 // Menu order as per specification
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
 
+// Menu order as per strict specification
 const menuItems = [
   { id: "beranda" as ViewType, label: "BERANDA", icon: LayoutDashboard },
   { id: "identitas" as ViewType, label: "IDENTITAS PESANTREN", icon: Building },
   { id: "administrasi" as ViewType, label: "ADMINISTRASI", icon: CreditCard },
   { id: "tim" as ViewType, label: "TIM MEDIA", icon: Users },
-  { id: "event" as ViewType, label: "EVENT", icon: Calendar, comingSoon: true },
   { id: "eid" as ViewType, label: "E-ID & ASET", icon: IdCard },
+  { id: "event" as ViewType, label: "EVENT", icon: Calendar, comingSoon: true },
   { id: "hub" as ViewType, label: "MPJ HUB", icon: Layers, comingSoon: true },
   { id: "pengaturan" as ViewType, label: "PENGATURAN", icon: Settings },
 ];
