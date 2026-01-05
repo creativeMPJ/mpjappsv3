@@ -14,6 +14,13 @@ type ViewType = "beranda" | "event" | "sertifikat" | "eid" | "profil";
 
 interface CrewProfilPageProps {
   onNavigate: (view: ViewType) => void;
+  debugCrew?: {
+    nama?: string;
+    niam?: string;
+    jabatan?: string;
+    xp_level?: number;
+    skill?: string[];
+  };
 }
 
 const availableSkills = [
@@ -28,10 +35,13 @@ const teamMembers = [
   { id: 3, name: "Nurul Hidayah", avatar: "https://i.pravatar.cc/150?img=32" },
 ];
 
-const CrewProfilPage = ({ onNavigate }: CrewProfilPageProps) => {
-  const [name] = useState("Ahmad Fauzi");
+const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
+  // Use debug data if available
+  const [name] = useState(debugCrew?.nama || "Ahmad Fauzi");
+  const niam = debugCrew?.niam || null;
+  const xpLevel = debugCrew?.xp_level || 150;
   const [whatsapp, setWhatsapp] = useState("081234567890");
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(["Video Editing", "Desain Grafis", "Videography"]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(debugCrew?.skill || ["Video Editing", "Desain Grafis", "Videography"]);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
 
   const toggleSkill = (skill: string) => {
@@ -72,7 +82,9 @@ const CrewProfilPage = ({ onNavigate }: CrewProfilPageProps) => {
               <div className="relative">
                 <Avatar className="h-24 w-24">
                   <AvatarImage src="https://i.pravatar.cc/150?img=12" />
-                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">AF</AvatarFallback>
+                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                    {name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <Button
                   size="icon"
@@ -82,7 +94,14 @@ const CrewProfilPage = ({ onNavigate }: CrewProfilPageProps) => {
                 </Button>
               </div>
               <h2 className="mt-4 text-xl font-bold text-foreground">{name}</h2>
-              <Badge className="mt-1 bg-primary/10 text-primary">Kru Media</Badge>
+              <Badge className="mt-1 bg-primary/10 text-primary">{debugCrew?.jabatan || 'Kru Media'}</Badge>
+              {/* NIAM Display - Professional Typography */}
+              {niam && (
+                <div className="mt-3 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <p className="text-xs text-emerald-600 uppercase tracking-wider">NIAM</p>
+                  <p className="text-lg font-mono font-bold text-emerald-800 tracking-wide">{niam}</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

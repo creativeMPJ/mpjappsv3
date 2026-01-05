@@ -58,9 +58,13 @@ interface CrewMember {
 
 interface ManajemenKruProps {
   paymentStatus: "paid" | "unpaid";
+  debugProfile?: {
+    nip?: string;
+    nama_pesantren?: string;
+  };
 }
 
-const ManajemenKru = ({ paymentStatus }: ManajemenKruProps) => {
+const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
   const { user } = useAuth();
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
   const [jabatanCodes, setJabatanCodes] = useState<JabatanCode[]>([]);
