@@ -282,7 +282,8 @@ const DebugView = () => {
                 <Badge className="bg-green-100 text-green-700">Paid</Badge>
               </div>
               <p className="text-sm text-slate-600">
-                Mock data Platinum: Pembayaran Lunas, Slot Kru Penuh (3/3), Diamond Crystal Theme.
+                Mock data Platinum: Pembayaran Lunas, Slot Kru Penuh (3/3), Diamond Crystal Theme. 
+                Nav Order: Beranda → Identitas → Administrasi → Tim Media → E-ID & Aset → Event (Soon) → MPJ HUB (Soon) → Pengaturan.
               </p>
               <div className="flex gap-2">
                 <Button 

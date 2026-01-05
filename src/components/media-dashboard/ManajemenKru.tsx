@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +64,113 @@ interface ManajemenKruProps {
   };
 }
 
+const FREE_SLOT_LIMIT = 3;
+
+const skillOptions = [
+  "Editor Video",
+  "Desainer Grafis",
+  "Fotografer",
+  "Content Writer",
+  "Social Media",
+  "Videografi",
+];
+
+// Memoized crew row component for performance
+const CrewRow = memo(({ 
+  member, 
+  jabatanCodes, 
+  paymentStatus, 
+  onUpdateJabatan, 
+  onDelete 
+}: {
+  member: CrewMember;
+  jabatanCodes: JabatanCode[];
+  paymentStatus: "paid" | "unpaid";
+  onUpdateJabatan: (id: string, jabatanCodeId: string) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const getAvatarInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+            {getAvatarInitials(member.nama)}
+          </div>
+          <span className="font-medium text-foreground">{member.nama}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Select
+          value={member.jabatan_code_id || ""}
+          onValueChange={(value) => onUpdateJabatan(member.id, value)}
+          disabled={paymentStatus === "unpaid"}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue>
+              {member.jabatan || "Pilih jabatan"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {jabatanCodes.map((jabatan) => (
+              <SelectItem key={jabatan.id} value={jabatan.id}>
+                <span className="font-mono text-xs mr-2">[{jabatan.code}]</span>
+                {jabatan.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        {member.niam ? (
+          <Badge variant="outline" className="font-mono text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
+            {member.niam}
+          </Badge>
+        ) : (
+          <Badge variant="secondary" className="text-xs">
+            Belum terbit
+          </Badge>
+        )}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          <Zap className="h-4 w-4 text-accent" />
+          <span className="font-semibold text-accent">{member.xp_level || 0}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap gap-1">
+          {member.skill?.map((skill) => (
+            <Badge
+              key={skill}
+              variant="secondary"
+              className="bg-primary/10 text-primary text-xs"
+            >
+              {skill}
+            </Badge>
+          ))}
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive hover:bg-destructive/10"
+          onClick={() => onDelete(member.id)}
+          disabled={paymentStatus === "unpaid"}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+});
+
+CrewRow.displayName = 'CrewRow';
+
 const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
   const { user } = useAuth();
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
@@ -77,43 +184,26 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
     skill: "",
   });
 
-  const skillOptions = [
-    "Editor Video",
-    "Desainer Grafis",
-    "Fotografer",
-    "Content Writer",
-    "Social Media",
-    "Videografi",
-  ];
+  // Memoized computed values
+  const isSlotLimitReached = useMemo(() => crewMembers.length >= FREE_SLOT_LIMIT, [crewMembers.length]);
+  const isAddDisabled = useMemo(() => paymentStatus === "unpaid" || isSlotLimitReached, [paymentStatus, isSlotLimitReached]);
 
   // Fetch crew members and jabatan codes
-  useEffect(() => {
-    fetchData();
-  }, [user?.id]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user?.id) return;
     
     setIsLoading(true);
     try {
-      // Fetch jabatan codes
-      const { data: jabatanData, error: jabatanError } = await supabase
-        .from('jabatan_codes')
-        .select('*')
-        .order('name');
+      const [jabatanResult, crewResult] = await Promise.all([
+        supabase.from('jabatan_codes').select('*').order('name'),
+        supabase.from('crews').select('*').eq('profile_id', user.id).order('created_at', { ascending: false })
+      ]);
 
-      if (jabatanError) throw jabatanError;
-      setJabatanCodes(jabatanData || []);
+      if (jabatanResult.error) throw jabatanResult.error;
+      if (crewResult.error) throw crewResult.error;
 
-      // Fetch crew members for this profile
-      const { data: crewData, error: crewError } = await supabase
-        .from('crews')
-        .select('*')
-        .eq('profile_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (crewError) throw crewError;
-      setCrewMembers(crewData || []);
+      setJabatanCodes(jabatanResult.data || []);
+      setCrewMembers(crewResult.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -124,9 +214,13 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const handleAddMember = async () => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleAddMember = useCallback(async () => {
     if (!newMember.name || !newMember.jabatan_code_id || !newMember.skill) {
       toast({
         title: "Error",
@@ -140,10 +234,8 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
 
     setIsSaving(true);
     try {
-      // Get jabatan name for the jabatan field
       const selectedJabatan = jabatanCodes.find(j => j.id === newMember.jabatan_code_id);
 
-      // Insert new crew member
       const { data: newCrew, error: insertError } = await supabase
         .from('crews')
         .insert({
@@ -159,7 +251,6 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
 
       if (insertError) throw insertError;
 
-      // Generate NIAM using the database function
       const { data: niamData, error: niamError } = await supabase
         .rpc('generate_niam', {
           p_crew_id: newCrew.id,
@@ -169,7 +260,6 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
 
       if (niamError) {
         console.error('NIAM generation error:', niamError);
-        // Don't throw - crew was created, just NIAM failed (likely no NIP yet)
         toast({
           title: "Kru Ditambahkan",
           description: niamError.message.includes('NIP') 
@@ -197,9 +287,9 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [newMember, user?.id, jabatanCodes, fetchData]);
 
-  const handleDeleteMember = async (id: string) => {
+  const handleDeleteMember = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('crews')
@@ -208,7 +298,7 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
 
       if (error) throw error;
 
-      setCrewMembers(crewMembers.filter((m) => m.id !== id));
+      setCrewMembers(prev => prev.filter((m) => m.id !== id));
       toast({
         title: "Dihapus",
         description: "Anggota kru berhasil dihapus",
@@ -221,9 +311,9 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
         variant: "destructive",
       });
     }
-  };
+  }, []);
 
-  const handleUpdateJabatan = async (crewId: string, newJabatanCodeId: string) => {
+  const handleUpdateJabatan = useCallback(async (crewId: string, newJabatanCodeId: string) => {
     try {
       const selectedJabatan = jabatanCodes.find(j => j.id === newJabatanCodeId);
       
@@ -251,14 +341,7 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
         variant: "destructive",
       });
     }
-  };
-
-  const FREE_SLOT_LIMIT = 3;
-  const isSlotLimitReached = crewMembers.length >= FREE_SLOT_LIMIT;
-  const isAddDisabled = paymentStatus === "unpaid" || isSlotLimitReached;
-  const getAvatarInitials = (name: string) => {
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-  };
+  }, [jabatanCodes, fetchData]);
 
   if (isLoading) {
     return (
@@ -272,7 +355,7 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Manajemen Crew</h1>
+          <h1 className="text-2xl font-bold text-foreground">Tim Media</h1>
           <p className="text-muted-foreground">
             Kelola anggota tim media pesantren Anda ({crewMembers.length}/{FREE_SLOT_LIMIT} slot gratis)
           </p>
@@ -435,82 +518,23 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
             <TableBody>
               {crewMembers.length > 0 ? (
                 crewMembers.map((member) => (
-                  <TableRow key={member.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                          {getAvatarInitials(member.nama)}
-                        </div>
-                        <span className="font-medium text-foreground">{member.nama}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={member.jabatan_code_id || ""}
-                        onValueChange={(value) => handleUpdateJabatan(member.id, value)}
-                        disabled={paymentStatus === "unpaid"}
-                      >
-                        <SelectTrigger className="w-40">
-                          <SelectValue>
-                            {member.jabatan || "Pilih jabatan"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {jabatanCodes.map((jabatan) => (
-                            <SelectItem key={jabatan.id} value={jabatan.id}>
-                              <span className="font-mono text-xs mr-2">[{jabatan.code}]</span>
-                              {jabatan.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {member.niam ? (
-                        <Badge variant="outline" className="font-mono text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
-                          {member.niam}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          Belum terbit
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Zap className="h-4 w-4 text-accent" />
-                        <span className="font-semibold text-accent">{member.xp_level || 0}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {member.skill?.map((skill) => (
-                          <Badge
-                            key={skill}
-                            variant="secondary"
-                            className="bg-primary/10 text-primary text-xs"
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteMember(member.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  <CrewRow
+                    key={member.id}
+                    member={member}
+                    jabatanCodes={jabatanCodes}
+                    paymentStatus={paymentStatus}
+                    onUpdateJabatan={handleUpdateJabatan}
+                    onDelete={handleDeleteMember}
+                  />
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Belum ada anggota kru. Klik "Tambah Kru Baru" untuk memulai.
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Users className="h-8 w-8" />
+                      <p>Belum ada anggota kru</p>
+                      <p className="text-sm">Klik tombol "Tambah Kru Baru" untuk memulai</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
@@ -519,34 +543,23 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-card border-border">
-          <CardContent className="p-6 text-center">
-            <Users className="h-8 w-8 mx-auto text-primary mb-2" />
-            <p className="text-3xl font-bold text-foreground">{crewMembers.length}</p>
-            <p className="text-sm text-muted-foreground">Total Anggota</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-6 text-center">
-            <Zap className="h-8 w-8 mx-auto text-accent mb-2" />
-            <p className="text-3xl font-bold text-accent">
-              {crewMembers.reduce((acc, m) => acc + (m.xp_level || 0), 0)}
-            </p>
-            <p className="text-sm text-muted-foreground">Total XP Tim</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-card border-border">
-          <CardContent className="p-6 text-center">
-            <Badge className="bg-green-500 text-white mb-2">ACTIVE</Badge>
-            <p className="text-3xl font-bold text-foreground">
-              {crewMembers.filter(m => m.niam).length}
-            </p>
-            <p className="text-sm text-muted-foreground">Kru Ber-NIAM</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Info Card */}
+      <Card className="bg-emerald-50/50 border-emerald-100">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <Users className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-emerald-800">Aturan The Golden 3</h4>
+              <p className="text-sm text-emerald-700 mt-1">
+                Setiap pesantren mendapat <strong>{FREE_SLOT_LIMIT} slot gratis</strong> untuk anggota kru media. 
+                Slot tambahan dapat dibeli melalui menu Administrasi (fitur segera hadir).
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
