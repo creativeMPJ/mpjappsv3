@@ -13,7 +13,8 @@ import {
   X,
   Zap,
   AlertTriangle,
-  IdCard
+  IdCard,
+  Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { formatNIP, getProfileLevelInfo, calculateProfileLevel } from "@/lib/id-utils";
+import { formatNIP, getProfileLevelInfo } from "@/lib/id-utils";
 import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
 import MediaDashboardHome from "@/components/media-dashboard/MediaDashboardHome";
 import IdentitasPesantren from "@/components/media-dashboard/IdentitasPesantren";
@@ -29,17 +30,20 @@ import ManajemenKru from "@/components/media-dashboard/ManajemenKru";
 import Administrasi from "@/components/media-dashboard/Administrasi";
 import MPJHub from "@/components/media-dashboard/MPJHub";
 import Pengaturan from "@/components/media-dashboard/Pengaturan";
-import EIDCard from "@/components/media-dashboard/EIDCard";
+import EventPage from "@/components/media-dashboard/EventPage";
+import EIDAsetPage from "@/components/media-dashboard/EIDAsetPage";
 
-type ViewType = "beranda" | "identitas" | "kru" | "administrasi" | "hub" | "pengaturan" | "eid";
+// Menu order as per specification
+type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
 
 const menuItems = [
-  { id: "beranda" as ViewType, label: "DASHBOARD BERANDA", icon: LayoutDashboard },
+  { id: "beranda" as ViewType, label: "BERANDA", icon: LayoutDashboard },
   { id: "identitas" as ViewType, label: "IDENTITAS PESANTREN", icon: Building },
-  { id: "kru" as ViewType, label: "MANAJEMEN CREW (TIM MEDIA)", icon: Users },
-  { id: "eid" as ViewType, label: "E-ID CARD", icon: IdCard },
   { id: "administrasi" as ViewType, label: "ADMINISTRASI", icon: CreditCard },
-  { id: "hub" as ViewType, label: "MPJ-HUB", icon: Layers, comingSoon: true },
+  { id: "tim" as ViewType, label: "TIM MEDIA", icon: Users },
+  { id: "event" as ViewType, label: "EVENT", icon: Calendar, comingSoon: true },
+  { id: "eid" as ViewType, label: "E-ID & ASET", icon: IdCard },
+  { id: "hub" as ViewType, label: "MPJ HUB", icon: Layers, comingSoon: true },
   { id: "pengaturan" as ViewType, label: "PENGATURAN", icon: Settings },
 ];
 
@@ -61,6 +65,7 @@ const MediaDashboard = () => {
   const paymentStatus = profile?.status_payment ?? 'unpaid';
   const profileLevel = profile?.profile_level ?? 'basic';
   const levelInfo = getProfileLevelInfo(profileLevel);
+  const isPlatinum = profileLevel === 'platinum';
 
   const handleLogout = async () => {
     if (isDebugMode) {
@@ -92,6 +97,7 @@ const MediaDashboard = () => {
       </div>
     </div>
   );
+
   const renderContent = () => {
     switch (activeView) {
       case "beranda":
@@ -99,7 +105,8 @@ const MediaDashboard = () => {
           <MediaDashboardHome 
             paymentStatus={paymentStatus} 
             profileLevel={profileLevel}
-            onNavigate={handleMenuClick} 
+            onNavigate={handleMenuClick}
+            debugProfile={isDebugMode ? profile : undefined}
           />
         );
       case "identitas":
@@ -111,10 +118,16 @@ const MediaDashboard = () => {
             debugProfile={isDebugMode ? profile : undefined}
           />
         );
-      case "kru":
+      case "tim":
         return <ManajemenKru paymentStatus={paymentStatus} debugProfile={isDebugMode ? profile : undefined} />;
       case "eid":
-        return <EIDCard isGold={profileLevel === 'gold' || profileLevel === 'platinum'} debugProfile={isDebugMode ? profile : undefined} />;
+        return (
+          <EIDAsetPage 
+            paymentStatus={paymentStatus}
+            profileLevel={profileLevel}
+            debugProfile={isDebugMode ? profile : undefined}
+          />
+        );
       case "administrasi":
         return (
           <Administrasi 
@@ -122,8 +135,10 @@ const MediaDashboard = () => {
             onPaymentStatusChange={() => {}}
           />
         );
+      case "event":
+        return <EventPage />;
       case "hub":
-        return <ComingSoonPlaceholder title="MPJ-HUB" />;
+        return <ComingSoonPlaceholder title="MPJ HUB" />;
       case "pengaturan":
         return <Pengaturan />;
       default:
@@ -131,7 +146,8 @@ const MediaDashboard = () => {
           <MediaDashboardHome 
             paymentStatus={paymentStatus} 
             profileLevel={profileLevel}
-            onNavigate={handleMenuClick} 
+            onNavigate={handleMenuClick}
+            debugProfile={isDebugMode ? profile : undefined}
           />
         );
     }
@@ -144,6 +160,14 @@ const MediaDashboard = () => {
 
   // Format NIP for display (clean, without dots)
   const displayNIP = profile?.nip ? formatNIP(profile.nip, true) : null;
+
+  // Platinum Diamond Crystal Theme Classes
+  const getPlatinumHeaderStyles = () => {
+    if (isPlatinum) {
+      return "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white border-cyan-400/30";
+    }
+    return "bg-white border-gray-200";
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -232,38 +256,58 @@ const MediaDashboard = () => {
           </Alert>
         )}
 
-        {/* Top Bar - Mobile First, High Contrast */}
-        <header className="h-14 md:h-16 bg-white border-b border-gray-200 flex items-center justify-between px-3 md:px-6 sticky top-0 z-30 shadow-sm">
+        {/* Top Bar - With Platinum Diamond Crystal Theme */}
+        <header className={cn(
+          "h-14 md:h-16 border-b flex items-center justify-between px-3 md:px-6 sticky top-0 z-30 shadow-sm",
+          getPlatinumHeaderStyles()
+        )}>
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden text-slate-700"
+              className={cn(
+                "lg:hidden",
+                isPlatinum ? "text-white hover:bg-white/10" : "text-slate-700"
+              )}
               onClick={() => setMobileSidebarOpen(true)}
             >
               <Menu className="h-6 w-6" />
             </Button>
             {/* Mobile: Simple title only */}
-            <h2 className="text-base md:text-lg font-bold text-slate-900 md:hidden">
+            <h2 className={cn(
+              "text-base md:text-lg font-bold md:hidden",
+              isPlatinum ? "text-white" : "text-slate-900"
+            )}>
               MPJ MEDIA
             </h2>
             {/* Desktop: Full title with badge and NIP */}
             <div className="hidden md:block">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-slate-900">
+                  <h2 className={cn(
+                    "text-lg font-bold",
+                    isPlatinum ? "text-white" : "text-slate-900"
+                  )}>
                     {profile?.nama_pesantren || 'Media Pesantren'}
                   </h2>
-                  <VerifiedBadge isVerified={levelInfo.isVerified} size="md" />
+                  {isPlatinum && <VerifiedBadge isVerified={true} size="md" />}
                 </div>
                 {displayNIP && (
-                  <Badge className="bg-emerald-100 text-emerald-800 font-mono text-sm">
+                  <Badge className={cn(
+                    "font-mono text-sm",
+                    isPlatinum 
+                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/30" 
+                      : "bg-emerald-100 text-emerald-800"
+                  )}>
                     NIP: {displayNIP}
                   </Badge>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <p className="text-sm text-slate-600">
+                <p className={cn(
+                  "text-sm",
+                  isPlatinum ? "text-cyan-200" : "text-slate-600"
+                )}>
                   Dashboard Koordinator
                 </p>
                 <ProfileLevelBadge level={profileLevel} size="sm" />
@@ -273,12 +317,22 @@ const MediaDashboard = () => {
           <div className="flex items-center gap-2 md:gap-4">
             {/* NIP Badge - Mobile */}
             {displayNIP && (
-              <div className="flex md:hidden items-center gap-1.5 bg-emerald-100 text-emerald-800 px-2 py-1.5 rounded-lg text-xs font-mono">
+              <div className={cn(
+                "flex md:hidden items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-mono",
+                isPlatinum 
+                  ? "bg-cyan-500/20 text-cyan-300" 
+                  : "bg-emerald-100 text-emerald-800"
+              )}>
                 {displayNIP}
               </div>
             )}
             {/* E-ID Badge - Icon only on mobile */}
-            <div className="flex items-center gap-1.5 bg-[#166534] text-white px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold">
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold",
+              isPlatinum 
+                ? "bg-cyan-500/30 text-cyan-200" 
+                : "bg-[#166534] text-white"
+            )}>
               <IdCard className="h-4 w-4" />
               <span className="hidden md:inline">E-ID</span>
             </div>
@@ -287,12 +341,24 @@ const MediaDashboard = () => {
               <Zap className="h-4 w-4" />
               <span>150 XP</span>
             </div>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9">
-              <Bell className="h-5 w-5 text-slate-600" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={cn(
+                "relative h-9 w-9",
+                isPlatinum ? "text-white hover:bg-white/10" : ""
+              )}
+            >
+              <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
             </Button>
             {/* User Avatar */}
-            <div className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-[#166534] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            <div className={cn(
+              "h-9 w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0",
+              isPlatinum 
+                ? "bg-gradient-to-br from-cyan-400 to-blue-500 text-white" 
+                : "bg-[#166534] text-white"
+            )}>
               MP
             </div>
           </div>

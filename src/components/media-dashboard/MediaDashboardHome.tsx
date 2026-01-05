@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { 
   Users, 
   Calendar,
@@ -10,11 +11,15 @@ import {
   CreditCard,
   AlertTriangle,
   Layers,
-  Award
+  Award,
+  CheckCircle2,
+  IdCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatNIP } from "@/lib/id-utils";
+import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
 
-type ViewType = "beranda" | "identitas" | "kru" | "administrasi" | "hub" | "pengaturan";
+type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
 type PaymentStatus = "paid" | "unpaid";
 
@@ -22,14 +27,49 @@ interface MediaDashboardHomeProps {
   paymentStatus: PaymentStatus;
   profileLevel: ProfileLevel;
   onNavigate: (view: ViewType) => void;
+  debugProfile?: {
+    nip?: string;
+    nama_pesantren?: string;
+    jumlah_santri?: number;
+  };
 }
 
-const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDashboardHomeProps) => {
+const MediaDashboardHome = ({ 
+  paymentStatus, 
+  profileLevel, 
+  onNavigate,
+  debugProfile 
+}: MediaDashboardHomeProps) => {
+  const isPlatinum = profileLevel === 'platinum';
+  const displayNIP = debugProfile?.nip ? formatNIP(debugProfile.nip, true) : "2601001";
+  const displayName = debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah";
+  const jumlahSantri = debugProfile?.jumlah_santri || 250;
+
+  // Calculate profile completion based on level
+  const getProfileCompletion = () => {
+    switch (profileLevel) {
+      case "platinum": return 100;
+      case "gold": return 75;
+      case "silver": return 50;
+      default: return 25;
+    }
+  };
+
+  const profileCompletion = getProfileCompletion();
+
+  // Mission items for daily tasks
+  const missionItems = [
+    { label: "Data Dasar Lengkap", completed: profileLevel !== "basic", points: 100 },
+    { label: "Logo & Dokumen Terunggah", completed: profileLevel === "gold" || profileLevel === "platinum", points: 150 },
+    { label: "Profil Ensiklopedia", completed: profileLevel === "platinum", points: 200 },
+    { label: "Administrasi Lunas", completed: paymentStatus === "paid", points: 100 },
+  ];
+
   const getLevelInfo = () => {
     switch (profileLevel) {
       case "silver": return { color: "bg-slate-400", label: "Silver", icon: "🥈" };
       case "gold": return { color: "bg-[#f59e0b]", label: "Gold", icon: "🥇" };
-      case "platinum": return { color: "bg-purple-500", label: "Platinum", icon: "💎" };
+      case "platinum": return { color: "bg-gradient-to-r from-cyan-500 to-blue-500", label: "Platinum", icon: "💎" };
       default: return { color: "bg-slate-500", label: "Basic", icon: "🏅" };
     }
   };
@@ -48,18 +88,65 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
         </Alert>
       )}
 
-      {/* Hero Card - Emerald Gradient for High Contrast */}
-      <Card className="bg-gradient-to-r from-emerald-800 to-emerald-600 text-white border-0 overflow-hidden relative">
+      {/* Hero Card - With Platinum Diamond Crystal Theme */}
+      <Card className={cn(
+        "border-0 overflow-hidden relative",
+        isPlatinum 
+          ? "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white"
+          : "bg-gradient-to-r from-emerald-800 to-emerald-600 text-white"
+      )}>
+        {/* Decorative Pattern */}
         <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
-          <svg viewBox="0 0 200 200" className="w-full h-full">
-            <pattern id="islamic-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
-              <path d="M20 0L40 20L20 40L0 20Z" fill="currentColor" />
-            </pattern>
-            <rect width="200" height="200" fill="url(#islamic-pattern)" />
-          </svg>
+          {isPlatinum ? (
+            <svg viewBox="0 0 200 200" className="w-full h-full">
+              <pattern id="diamond-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
+                <polygon points="10,0 20,10 10,20 0,10" fill="currentColor" className="text-cyan-400" />
+              </pattern>
+              <rect width="200" height="200" fill="url(#diamond-pattern)" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 200 200" className="w-full h-full">
+              <pattern id="islamic-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
+                <path d="M20 0L40 20L20 40L0 20Z" fill="currentColor" />
+              </pattern>
+              <rect width="200" height="200" fill="url(#islamic-pattern)" />
+            </svg>
+          )}
         </div>
         <CardContent className="p-6 md:p-8 relative z-10">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
+          {/* NIP & Verified Badge Row */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Badge className={cn(
+              "font-mono text-lg px-3 py-1",
+              isPlatinum 
+                ? "bg-cyan-500/30 text-cyan-200 border-cyan-400/50" 
+                : "bg-white/20 text-white border-white/30"
+            )}>
+              NIP: {displayNIP}
+            </Badge>
+            {isPlatinum && <VerifiedBadge isVerified={true} size="lg" showLabel />}
+          </div>
+          
+          {/* Institution Name */}
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className={cn(
+              "text-2xl md:text-4xl font-bold",
+              isPlatinum ? "text-cyan-100" : "text-white"
+            )}>
+              {displayName}
+            </h1>
+          </div>
+          
+          {/* Welcome Message */}
+          <p className={cn(
+            "text-base md:text-lg",
+            isPlatinum ? "text-cyan-200/90" : "text-white/90"
+          )}>
+            Selamat datang di dashboard Koordinator Media Pondok Jawa Timur.
+          </p>
+
+          {/* Level & Status Badges */}
+          <div className="flex flex-wrap items-center gap-2 mt-4">
             <Badge className={cn(levelInfo.color, "text-white")}>
               {levelInfo.icon} {levelInfo.label}
             </Badge>
@@ -67,12 +154,55 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
               {paymentStatus === "paid" ? "ACTIVE" : "INACTIVE"}
             </Badge>
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold mb-2 text-white">
-            Ahlan wa Sahlan
-          </h1>
-          <p className="text-white/90 text-base md:text-lg">
-            Selamat datang di dashboard Koordinator Media Pondok Jawa Timur.
-          </p>
+        </CardContent>
+      </Card>
+
+      {/* Profile Completion Progress */}
+      <Card className="bg-white border-gray-200">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-[#166534]" />
+              <h3 className="font-semibold text-slate-900">Kelengkapan Profil</h3>
+            </div>
+            <span className="text-lg font-bold text-[#166534]">{profileCompletion}%</span>
+          </div>
+          <Progress value={profileCompletion} className="h-3 mb-4" />
+          
+          {/* Mission Checklist */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {missionItems.map((mission, index) => (
+              <div 
+                key={index}
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border",
+                  mission.completed 
+                    ? "bg-emerald-50 border-emerald-200" 
+                    : "bg-slate-50 border-slate-200"
+                )}
+              >
+                {mission.completed ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
+                ) : (
+                  <div className="h-5 w-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={cn(
+                    "text-sm font-medium truncate",
+                    mission.completed ? "text-emerald-800" : "text-slate-600"
+                  )}>
+                    {mission.label}
+                  </p>
+                </div>
+                <Badge variant="outline" className={cn(
+                  "text-xs",
+                  mission.completed ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"
+                )}>
+                  +{mission.points} XP
+                </Badge>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -90,7 +220,7 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
                 <Users className="h-7 w-7 text-emerald-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-slate-900">250</p>
+                <p className="text-3xl font-bold text-slate-900">{jumlahSantri}</p>
                 <p className="text-sm text-slate-600">Santri terdaftar</p>
               </div>
             </div>
@@ -110,7 +240,7 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
               </div>
               <div>
                 <p className="text-3xl font-bold text-slate-900">3</p>
-                <p className="text-sm text-slate-600">Anggota aktif</p>
+                <p className="text-sm text-slate-600">Anggota aktif (3/3 slot)</p>
               </div>
             </div>
           </CardContent>
@@ -133,7 +263,7 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-900 truncate">Pelatihan Videografi</p>
-                <p className="text-sm text-slate-600">28 Desember 2025 • 09:00 WIB</p>
+                <p className="text-sm text-slate-600">28 Januari 2026 - 09:00 WIB</p>
               </div>
               <Badge className="bg-emerald-100 text-emerald-700 hidden sm:inline-flex">Upcoming</Badge>
             </div>
@@ -143,7 +273,7 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-900 truncate">Lomba Konten Digital</p>
-                <p className="text-sm text-slate-600">5 Januari 2026 • 08:00 WIB</p>
+                <p className="text-sm text-slate-600">5 Februari 2026 - 08:00 WIB</p>
               </div>
               <Badge className="bg-amber-100 text-amber-700 hidden sm:inline-flex">Upcoming</Badge>
             </div>
@@ -170,17 +300,17 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
           </CardContent>
         </Card>
 
-        {/* Manage Crew */}
+        {/* Tim Media */}
         <Card 
           className="bg-white border-gray-200 hover:shadow-lg transition-shadow cursor-pointer group"
-          onClick={() => onNavigate("kru")}
+          onClick={() => onNavigate("tim")}
         >
           <CardContent className="p-4 md:p-6 text-center">
             <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
               <UserCog className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Crew</h3>
-            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Tim Media</p>
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Tim Media</h3>
+            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Kelola Kru</p>
             <Button className="w-full bg-[#166534] hover:bg-emerald-700 text-white text-sm">
               Kelola
             </Button>
@@ -217,19 +347,19 @@ const MediaDashboardHome = ({ paymentStatus, profileLevel, onNavigate }: MediaDa
           </CardContent>
         </Card>
 
-        {/* MPJ-Hub */}
+        {/* E-ID & Aset */}
         <Card 
           className="bg-white border-gray-200 hover:shadow-lg transition-shadow cursor-pointer group"
-          onClick={() => onNavigate("hub")}
+          onClick={() => onNavigate("eid")}
         >
           <CardContent className="p-4 md:p-6 text-center">
-            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-amber-100 rounded-full flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-              <Layers className="h-6 w-6 md:h-8 md:w-8 text-amber-600" />
+            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <IdCard className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">MPJ-Hub</h3>
-            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Resources</p>
-            <Button className="w-full bg-[#f59e0b] hover:bg-amber-600 text-slate-900 text-sm font-semibold">
-              Jelajahi
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">E-ID & Aset</h3>
+            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Piagam & Kartu</p>
+            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">
+              Lihat
             </Button>
           </CardContent>
         </Card>

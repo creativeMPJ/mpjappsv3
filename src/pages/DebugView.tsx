@@ -17,13 +17,14 @@ import { VirtualIDCard } from "@/components/shared/VirtualIDCard";
 import { ProfileLevelBadge, XPLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
 import { formatNIP, formatNIAM } from "@/lib/id-utils";
 
-// Mock data for debugging/audit
+// Comprehensive mock data for debugging/audit
 const MOCK_DATA = {
   regionalAdmin: {
     id: 'mock-regional-admin',
     nama_pesantren: 'Admin Regional Malang',
     region_id: 'malang-region-id',
-    region_name: 'Malang',
+    region_name: 'Malang Raya',
+    city_name: 'Kota Malang',
     region_code: '01',
     role: 'admin_regional' as const,
     status_account: 'active' as const,
@@ -34,14 +35,17 @@ const MOCK_DATA = {
     id: 'mock-media-platinum',
     nama_pesantren: 'Pondok Pesantren Al-Hikmah',
     nama_pengasuh: 'KH. Ahmad Fauzi',
+    nama_media: 'Media Al-Hikmah TV',
     nip: '2601001', // Clean format without dots
     role: 'user' as const,
     status_account: 'active' as const,
     status_payment: 'paid' as const,
     profile_level: 'platinum' as const,
     region_id: 'malang-region-id',
+    region_name: 'Malang Raya',
+    city_name: 'Kota Malang',
     // Platinum requires all data complete
-    alamat_singkat: 'Jl. Raya No. 123, Malang',
+    alamat_singkat: 'Jl. Raya Pesantren No. 123, Singosari, Malang',
     jumlah_santri: 250,
     sejarah: 'Didirikan pada tahun 1980...',
     visi_misi: 'Mencetak generasi Qurani...',
@@ -69,6 +73,12 @@ const MOCK_DATA = {
     whatsapp: '081234567890',
     prinsip_hidup: 'Salam Khidmah, Salam Militan',
   },
+  // Full crew slots (3/3) for testing Golden 3 rule
+  fullCrewSlots: [
+    { id: '1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', xp_level: 1500 },
+    { id: '2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', xp_level: 2500 },
+    { id: '3', nama: 'Cahya Dewi', niam: 'AN260100103', jabatan: 'Desainer', xp_level: 800 },
+  ],
 };
 
 const DebugView = () => {
@@ -92,7 +102,7 @@ const DebugView = () => {
           </div>
           <p className="text-slate-600 max-w-2xl mx-auto">
             Halaman audit untuk menguji tampilan dashboard tanpa login. 
-            Klik tombol di bawah untuk menavigasi ke dashboard dengan data simulasi.
+            Klik tombol di bawah untuk menavigasi ke dashboard dengan data simulasi lengkap.
           </p>
           <Badge className="bg-amber-100 text-amber-700 border-amber-200">
             Development Mode Only
@@ -106,7 +116,7 @@ const DebugView = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-emerald-600" />
-              CORE Identity Format (Tanpa Titik)
+              Format ID Clean (Tanpa Titik/Pemisah)
             </CardTitle>
             <CardDescription>
               Format ID yang bersih dan profesional tanpa pemisah titik
@@ -177,7 +187,7 @@ const DebugView = () => {
               </div>
               
               {/* Platinum */}
-              <div className="bg-white rounded-lg p-4 border border-purple-200 text-center">
+              <div className="bg-white rounded-lg p-4 border border-cyan-200 text-center">
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <ProfileLevelBadge level="platinum" size="lg" />
                   <VerifiedBadge isVerified={true} size="lg" />
@@ -248,11 +258,11 @@ const DebugView = () => {
           </Card>
 
           {/* Media Dashboard */}
-          <Card className="hover:shadow-lg transition-shadow border-purple-200 ring-2 ring-purple-100">
+          <Card className="hover:shadow-lg transition-shadow border-cyan-200 ring-2 ring-cyan-100">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-purple-600" />
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-100 to-blue-100 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-cyan-600" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -269,9 +279,10 @@ const DebugView = () => {
                 <Badge variant="outline" className="font-mono">
                   NIP: {formatNIP(MOCK_DATA.mediaPlatinum.nip, true)}
                 </Badge>
+                <Badge className="bg-green-100 text-green-700">Paid</Badge>
               </div>
               <p className="text-sm text-slate-600">
-                Mock data untuk menguji dashboard Media dengan status Platinum dan Centang Biru.
+                Mock data Platinum: Pembayaran Lunas, Slot Kru Penuh (3/3), Diamond Crystal Theme.
               </p>
               <div className="flex gap-2">
                 <Button 
@@ -283,7 +294,7 @@ const DebugView = () => {
                   Preview
                 </Button>
                 <Button 
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                  className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
                   onClick={() => navigateWithState('/user', { 
                     debugProfile: MOCK_DATA.mediaPlatinum 
                   })}

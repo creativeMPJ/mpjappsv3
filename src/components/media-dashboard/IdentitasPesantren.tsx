@@ -20,12 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { 
   Upload, 
   MapPin, 
@@ -34,14 +28,16 @@ import {
   CheckCircle2, 
   Lock,
   Download,
-  Eye,
-  QrCode,
-  IdCard
+  Building2,
+  Image,
+  Globe,
+  History,
+  GraduationCap
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { VirtualCharter } from "@/components/shared/VirtualCharter";
-import { PhysicalCharter } from "@/components/shared/PhysicalCharter";
 import { formatNIP } from "@/lib/id-utils";
+import { cn } from "@/lib/utils";
 
 interface IdentitasPesantrenProps {
   paymentStatus: "paid" | "unpaid";
@@ -52,6 +48,8 @@ interface IdentitasPesantrenProps {
     nama_pengasuh?: string;
     alamat_singkat?: string;
     nip?: string;
+    region_name?: string;
+    city_name?: string;
   };
 }
 
@@ -61,43 +59,64 @@ const IdentitasPesantren = ({
   onProfileLevelChange,
   debugProfile 
 }: IdentitasPesantrenProps) => {
+  // Form state based on ERD pesantren table
   const [formData, setFormData] = useState({
+    // Basic/Silver Level - Read Only Region
     namaPesantren: debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah",
-    pengasuh: debugProfile?.nama_pengasuh || "KH. Ahmad Dahlan",
-    alamat: debugProfile?.alamat_singkat || "Jl. Raya No. 123, Malang",
-    smartRegion: "",
-    sejarah: "",
+    namaPengasuh: debugProfile?.nama_pengasuh || "KH. Ahmad Dahlan",
+    alamatSingkat: debugProfile?.alamat_singkat || "Jl. Raya No. 123, Malang",
+    region: debugProfile?.region_name || "Malang Raya",
+    city: debugProfile?.city_name || "Kota Malang",
+    
+    // Gold Level Fields
+    logoPesantrenUrl: "",
+    namaMedia: "",
+    socialLinks: {
+      instagram: "",
+      youtube: "",
+      tiktok: "",
+      website: ""
+    },
+    fotoPengasuhUrl: "",
+    dawuhPengasuh: "",
+    jumlahSantriTerbaru: "",
+    tahunBerdiriPesantren: "",
+    latitude: "",
+    longitude: "",
+    
+    // Platinum Level Fields
     visiMisi: "",
+    sejarahSingkat: "",
+    tipePesantren: "",
+    jenjangPendidikan: [] as string[],
     programUnggulan: "",
+    fotoGedungPesantren: "",
+    logoMediaPesantren: "",
   });
-
-  const regions = [
-    "Surabaya Raya",
-    "Malang Raya",
-    "Kediri Raya",
-    "Madiun Raya",
-    "Jember Raya",
-  ];
 
   const calculateProgress = () => {
     let progress = 0;
-    if (formData.namaPesantren && formData.pengasuh && formData.alamat && formData.smartRegion) progress += 33;
-    if (profileLevel === "silver" || profileLevel === "gold" || profileLevel === "platinum") progress += 33;
-    if (profileLevel === "gold" || profileLevel === "platinum") progress += 17;
-    if (profileLevel === "platinum") progress += 17;
-    return Math.min(progress, 100);
+    // Basic data (25%)
+    if (formData.namaPesantren && formData.namaPengasuh && formData.alamatSingkat) progress += 25;
+    // Silver achieved (25%)
+    if (profileLevel !== "basic") progress += 25;
+    // Gold achieved (25%)
+    if (profileLevel === "gold" || profileLevel === "platinum") progress += 25;
+    // Platinum achieved (25%)
+    if (profileLevel === "platinum") progress += 25;
+    return progress;
   };
 
   const handleSaveStep = (step: number) => {
     if (step === 1) {
       onProfileLevelChange("silver");
-      toast({ title: "Step 1 Selesai!", description: "Anda naik ke level Silver." });
+      toast({ title: "Level Silver Tercapai!", description: "Data dasar berhasil disimpan." });
     } else if (step === 2) {
       onProfileLevelChange("gold");
-      toast({ title: "Step 2 Selesai!", description: "Anda naik ke level Gold." });
+      toast({ title: "Level Gold Tercapai!", description: "Data media dan kelengkapan tersimpan." });
     } else if (step === 3) {
       onProfileLevelChange("platinum");
-      toast({ title: "Step 3 Selesai!", description: "Selamat! Anda mencapai level Platinum." });
+      toast({ title: "Level Platinum Tercapai!", description: "Selamat! Profil Anda sudah lengkap." });
     }
   };
 
@@ -108,20 +127,30 @@ const IdentitasPesantren = ({
     return false;
   };
 
-  const canDownloadCertificate = paymentStatus === "paid" && (profileLevel === "gold" || profileLevel === "platinum");
+  // Get highest level for charter display
+  const getHighestLevel = (): "silver" | "gold" | "platinum" => {
+    if (profileLevel === "platinum") return "platinum";
+    if (profileLevel === "gold") return "gold";
+    return "silver";
+  };
+
+  const displayNIP = debugProfile?.nip || "2601001";
+  const isPlatinum = profileLevel === "platinum";
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Identitas Pesantren</h1>
-          <p className="text-slate-500">Kelola profil dan aset digital lembaga Anda</p>
+          <p className="text-slate-500">Misi Leveling Database - Lengkapi profil untuk naik level</p>
         </div>
-        <Badge className={`${
-          profileLevel === "platinum" ? "bg-purple-500" :
-          profileLevel === "gold" ? "bg-[#f59e0b]" :
+        <Badge className={cn(
+          "text-white",
+          profileLevel === "platinum" ? "bg-gradient-to-r from-cyan-500 to-blue-500" :
+          profileLevel === "gold" ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900" :
           profileLevel === "silver" ? "bg-slate-400" : "bg-slate-300"
-        } text-white`}>
+        )}>
           Level: {profileLevel.charAt(0).toUpperCase() + profileLevel.slice(1)}
         </Badge>
       </div>
@@ -143,14 +172,15 @@ const IdentitasPesantren = ({
             Update Profil
           </TabsTrigger>
           <TabsTrigger value="piagam" className="data-[state=active]:bg-[#166534] data-[state=active]:text-white">
-            Piagam & Aset Digital
+            Piagam Pesantren
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab 1: Update Profil */}
+        {/* Tab 1: Update Profil - Leveling Form */}
         <TabsContent value="profil" className="space-y-4">
           <Accordion type="single" collapsible defaultValue="step1" className="space-y-4">
-            {/* Step 1: Silver */}
+            
+            {/* Step 1: Silver - Data Dasar (Region Locked) */}
             <AccordionItem value="step1" className="border rounded-lg bg-white">
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
                 <div className="flex items-center gap-3">
@@ -160,8 +190,8 @@ const IdentitasPesantren = ({
                     <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">1</div>
                   )}
                   <div className="text-left">
-                    <h3 className="font-semibold text-slate-800">Data Dasar</h3>
-                    <p className="text-sm text-slate-500">Nama, Pengasuh, Alamat, Region</p>
+                    <h3 className="font-semibold text-slate-800">Data Dasar Pesantren</h3>
+                    <p className="text-sm text-slate-500">Nama, Pengasuh, Alamat, Wilayah (Terkunci)</p>
                   </div>
                   <Badge className="bg-slate-400 text-white ml-2">Silver</Badge>
                 </div>
@@ -178,32 +208,40 @@ const IdentitasPesantren = ({
                   <div className="space-y-2">
                     <Label>Nama Pengasuh</Label>
                     <Input
-                      value={formData.pengasuh}
-                      onChange={(e) => setFormData({ ...formData, pengasuh: e.target.value })}
+                      value={formData.namaPengasuh}
+                      onChange={(e) => setFormData({ ...formData, namaPengasuh: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label>Alamat Lengkap</Label>
+                    <Label>Alamat Singkat</Label>
                     <Textarea
-                      value={formData.alamat}
-                      onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
+                      value={formData.alamatSingkat}
+                      onChange={(e) => setFormData({ ...formData, alamatSingkat: e.target.value })}
+                    />
+                  </div>
+                  
+                  {/* Locked Region Fields */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Lock className="h-3 w-3 text-slate-400" />
+                      Smart Region (Terkunci)
+                    </Label>
+                    <Input
+                      value={formData.region}
+                      disabled
+                      className="bg-slate-100 text-slate-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Smart Region</Label>
-                    <Select
-                      value={formData.smartRegion}
-                      onValueChange={(value) => setFormData({ ...formData, smartRegion: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih Region" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {regions.map((region) => (
-                          <SelectItem key={region} value={region}>{region}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="flex items-center gap-2">
+                      <Lock className="h-3 w-3 text-slate-400" />
+                      Kota/Kabupaten (Terkunci)
+                    </Label>
+                    <Input
+                      value={formData.city}
+                      disabled
+                      className="bg-slate-100 text-slate-500"
+                    />
                   </div>
                 </div>
                 <Button 
@@ -212,12 +250,12 @@ const IdentitasPesantren = ({
                   disabled={isStepComplete(1)}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isStepComplete(1) ? "Tersimpan" : "Simpan & Naik Level"}
+                  {isStepComplete(1) ? "Tersimpan" : "Simpan & Naik ke Silver"}
                 </Button>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Step 2: Gold */}
+            {/* Step 2: Gold - Media & Kelengkapan */}
             <AccordionItem value="step2" className="border rounded-lg bg-white">
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
                 <div className="flex items-center gap-3">
@@ -227,33 +265,137 @@ const IdentitasPesantren = ({
                     <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">2</div>
                   )}
                   <div className="text-left">
-                    <h3 className="font-semibold text-slate-800">Dokumen & Media</h3>
-                    <p className="text-sm text-slate-500">Logo, SK Pesantren, Foto Pengasuh</p>
+                    <h3 className="font-semibold text-slate-800">Identitas Media & Kelengkapan</h3>
+                    <p className="text-sm text-slate-500">Logo, Media Sosial, Foto Pengasuh, Koordinat</p>
                   </div>
                   <Badge className="bg-[#f59e0b] text-white ml-2">Gold</Badge>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Logo Upload */}
                   <div className="space-y-2">
-                    <Label>Upload Logo</Label>
+                    <Label className="flex items-center gap-2">
+                      <Image className="h-4 w-4" />
+                      Logo Pesantren
+                    </Label>
                     <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors cursor-pointer">
                       <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
                       <p className="text-sm text-slate-500">PNG/JPG</p>
                     </div>
                   </div>
+                  
+                  {/* Nama Media */}
                   <div className="space-y-2">
-                    <Label>SK Pesantren</Label>
-                    <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors cursor-pointer">
-                      <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
-                      <p className="text-sm text-slate-500">PDF</p>
-                    </div>
+                    <Label>Nama Media Pesantren</Label>
+                    <Input
+                      placeholder="Contoh: Media Al-Hikmah TV"
+                      value={formData.namaMedia}
+                      onChange={(e) => setFormData({ ...formData, namaMedia: e.target.value })}
+                    />
                   </div>
+                  
+                  {/* Foto Pengasuh */}
                   <div className="space-y-2">
-                    <Label>Foto Pengasuh</Label>
+                    <Label className="flex items-center gap-2">
+                      <Image className="h-4 w-4" />
+                      Foto Pengasuh
+                    </Label>
                     <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-emerald-400 transition-colors cursor-pointer">
                       <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
                       <p className="text-sm text-slate-500">PNG/JPG</p>
+                    </div>
+                  </div>
+                  
+                  {/* Social Links */}
+                  <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                    <Label className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Akun Media Sosial
+                    </Label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Input
+                        placeholder="@instagram"
+                        value={formData.socialLinks.instagram}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          socialLinks: { ...formData.socialLinks, instagram: e.target.value }
+                        })}
+                      />
+                      <Input
+                        placeholder="YouTube Channel"
+                        value={formData.socialLinks.youtube}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          socialLinks: { ...formData.socialLinks, youtube: e.target.value }
+                        })}
+                      />
+                      <Input
+                        placeholder="@tiktok"
+                        value={formData.socialLinks.tiktok}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          socialLinks: { ...formData.socialLinks, tiktok: e.target.value }
+                        })}
+                      />
+                      <Input
+                        placeholder="Website"
+                        value={formData.socialLinks.website}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          socialLinks: { ...formData.socialLinks, website: e.target.value }
+                        })}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Dawuh Pengasuh */}
+                  <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                    <Label>Dawuh / Pesan Pengasuh</Label>
+                    <Textarea
+                      placeholder="Tulis pesan inspiratif dari pengasuh..."
+                      value={formData.dawuhPengasuh}
+                      onChange={(e) => setFormData({ ...formData, dawuhPengasuh: e.target.value })}
+                    />
+                  </div>
+                  
+                  {/* Jumlah Santri & Tahun Berdiri */}
+                  <div className="space-y-2">
+                    <Label>Jumlah Santri Terbaru</Label>
+                    <Input
+                      type="number"
+                      placeholder="250"
+                      value={formData.jumlahSantriTerbaru}
+                      onChange={(e) => setFormData({ ...formData, jumlahSantriTerbaru: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tahun Berdiri Pesantren</Label>
+                    <Input
+                      type="number"
+                      placeholder="1980"
+                      value={formData.tahunBerdiriPesantren}
+                      onChange={(e) => setFormData({ ...formData, tahunBerdiriPesantren: e.target.value })}
+                    />
+                  </div>
+                  
+                  {/* Koordinat */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Koordinat Lokasi
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Latitude"
+                        value={formData.latitude}
+                        onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
+                      />
+                      <Input
+                        placeholder="Longitude"
+                        value={formData.longitude}
+                        onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -263,249 +405,192 @@ const IdentitasPesantren = ({
                   disabled={!isStepComplete(1) || isStepComplete(2)}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isStepComplete(2) ? "Tersimpan" : "Simpan & Naik Level"}
+                  {isStepComplete(2) ? "Tersimpan" : "Simpan & Naik ke Gold"}
                 </Button>
               </AccordionContent>
             </AccordionItem>
 
-            {/* Step 3: Platinum */}
-            <AccordionItem value="step3" className="border rounded-lg bg-white">
+            {/* Step 3: Platinum - Ensiklopedia Lengkap */}
+            <AccordionItem value="step3" className={cn(
+              "border rounded-lg",
+              isPlatinum ? "bg-gradient-to-br from-slate-50 to-cyan-50 border-cyan-200" : "bg-white"
+            )}>
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
                 <div className="flex items-center gap-3">
                   {isStepComplete(3) ? (
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    <CheckCircle2 className="h-6 w-6 text-cyan-500" />
                   ) : (
                     <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">3</div>
                   )}
                   <div className="text-left">
-                    <h3 className="font-semibold text-slate-800">Ensiklopedia</h3>
-                    <p className="text-sm text-slate-500">Sejarah, Visi Misi, Program</p>
+                    <h3 className="font-semibold text-slate-800">Ensiklopedia Pesantren</h3>
+                    <p className="text-sm text-slate-500">Visi Misi, Sejarah, Tipe, Jenjang, Program Unggulan</p>
                   </div>
-                  <Badge className="bg-purple-500 text-white ml-2">Platinum</Badge>
+                  <Badge className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white ml-2">Platinum</Badge>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
                 <div className="space-y-4">
+                  {/* Visi Misi */}
                   <div className="space-y-2">
-                    <Label>Sejarah Pesantren</Label>
+                    <Label className="flex items-center gap-2">
+                      <Award className="h-4 w-4" />
+                      Visi & Misi
+                    </Label>
                     <Textarea
                       rows={4}
-                      placeholder="Ceritakan sejarah berdirinya pesantren..."
-                      value={formData.sejarah}
-                      onChange={(e) => setFormData({ ...formData, sejarah: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Visi & Misi</Label>
-                    <Textarea
-                      rows={3}
-                      placeholder="Visi dan misi pesantren..."
+                      placeholder="Tulis visi dan misi pesantren..."
                       value={formData.visiMisi}
                       onChange={(e) => setFormData({ ...formData, visiMisi: e.target.value })}
                     />
                   </div>
+                  
+                  {/* Sejarah */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Sejarah Singkat
+                    </Label>
+                    <Textarea
+                      rows={4}
+                      placeholder="Ceritakan sejarah berdirinya pesantren..."
+                      value={formData.sejarahSingkat}
+                      onChange={(e) => setFormData({ ...formData, sejarahSingkat: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Tipe Pesantren */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Tipe Pesantren
+                      </Label>
+                      <Select
+                        value={formData.tipePesantren}
+                        onValueChange={(value) => setFormData({ ...formData, tipePesantren: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih tipe pesantren" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="salaf">Salaf</SelectItem>
+                          <SelectItem value="modern">Modern</SelectItem>
+                          <SelectItem value="kombinasi">Kombinasi</SelectItem>
+                          <SelectItem value="tahfidz">Tahfidz</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Jenjang Pendidikan */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        Jenjang Pendidikan
+                      </Label>
+                      <Select
+                        value={formData.jenjangPendidikan[0] || ""}
+                        onValueChange={(value) => setFormData({ ...formData, jenjangPendidikan: [value] })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih jenjang" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sd-mi">SD/MI</SelectItem>
+                          <SelectItem value="smp-mts">SMP/MTs</SelectItem>
+                          <SelectItem value="sma-ma">SMA/MA</SelectItem>
+                          <SelectItem value="perguruan-tinggi">Perguruan Tinggi</SelectItem>
+                          <SelectItem value="all">Semua Jenjang</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  {/* Program Unggulan */}
                   <div className="space-y-2">
                     <Label>Program Unggulan</Label>
                     <Textarea
                       rows={3}
-                      placeholder="Deskripsi program unggulan..."
+                      placeholder="Deskripsi program unggulan pesantren..."
                       value={formData.programUnggulan}
                       onChange={(e) => setFormData({ ...formData, programUnggulan: e.target.value })}
                     />
                   </div>
+                  
+                  {/* Foto Gedung & Logo Media */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Foto Gedung Pesantren</Label>
+                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-cyan-400 transition-colors cursor-pointer">
+                        <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                        <p className="text-sm text-slate-500">PNG/JPG</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Logo Media Pesantren</Label>
+                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-cyan-400 transition-colors cursor-pointer">
+                        <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                        <p className="text-sm text-slate-500">PNG/JPG</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <Button 
-                  className="mt-4 bg-[#166534] hover:bg-[#14532d]"
+                  className={cn(
+                    "mt-4",
+                    isPlatinum 
+                      ? "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600" 
+                      : "bg-[#166534] hover:bg-[#14532d]"
+                  )}
                   onClick={() => handleSaveStep(3)}
                   disabled={!isStepComplete(2) || isStepComplete(3)}
                 >
                   <Save className="h-4 w-4 mr-2" />
-                  {isStepComplete(3) ? "Tersimpan" : "Simpan & Naik Level"}
+                  {isStepComplete(3) ? "Tersimpan - Platinum Achieved!" : "Simpan & Naik ke Platinum"}
                 </Button>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
         </TabsContent>
 
-        {/* Tab 2: Piagam & Aset Digital */}
+        {/* Tab 2: Piagam Pesantren - Single Charter (Highest Level) */}
         <TabsContent value="piagam" className="space-y-6">
-          {/* Section 1: Virtual Charter (YouTube Play Button Style) */}
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 mb-2">Piagam Virtual (YouTube Style)</h2>
-            <p className="text-sm text-slate-500 mb-4">
-              Piagam digital dengan efek timbul sesuai level keanggotaan
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Silver Charter */}
-              <div className="space-y-2">
-                <Badge className="bg-slate-400 text-white">Silver - Lunas Administrasi</Badge>
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Award className="h-5 w-5 text-[#166534]" />
+                Piagam Keanggotaan Virtual
+              </CardTitle>
+              <p className="text-sm text-slate-500">
+                Piagam digital YouTube Style sesuai level tertinggi yang dicapai
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="max-w-sm mx-auto">
                 <VirtualCharter
-                  level="silver"
-                  noId={debugProfile?.nip || "2601001"}
-                  namaMedia={formData.namaPesantren}
-                  alamat={formData.alamat}
-                  className={profileLevel === "basic" ? "opacity-50" : ""}
+                  level={getHighestLevel()}
+                  noId={displayNIP}
+                  namaMedia={formData.namaMedia || formData.namaPesantren}
+                  alamat={formData.alamatSingkat}
                 />
               </div>
-              
-              {/* Gold Charter */}
-              <div className="space-y-2">
-                <Badge className="bg-amber-500 text-white">Gold - Profil Lengkap</Badge>
-                <VirtualCharter
-                  level="gold"
-                  noId={debugProfile?.nip || "2601001"}
-                  namaMedia={formData.namaPesantren}
-                  alamat={formData.alamat}
-                  className={profileLevel !== "gold" && profileLevel !== "platinum" ? "opacity-50" : ""}
-                />
+              <div className="flex justify-center mt-6">
+                <Button 
+                  className="bg-[#166534] hover:bg-[#14532d]"
+                  disabled={paymentStatus === "unpaid"}
+                  onClick={() => toast({ title: "Download Piagam", description: "Fitur sedang dikembangkan" })}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Piagam (PDF)
+                </Button>
               </div>
-              
-              {/* Platinum Charter */}
-              <div className="space-y-2">
-                <Badge className="bg-cyan-600 text-white">Platinum - Full Verified</Badge>
-                <VirtualCharter
-                  level="platinum"
-                  noId={debugProfile?.nip || "2601001"}
-                  namaMedia={formData.namaPesantren}
-                  alamat={formData.alamat}
-                  className={profileLevel !== "platinum" ? "opacity-50" : ""}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Physical Charter (Classic A4 Landscape) */}
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 mb-2">Sertifikat Resmi (A4 Landscape)</h2>
-            <p className="text-sm text-slate-500 mb-4">
-              Piagam klasik untuk dicetak oleh Admin Pusat
-            </p>
-            <div className="max-w-2xl mx-auto relative">
-              <PhysicalCharter
-                noId={debugProfile?.nip || "2601001"}
-                namaMedia={formData.namaPesantren}
-                alamat={formData.alamat}
-              />
-              {!canDownloadCertificate && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                  <div className="text-center text-white">
-                    <Lock className="h-10 w-10 mx-auto mb-2" />
-                    <p className="text-sm">Lengkapi Profil (Gold) & Lunasi Tagihan</p>
-                  </div>
-                </div>
+              {paymentStatus === "unpaid" && (
+                <p className="text-center text-sm text-red-600 mt-2">
+                  * Lunasi administrasi untuk mengunduh piagam
+                </p>
               )}
-            </div>
-            <div className="max-w-2xl mx-auto mt-4">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="block">
-                      <Button 
-                        className="w-full bg-[#166534] hover:bg-[#14532d]"
-                        disabled={!canDownloadCertificate}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF Resmi
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {!canDownloadCertificate && (
-                    <TooltipContent>
-                      <p>Lengkapi Data (Gold) & Lunasi Tagihan</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-
-          {/* Section 2: Preview ID Card Kru */}
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Preview ID Card Kru</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Virtual ID - Landscape */}
-              <Card className="overflow-hidden">
-                <CardHeader className="bg-slate-100 pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <IdCard className="h-5 w-5 text-[#166534]" />
-                      Virtual ID (Landscape)
-                    </CardTitle>
-                    <Badge variant="secondary" className="bg-green-100 text-green-700">
-                      Available for Crew
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="aspect-[1.6/1] bg-gradient-to-br from-[#166534] to-[#14532d] rounded-xl p-4 text-white relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 opacity-10">
-                      <Award className="w-full h-full" />
-                    </div>
-                    <div className="flex flex-col h-full justify-between">
-                      <div>
-                        <p className="text-xs opacity-80">No. ID</p>
-                        <p className="font-mono font-bold">200100101</p>
-                      </div>
-                      <div>
-                        <p className="font-bold">Ahmad Fauzi</p>
-                        <p className="text-sm opacity-80">PP Al-Hikmah</p>
-                        <p className="text-xs opacity-60 mt-1">Jl. Raya No. 123, Malang</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-3 text-center">* Tanpa foto & barcode untuk tampilan aplikasi</p>
-                </CardContent>
-              </Card>
-
-              {/* Physical ID - Portrait */}
-              <Card className="overflow-hidden relative">
-                <CardHeader className="bg-slate-100 pb-4">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <IdCard className="h-5 w-5 text-[#166534]" />
-                      Physical ID (Portrait)
-                    </CardTitle>
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-700">
-                      Print Only
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="aspect-[2/3] bg-white rounded-xl border-2 border-[#166534] p-3 relative overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-[#166534] text-white text-center py-2 rounded-t-lg -mx-3 -mt-3 mb-3">
-                      <p className="text-xs font-bold">MEDIA PONDOK JAWA TIMUR</p>
-                    </div>
-                    {/* Photo */}
-                    <div className="w-20 h-20 mx-auto bg-slate-200 rounded-full flex items-center justify-center mb-3">
-                      <span className="text-2xl font-bold text-slate-400">AF</span>
-                    </div>
-                    {/* Info */}
-                    <div className="text-center mb-3">
-                      <p className="font-bold text-sm text-slate-800">Ahmad Fauzi</p>
-                      <p className="text-xs text-slate-600">PP Al-Hikmah</p>
-                      <p className="text-xs text-slate-500 mt-1">Jl. Raya No. 123</p>
-                    </div>
-                    {/* QR Code */}
-                    <div className="flex flex-col items-center mt-auto">
-                      <div className="w-16 h-16 bg-slate-100 flex items-center justify-center rounded">
-                        <QrCode className="h-12 w-12 text-slate-400" />
-                      </div>
-                      <p className="text-xs font-mono text-slate-600 mt-1">200100101</p>
-                    </div>
-                  </div>
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
-                    <div className="bg-white/90 px-4 py-2 rounded-lg text-center">
-                      <Lock className="h-5 w-5 mx-auto text-slate-600 mb-1" />
-                      <p className="text-sm font-medium text-slate-800">Hanya dapat dicetak</p>
-                      <p className="text-xs text-slate-600">oleh Admin Pusat</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
