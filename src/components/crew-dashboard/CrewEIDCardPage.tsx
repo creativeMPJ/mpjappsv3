@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Download, QrCode, Shield, Lock, FileText, RotateCcw, Info } from "lucide-react";
+import { Download, Shield, Lock, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ interface CrewEIDCardPageProps {
     xp_level?: number;
     skill?: string[];
     institution_name?: string;
+    pesantren_asal?: string;
+    alamat_asal?: string;
   };
 }
 
@@ -34,8 +36,8 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
   const userData = isDebugMode && debugCrew ? {
     name: debugCrew.nama,
     noId: debugCrew.niam || "AN260100102",
-    asalMedia: debugCrew.institution_name || "PP. Al-Hikmah Malang",
-    alamatPesantren: "Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur",
+    asalMedia: debugCrew.institution_name || debugCrew.pesantren_asal || "PP. Al-Hikmah Malang",
+    alamatPesantren: debugCrew.alamat_asal || "Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur",
     role: debugCrew.jabatan || "Kru Media",
     xp: debugCrew.xp_level || 2500,
     skills: debugCrew.skill || ["Fotografer", "Editor"],
@@ -116,11 +118,11 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
     <div className="p-4 space-y-6">
       <Tabs defaultValue="virtual" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="virtual">Virtual Card</TabsTrigger>
-          <TabsTrigger value="physical">Physical Card</TabsTrigger>
+          <TabsTrigger value="virtual">Kartu Virtual</TabsTrigger>
+          <TabsTrigger value="physical">Pratinjau Fisik</TabsTrigger>
         </TabsList>
 
-        {/* TAB 1: Virtual Card - Landscape 16:9 */}
+        {/* TAB 1: Kartu Virtual - Landscape 16:9 */}
         <TabsContent value="virtual" className="space-y-4">
           {/* XP Badge Display */}
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -151,7 +153,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
           </div>
         </TabsContent>
 
-        {/* TAB 2: Physical Card - Portrait for Events */}
+        {/* TAB 2: Pratinjau Fisik - Portrait for Events */}
         <TabsContent value="physical" className="space-y-4">
           {/* Physical Member Card - Portrait with flip */}
           <PhysicalMemberCard
@@ -201,7 +203,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">No. ID</span>
-              <span className="font-medium">{userData.noId}</span>
+              <span className="font-mono font-medium">{userData.noId}</span>
             </div>
           </div>
         </CardContent>

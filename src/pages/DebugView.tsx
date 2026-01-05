@@ -57,11 +57,17 @@ const MOCK_DATA = {
     jabatan: 'Kru Media',
     jabatan_code: 'AN',
     xp_level: 2500, // Gold level (2000-5000)
-    skill: ['Videografi', 'Editing'],
+    skill: ['Videografi', 'Editing', 'Desain Grafis'],
     profile_id: 'mock-media-platinum',
     // Parent institution data
     institution_name: 'Pondok Pesantren Al-Hikmah',
     institution_nip: '2601001',
+    // Extended crew data for profile form
+    pesantren_asal: 'Pondok Pesantren Al-Hikmah',
+    alamat_asal: 'Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur',
+    nama_panggilan: 'Rizky',
+    whatsapp: '081234567890',
+    prinsip_hidup: 'Salam Khidmah, Salam Militan',
   },
 };
 
