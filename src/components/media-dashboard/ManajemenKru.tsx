@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -75,6 +76,24 @@ const skillOptions = [
   "Videografi",
 ];
 
+// Skeleton loader for table rows
+const TableRowSkeleton = memo(() => (
+  <TableRow>
+    <TableCell>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <Skeleton className="h-4 w-32" />
+      </div>
+    </TableCell>
+    <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+  </TableRow>
+));
+TableRowSkeleton.displayName = 'TableRowSkeleton';
+
 // Memoized crew row component for performance
 const CrewRow = memo(({ 
   member, 
@@ -89,16 +108,16 @@ const CrewRow = memo(({
   onUpdateJabatan: (id: string, jabatanCodeId: string) => void;
   onDelete: (id: string) => void;
 }) => {
-  const getAvatarInitials = (name: string) => {
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-  };
+  const getAvatarInitials = useMemo(() => {
+    return member.nama.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  }, [member.nama]);
 
   return (
     <TableRow>
       <TableCell>
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-            {getAvatarInitials(member.nama)}
+            {getAvatarInitials}
           </div>
           <span className="font-medium text-foreground">{member.nama}</span>
         </div>
@@ -171,6 +190,52 @@ const CrewRow = memo(({
 
 CrewRow.displayName = 'CrewRow';
 
+// Memoized crew list component
+const CrewList = memo(({ 
+  crewMembers, 
+  jabatanCodes, 
+  paymentStatus, 
+  onUpdateJabatan, 
+  onDelete 
+}: {
+  crewMembers: CrewMember[];
+  jabatanCodes: JabatanCode[];
+  paymentStatus: "paid" | "unpaid";
+  onUpdateJabatan: (id: string, jabatanCodeId: string) => void;
+  onDelete: (id: string) => void;
+}) => {
+  if (crewMembers.length === 0) {
+    return (
+      <TableRow>
+        <TableCell colSpan={6} className="h-32 text-center">
+          <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <Users className="h-8 w-8" />
+            <p>Belum ada anggota kru</p>
+            <p className="text-sm">Klik tombol "Tambah Kru Baru" untuk memulai</p>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  return (
+    <>
+      {crewMembers.map((member) => (
+        <CrewRow
+          key={member.id}
+          member={member}
+          jabatanCodes={jabatanCodes}
+          paymentStatus={paymentStatus}
+          onUpdateJabatan={onUpdateJabatan}
+          onDelete={onDelete}
+        />
+      ))}
+    </>
+  );
+});
+
+CrewList.displayName = 'CrewList';
+
 const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
   const { user } = useAuth();
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
@@ -184,9 +249,20 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
     skill: "",
   });
 
-  // Memoized computed values
-  const isSlotLimitReached = useMemo(() => crewMembers.length >= FREE_SLOT_LIMIT, [crewMembers.length]);
-  const isAddDisabled = useMemo(() => paymentStatus === "unpaid" || isSlotLimitReached, [paymentStatus, isSlotLimitReached]);
+  // Memoized computed values for slot logic (The Golden 3)
+  const slotStatus = useMemo(() => {
+    const used = crewMembers.length;
+    const isLimitReached = used >= FREE_SLOT_LIMIT;
+    const isAddDisabled = paymentStatus === "unpaid" || isLimitReached;
+    
+    return {
+      used,
+      limit: FREE_SLOT_LIMIT,
+      isLimitReached,
+      isAddDisabled,
+      remaining: FREE_SLOT_LIMIT - used,
+    };
+  }, [crewMembers.length, paymentStatus]);
 
   // Fetch crew members and jabatan codes
   const fetchData = useCallback(async () => {
@@ -343,26 +419,18 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
     }
   }, [jabatanCodes, fetchData]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Tim Media</h1>
           <p className="text-muted-foreground">
-            Kelola anggota tim media pesantren Anda ({crewMembers.length}/{FREE_SLOT_LIMIT} slot gratis)
+            Kelola anggota tim media pesantren Anda ({slotStatus.used}/{slotStatus.limit} slot gratis)
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={fetchData} disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
             Refresh
           </Button>
           <TooltipProvider>
@@ -373,13 +441,13 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
                     <DialogTrigger asChild>
                       <Button
                         className={cn(
-                          isAddDisabled 
+                          slotStatus.isAddDisabled 
                             ? "bg-muted text-muted-foreground cursor-not-allowed" 
                             : "bg-primary hover:bg-primary/90"
                         )}
-                        disabled={isAddDisabled}
+                        disabled={slotStatus.isAddDisabled}
                       >
-                        {isAddDisabled ? (
+                        {slotStatus.isAddDisabled ? (
                           <Lock className="h-4 w-4 mr-2" />
                         ) : (
                           <UserPlus className="h-4 w-4 mr-2" />
@@ -460,12 +528,12 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
                   </Dialog>
                 </span>
               </TooltipTrigger>
-              {isAddDisabled && (
+              {slotStatus.isAddDisabled && (
                 <TooltipContent>
                   <p>
                     {paymentStatus === "unpaid" 
                       ? "Fitur terkunci (Unpaid) - Lunasi tagihan untuk membuka"
-                      : `Batas slot gratis tercapai (${FREE_SLOT_LIMIT} anggota)`
+                      : `Batas slot gratis tercapai (${slotStatus.limit} anggota)`
                     }
                   </p>
                 </TooltipContent>
@@ -476,12 +544,12 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
       </div>
 
       {/* Slot Limit Alert */}
-      {isSlotLimitReached && paymentStatus === "paid" && (
+      {slotStatus.isLimitReached && paymentStatus === "paid" && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800 flex items-center justify-between">
             <span>
-              <strong>Slot Gratis Penuh:</strong> Anda telah menggunakan {FREE_SLOT_LIMIT} slot gratis.
+              <strong>Slot Gratis Penuh:</strong> Anda telah menggunakan {slotStatus.limit} slot gratis.
             </span>
             <Button size="sm" variant="outline" className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100" disabled>
               <Lock className="h-3 w-3 mr-1" />
@@ -516,27 +584,20 @@ const ManajemenKru = ({ paymentStatus, debugProfile }: ManajemenKruProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {crewMembers.length > 0 ? (
-                crewMembers.map((member) => (
-                  <CrewRow
-                    key={member.id}
-                    member={member}
-                    jabatanCodes={jabatanCodes}
-                    paymentStatus={paymentStatus}
-                    onUpdateJabatan={handleUpdateJabatan}
-                    onDelete={handleDeleteMember}
-                  />
-                ))
+              {isLoading ? (
+                <>
+                  <TableRowSkeleton />
+                  <TableRowSkeleton />
+                  <TableRowSkeleton />
+                </>
               ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <Users className="h-8 w-8" />
-                      <p>Belum ada anggota kru</p>
-                      <p className="text-sm">Klik tombol "Tambah Kru Baru" untuk memulai</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                <CrewList
+                  crewMembers={crewMembers}
+                  jabatanCodes={jabatanCodes}
+                  paymentStatus={paymentStatus}
+                  onUpdateJabatan={handleUpdateJabatan}
+                  onDelete={handleDeleteMember}
+                />
               )}
             </TableBody>
           </Table>
