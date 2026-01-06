@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, User, Lock, Send, FileText, Shield, UserPlus, AlertTriangle } from "lucide-react";
+import { Settings, User, Lock, UserPlus, Search, Trash2, Shield, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,22 +7,36 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { formatNIAM } from "@/lib/id-utils";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
-interface UserData {
+interface AdminUser {
   id: string;
-  nama_pesantren: string | null;
-  nama_pengasuh: string | null;
+  user_id: string;
+  nama: string;
+  niam: string | null;
+  jabatan: string | null;
   region_id: string | null;
   region_name: string | null;
   role: AppRole;
-  status_account: string;
+}
+
+interface CrewOption {
+  id: string;
+  profile_id: string;
+  nama: string;
+  niam: string | null;
+  jabatan: string | null;
+  pesantren_name: string | null;
+  region_id: string | null;
+  region_name: string | null;
 }
 
 interface Region {
@@ -36,74 +50,86 @@ const AdminPusatPengaturan = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   
-  // Super Admin Zone state
-  const [userList, setUserList] = useState<UserData[]>([]);
+  // Admin management state
+  const [adminList, setAdminList] = useState<AdminUser[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Role management dialog state
-  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
-  const [selectedRole, setSelectedRole] = useState<AppRole>("user");
+  // Add admin dialog state
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [crewSearchQuery, setCrewSearchQuery] = useState("");
+  const [crewOptions, setCrewOptions] = useState<CrewOption[]>([]);
+  const [selectedCrew, setSelectedCrew] = useState<CrewOption | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AppRole>("admin_regional");
   const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [isSearchingCrew, setIsSearchingCrew] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch all users with their roles
-        const { data: userData } = await supabase
-          .from("profiles")
-          .select(`
-            id,
-            nama_pesantren,
-            nama_pengasuh,
-            region_id,
-            role,
-            status_account,
-            regions!profiles_region_id_fkey (name)
-          `)
-          .order("nama_pesantren", { ascending: true });
-
-        // Fetch all regions
-        const { data: regionsData } = await supabase
-          .from("regions")
-          .select("id, name")
-          .order("name", { ascending: true });
-
-        if (userData) {
-          setUserList(
-            userData.map((item: any) => ({
-              id: item.id,
-              nama_pesantren: item.nama_pesantren,
-              nama_pengasuh: item.nama_pengasuh,
-              region_id: item.region_id,
-              region_name: item.regions?.name || "Belum diatur",
-              role: item.role,
-              status_account: item.status_account,
-            }))
-          );
-        }
-
-        if (regionsData) {
-          setRegions(regionsData);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
-  const handleLockedFeature = (feature: string) => {
-    toast({
-      title: "Coming Soon",
-      description: `Fitur "${feature}" akan tersedia di update selanjutnya.`,
-      variant: "default",
-    });
+  const fetchData = async () => {
+    try {
+      // Fetch all admins by joining user_roles with crews
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["admin_pusat", "admin_regional", "admin_finance"]);
+
+      if (rolesData && rolesData.length > 0) {
+        // Get crew info for each admin
+        const adminPromises = rolesData.map(async (roleData) => {
+          const { data: crewData } = await supabase
+            .from("crews")
+            .select(`
+              id,
+              nama,
+              niam,
+              jabatan,
+              profile_id,
+              profiles!crews_profile_id_fkey (region_id, regions!profiles_region_id_fkey (name))
+            `)
+            .eq("profile_id", roleData.user_id)
+            .limit(1)
+            .single();
+
+          if (crewData) {
+            return {
+              id: crewData.id,
+              user_id: roleData.user_id,
+              nama: crewData.nama,
+              niam: crewData.niam,
+              jabatan: crewData.jabatan,
+              region_id: (crewData.profiles as any)?.region_id || null,
+              region_name: (crewData.profiles as any)?.regions?.name || null,
+              role: roleData.role,
+            };
+          }
+          return null;
+        });
+
+        const admins = (await Promise.all(adminPromises)).filter(Boolean) as AdminUser[];
+        setAdminList(admins);
+      }
+
+      // Fetch all regions
+      const { data: regionsData } = await supabase
+        .from("regions")
+        .select("id, name")
+        .order("name", { ascending: true });
+
+      if (regionsData) {
+        setRegions(regionsData);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChangePassword = () => {
@@ -138,145 +164,174 @@ const AdminPusatPengaturan = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aktif</Badge>;
-      case "pending":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Ditolak</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+  // Search crew from database
+  const searchCrew = async (query: string) => {
+    if (query.length < 2) {
+      setCrewOptions([]);
+      return;
+    }
+
+    setIsSearchingCrew(true);
+    try {
+      const { data } = await supabase
+        .from("crews")
+        .select(`
+          id,
+          profile_id,
+          nama,
+          niam,
+          jabatan,
+          profiles!crews_profile_id_fkey (nama_pesantren, region_id, regions!profiles_region_id_fkey (name))
+        `)
+        .ilike("nama", `%${query}%`)
+        .limit(10);
+
+      if (data) {
+        // Filter out already assigned admins
+        const existingAdminUserIds = adminList.map(a => a.user_id);
+        const filtered = data.filter(c => !existingAdminUserIds.includes(c.profile_id));
+        
+        setCrewOptions(filtered.map((item: any) => ({
+          id: item.id,
+          profile_id: item.profile_id,
+          nama: item.nama,
+          niam: item.niam,
+          jabatan: item.jabatan,
+          pesantren_name: item.profiles?.nama_pesantren || null,
+          region_id: item.profiles?.region_id || null,
+          region_name: item.profiles?.regions?.name || null,
+        })));
+      }
+    } catch (error) {
+      console.error("Error searching crew:", error);
+    } finally {
+      setIsSearchingCrew(false);
     }
   };
 
-  const handleOpenRoleDialog = (userData: UserData) => {
-    setSelectedUser(userData);
-    setSelectedRole(userData.role);
-    setSelectedRegion(userData.region_id || "");
-    setIsRoleDialogOpen(true);
-  };
+  const handleAddAdmin = async () => {
+    if (!selectedCrew) {
+      toast({ title: "Error", description: "Pilih kru terlebih dahulu", variant: "destructive" });
+      return;
+    }
 
-  const handleSaveRole = async () => {
-    if (!selectedUser) return;
-    
+    if (selectedRole === "admin_regional" && !selectedRegion) {
+      toast({ title: "Error", description: "Pilih wilayah untuk Admin Regional", variant: "destructive" });
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Update user_roles table (this will trigger sync to profiles via the trigger)
-      const { error: roleError } = await supabase
+      // Upsert to user_roles table
+      const { error } = await supabase
         .from("user_roles")
         .upsert({
-          user_id: selectedUser.id,
+          user_id: selectedCrew.profile_id,
           role: selectedRole,
         }, {
           onConflict: "user_id"
         });
 
-      if (roleError) throw roleError;
-
-      // Update region in profiles if admin_regional and region changed
-      if (selectedRole === "admin_regional" && selectedRegion && selectedRegion !== selectedUser.region_id) {
-        const { error: regionError } = await supabase.rpc("migrate_legacy_account", {
-          p_user_id: selectedUser.id,
-          p_city_id: null as any,
-          p_region_id: selectedRegion,
-          p_nama_pesantren: selectedUser.nama_pesantren || "",
-          p_nama_pengasuh: selectedUser.nama_pengasuh || "",
-          p_alamat_singkat: "",
-          p_no_wa_pendaftar: "",
-          p_status_account: selectedUser.status_account as any,
-        });
-
-        if (regionError) {
-          console.error("Region update error:", regionError);
-        }
-      }
-
-      // Update local state
-      setUserList(prev => prev.map(u => 
-        u.id === selectedUser.id 
-          ? { 
-              ...u, 
-              role: selectedRole,
-              region_id: selectedRegion || u.region_id,
-              region_name: regions.find(r => r.id === selectedRegion)?.name || u.region_name
-            }
-          : u
-      ));
+      if (error) throw error;
 
       toast({
         title: "Berhasil",
-        description: `Role ${selectedUser.nama_pesantren || selectedUser.nama_pengasuh || "user"} berhasil diperbarui.`,
+        description: `${selectedCrew.nama} berhasil ditambahkan sebagai ${selectedRole === 'admin_pusat' ? 'Admin Pusat' : selectedRole === 'admin_regional' ? 'Admin Regional' : 'Admin Finance'}`,
       });
 
-      setIsRoleDialogOpen(false);
+      setIsAddDialogOpen(false);
+      setSelectedCrew(null);
+      setCrewSearchQuery("");
+      setCrewOptions([]);
+      fetchData();
     } catch (error: any) {
-      console.error("Error updating role:", error);
-      toast({
-        title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat memperbarui role.",
-        variant: "destructive",
-      });
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Filter users by role
-  const adminRegionalList = userList.filter(u => u.role === "admin_regional");
-  const adminPusatList = userList.filter(u => u.role === "admin_pusat" || u.role === "admin_finance");
+  const handleRemoveAdmin = async () => {
+    if (!deleteTarget) return;
+
+    setIsSaving(true);
+    try {
+      // Demote to regular user
+      const { error } = await supabase
+        .from("user_roles")
+        .update({ role: "user" })
+        .eq("user_id", deleteTarget.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: `${deleteTarget.nama} tidak lagi menjadi admin.`,
+      });
+
+      setDeleteTarget(null);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Filter by role type
+  const adminPusatList = adminList.filter(a => a.role === "admin_pusat");
+  const adminRegionalList = adminList.filter(a => a.role === "admin_regional");
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Pengaturan</h1>
-        <p className="text-slate-500 mt-1">Kelola akun dan preferensi</p>
+        <h1 className="text-2xl font-bold text-foreground">Pengaturan</h1>
+        <p className="text-muted-foreground mt-1">Kelola akun dan personil admin</p>
       </div>
 
-      {/* Profile Section - ACTIVE */}
-      <Card className="bg-white border-0 shadow-sm">
+      {/* Profile Section */}
+      <Card className="bg-card border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg text-slate-900 font-semibold flex items-center gap-2">
-            <User className="h-5 w-5 text-[#166534]" />
+          <CardTitle className="text-lg text-foreground font-semibold flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
             Profil Akun
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-slate-600">Email</Label>
+              <Label className="text-muted-foreground">Email</Label>
               <Input 
                 value={user?.email || ""} 
                 disabled 
-                className="mt-1 bg-slate-50"
+                className="mt-1 bg-muted"
               />
             </div>
             <div>
-              <Label className="text-slate-600">Role</Label>
+              <Label className="text-muted-foreground">Role</Label>
               <Input 
                 value="Admin Pusat" 
                 disabled 
-                className="mt-1 bg-slate-50"
+                className="mt-1 bg-muted"
               />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Change Password - ACTIVE */}
-      <Card className="bg-white border-0 shadow-sm">
+      {/* Change Password */}
+      <Card className="bg-card border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg text-slate-900 font-semibold flex items-center gap-2">
-            <Lock className="h-5 w-5 text-[#166534]" />
+          <CardTitle className="text-lg text-foreground font-semibold flex items-center gap-2">
+            <Lock className="h-5 w-5 text-primary" />
             Ganti Password
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-slate-600">Password Lama</Label>
+              <Label className="text-muted-foreground">Password Lama</Label>
               <Input 
                 type="password"
                 value={currentPassword}
@@ -286,7 +341,7 @@ const AdminPusatPengaturan = () => {
               />
             </div>
             <div>
-              <Label className="text-slate-600">Password Baru</Label>
+              <Label className="text-muted-foreground">Password Baru</Label>
               <Input 
                 type="password"
                 value={newPassword}
@@ -298,336 +353,374 @@ const AdminPusatPengaturan = () => {
           </div>
           <Button 
             onClick={handleChangePassword}
-            className="bg-[#166534] hover:bg-emerald-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             Simpan Password
           </Button>
         </CardContent>
       </Card>
 
-      {/* SUPER ADMIN ZONE */}
-      <Card className="bg-white border-2 border-red-200 shadow-sm">
-        <CardHeader className="pb-3 bg-red-50 rounded-t-lg">
+      {/* Admin Management Section */}
+      <Card className="bg-card border-0 shadow-sm">
+        <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg text-red-800 font-semibold flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              MANAJEMEN AKSES & HIERARKI
+            <CardTitle className="text-lg text-foreground font-semibold flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Kelola Personil Admin
             </CardTitle>
-            <Badge className="bg-red-600 text-white hover:bg-red-600">
-              SUPER ADMIN AREA
-            </Badge>
+            <Button 
+              onClick={() => setIsAddDialogOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Tambah Admin
+            </Button>
           </div>
-          <div className="flex items-center gap-2 mt-2">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <span className="text-sm text-red-600 font-medium">
-              Perhatian: Area ini memberikan akses penuh ke sistem. Hanya untuk Super Admin.
-            </span>
-          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Tambah atau hapus personil admin dari database kru yang sudah terdaftar.
+          </p>
         </CardHeader>
-        <CardContent className="space-y-6 pt-6">
+        <CardContent className="space-y-6">
           
+          {/* Admin Pusat Section */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="h-4 w-4 text-purple-600" />
+              <h3 className="font-semibold text-foreground">Tim Pusat ({adminPusatList.length})</h3>
+            </div>
+            
+            {loading ? (
+              <div className="flex items-center justify-center h-16">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-muted-foreground">NIAM</TableHead>
+                        <TableHead className="text-muted-foreground">Nama</TableHead>
+                        <TableHead className="text-muted-foreground">Jabatan</TableHead>
+                        <TableHead className="text-muted-foreground">Role</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminPusatList.length > 0 ? (
+                        adminPusatList.map((admin) => (
+                          <TableRow key={admin.id}>
+                            <TableCell className="font-mono text-sm">
+                              {admin.niam ? formatNIAM(admin.niam, true) : "-"}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">{admin.nama}</TableCell>
+                            <TableCell className="text-muted-foreground">{admin.jabatan || "-"}</TableCell>
+                            <TableCell>{getRoleBadge(admin.role)}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteTarget(admin)}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                            Belum ada Admin Pusat
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {adminPusatList.length > 0 ? (
+                    adminPusatList.map((admin) => (
+                      <div key={admin.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground">{admin.nama}</p>
+                            {admin.niam && (
+                              <p className="text-sm font-mono text-primary">{formatNIAM(admin.niam, true)}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">{admin.jabatan || "-"}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getRoleBadge(admin.role)}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteTarget(admin)}
+                              className="h-8 w-8 p-0 text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">Belum ada Admin Pusat</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="border-t border-border" />
+
           {/* Admin Regional Section */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-blue-600" />
-                Manajemen Admin Regional ({adminRegionalList.length})
-              </h3>
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="h-4 w-4 text-blue-600" />
+              <h3 className="font-semibold text-foreground">Admin Regional ({adminRegionalList.length})</h3>
             </div>
             
             {loading ? (
-              <div className="flex items-center justify-center h-24">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#166534]" />
+              <div className="flex items-center justify-center h-16">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-slate-600">Nama</TableHead>
-                      <TableHead className="text-slate-600">Wilayah</TableHead>
-                      <TableHead className="text-slate-600">Status</TableHead>
-                      <TableHead className="text-slate-600 text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {adminRegionalList.length > 0 ? (
-                      adminRegionalList.map((userData) => (
-                        <TableRow key={userData.id}>
-                          <TableCell className="font-medium text-slate-900">
-                            {userData.nama_pesantren || userData.nama_pengasuh || "Belum diisi"}
-                          </TableCell>
-                          <TableCell className="text-slate-600">{userData.region_name}</TableCell>
-                          <TableCell>{getStatusBadge(userData.status_account)}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenRoleDialog(userData)}
-                              className="gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
-                            >
-                              <Shield className="h-4 w-4" />
-                              Ubah Role
-                            </Button>
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-muted-foreground">NIAM</TableHead>
+                        <TableHead className="text-muted-foreground">Nama</TableHead>
+                        <TableHead className="text-muted-foreground">Jabatan</TableHead>
+                        <TableHead className="text-muted-foreground">Wilayah</TableHead>
+                        <TableHead className="text-muted-foreground text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminRegionalList.length > 0 ? (
+                        adminRegionalList.map((admin) => (
+                          <TableRow key={admin.id}>
+                            <TableCell className="font-mono text-sm">
+                              {admin.niam ? formatNIAM(admin.niam, true) : "-"}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">{admin.nama}</TableCell>
+                            <TableCell className="text-muted-foreground">{admin.jabatan || "-"}</TableCell>
+                            <TableCell className="text-muted-foreground">{admin.region_name || "-"}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setDeleteTarget(admin)}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                            Belum ada Admin Regional
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-slate-500 py-6">
-                          Belum ada Admin Regional
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-          {/* Divider */}
-          <div className="border-t border-slate-200" />
-
-          {/* Admin Pusat / Tim Pusat Section */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-purple-600" />
-                Manajemen Tim Pusat ({adminPusatList.length})
-              </h3>
-            </div>
-            
-            {loading ? (
-              <div className="flex items-center justify-center h-24">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#166534]" />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-slate-600">Nama</TableHead>
-                      <TableHead className="text-slate-600">Role</TableHead>
-                      <TableHead className="text-slate-600">Status</TableHead>
-                      <TableHead className="text-slate-600 text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {adminPusatList.length > 0 ? (
-                      adminPusatList.map((userData) => (
-                        <TableRow key={userData.id}>
-                          <TableCell className="font-medium text-slate-900">
-                            {userData.nama_pesantren || userData.nama_pengasuh || "Belum diisi"}
-                          </TableCell>
-                          <TableCell>{getRoleBadge(userData.role)}</TableCell>
-                          <TableCell>{getStatusBadge(userData.status_account)}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenRoleDialog(userData)}
-                              className="gap-1 border-purple-300 text-purple-700 hover:bg-purple-50"
-                            >
-                              <Shield className="h-4 w-4" />
-                              Ubah Role
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-slate-500 py-6">
-                          Belum ada Tim Pusat
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-slate-200" />
-
-          {/* Promote New User Section */}
-          <div>
-            <h3 className="font-semibold text-slate-900 mb-4">Promosikan User Baru</h3>
-            <p className="text-sm text-slate-500 mb-4">
-              Cari user yang sudah terdaftar dan promosikan ke role Admin.
-            </p>
-            
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-slate-600">Nama</TableHead>
-                    <TableHead className="text-slate-600">Wilayah</TableHead>
-                    <TableHead className="text-slate-600">Role Saat Ini</TableHead>
-                    <TableHead className="text-slate-600">Status</TableHead>
-                    <TableHead className="text-slate-600 text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {userList.filter(u => u.role === "user").slice(0, 10).map((userData) => (
-                    <TableRow key={userData.id}>
-                      <TableCell className="font-medium text-slate-900">
-                        {userData.nama_pesantren || userData.nama_pengasuh || "Belum diisi"}
-                      </TableCell>
-                      <TableCell className="text-slate-600">{userData.region_name}</TableCell>
-                      <TableCell>{getRoleBadge(userData.role)}</TableCell>
-                      <TableCell>{getStatusBadge(userData.status_account)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleOpenRoleDialog(userData)}
-                          className="gap-1 bg-[#166534] hover:bg-emerald-700 text-white"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          Promosikan
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {userList.filter(u => u.role === "user").length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-slate-500 py-6">
-                        Tidak ada user biasa yang tersedia
-                      </TableCell>
-                    </TableRow>
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {adminRegionalList.length > 0 ? (
+                    adminRegionalList.map((admin) => (
+                      <div key={admin.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-semibold text-foreground">{admin.nama}</p>
+                            {admin.niam && (
+                              <p className="text-sm font-mono text-primary">{formatNIAM(admin.niam, true)}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">{admin.jabatan || "-"}</p>
+                            <Badge variant="outline" className="mt-1 text-xs">{admin.region_name || "-"}</Badge>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTarget(admin)}
+                            className="h-8 w-8 p-0 text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">Belum ada Admin Regional</p>
                   )}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Locked Features */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Broadcast Center - LOCKED */}
-        <Card className="bg-slate-50 border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center">
-                <Send className="h-6 w-6 text-slate-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-slate-500">Broadcast Center</h3>
-                <p className="text-sm text-slate-400">Kirim pesan ke semua regional</p>
-              </div>
-              <Lock className="h-5 w-5 text-slate-400" />
-            </div>
-            <Button 
-              onClick={() => handleLockedFeature("Broadcast Center")}
-              className="w-full mt-4 bg-slate-300 text-slate-600 cursor-not-allowed"
-              disabled
-            >
-              Coming Soon
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Audit Log - LOCKED */}
-        <Card className="bg-slate-50 border-slate-200">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center">
-                <FileText className="h-6 w-6 text-slate-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-slate-500">Audit Log</h3>
-                <p className="text-sm text-slate-400">Riwayat aktivitas sistem</p>
-              </div>
-              <Lock className="h-5 w-5 text-slate-400" />
-            </div>
-            <Button 
-              onClick={() => handleLockedFeature("Audit Log")}
-              className="w-full mt-4 bg-slate-300 text-slate-600 cursor-not-allowed"
-              disabled
-            >
-              Coming Soon
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Role Management Dialog */}
-      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Add Admin Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-[#166534]" />
-              Atur Peran User
+              <UserPlus className="h-5 w-5 text-primary" />
+              Tambah Admin Baru
             </DialogTitle>
             <DialogDescription>
-              Ubah role dan wilayah user. Perubahan akan langsung aktif.
+              Cari kru dari database dan tetapkan sebagai admin.
             </DialogDescription>
           </DialogHeader>
           
-          {selectedUser && (
-            <div className="space-y-4 py-4">
-              {/* User Info */}
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="font-medium text-slate-900">
-                  {selectedUser.nama_pesantren || selectedUser.nama_pengasuh || "User"}
-                </p>
-                <p className="text-sm text-slate-500">
-                  Wilayah: {selectedUser.region_name}
+          <div className="space-y-4 py-4">
+            {/* Crew Search */}
+            <div className="space-y-2">
+              <Label>Cari Kru</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={crewSearchQuery}
+                  onChange={(e) => {
+                    setCrewSearchQuery(e.target.value);
+                    searchCrew(e.target.value);
+                  }}
+                  placeholder="Ketik nama kru (min. 2 karakter)"
+                  className="pl-10"
+                />
+              </div>
+              
+              {/* Search Results */}
+              {crewOptions.length > 0 && (
+                <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                  {crewOptions.map((crew) => (
+                    <button
+                      key={crew.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCrew(crew);
+                        setCrewSearchQuery(crew.nama);
+                        setCrewOptions([]);
+                        // Auto-set region if available
+                        if (crew.region_id) {
+                          setSelectedRegion(crew.region_id);
+                        }
+                      }}
+                      className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${
+                        selectedCrew?.id === crew.id ? 'bg-primary/10' : ''
+                      }`}
+                    >
+                      <p className="font-medium text-foreground">{crew.nama}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        {crew.niam && <span className="font-mono">{formatNIAM(crew.niam, true)}</span>}
+                        <span>•</span>
+                        <span>{crew.pesantren_name || "-"}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {isSearchingCrew && (
+                <p className="text-sm text-muted-foreground">Mencari...</p>
+              )}
+            </div>
+
+            {/* Selected Crew Info */}
+            {selectedCrew && (
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="font-medium text-foreground">{selectedCrew.nama}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCrew.jabatan || "Tanpa Jabatan"} • {selectedCrew.pesantren_name || "-"}
                 </p>
               </div>
+            )}
 
-              {/* Role Selection */}
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <Label>Pilih Role</Label>
+              <Select value={selectedRole} onValueChange={(val) => setSelectedRole(val as AppRole)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin_regional">Admin Regional</SelectItem>
+                  <SelectItem value="admin_finance">Admin Finance</SelectItem>
+                  <SelectItem value="admin_pusat">Admin Pusat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Region Selection - Only for admin_regional */}
+            {selectedRole === "admin_regional" && (
               <div className="space-y-2">
-                <Label>Pilih Role Baru</Label>
-                <Select value={selectedRole} onValueChange={(val) => setSelectedRole(val as AppRole)}>
+                <Label>Pilih Wilayah</Label>
+                <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih role" />
+                    <SelectValue placeholder="Pilih wilayah" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="user">User (Biasa)</SelectItem>
-                    <SelectItem value="admin_regional">Admin Regional</SelectItem>
-                    <SelectItem value="admin_finance">Admin Finance</SelectItem>
-                    <SelectItem value="admin_pusat">Admin Pusat</SelectItem>
+                    {regions.map((region) => (
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Region Selection - Only show if admin_regional */}
-              {selectedRole === "admin_regional" && (
-                <div className="space-y-2">
-                  <Label>Pilih Wilayah</Label>
-                  <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih wilayah" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {regions.map((region) => (
-                        <SelectItem key={region.id} value={region.id}>
-                          {region.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsAddDialogOpen(false);
+              setSelectedCrew(null);
+              setCrewSearchQuery("");
+              setCrewOptions([]);
+            }}>
               Batal
             </Button>
             <Button 
-              onClick={handleSaveRole} 
-              disabled={isSaving}
-              className="bg-[#166534] hover:bg-emerald-700 text-white"
+              onClick={handleAddAdmin} 
+              disabled={!selectedCrew || isSaving}
+              className="bg-primary"
             >
-              {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+              {isSaving ? "Menyimpan..." : "Tambah Admin"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Admin Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus dari Tim Admin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteTarget?.nama}</strong> akan dikembalikan menjadi user biasa dan tidak lagi memiliki akses admin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRemoveAdmin} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSaving ? "Menghapus..." : "Hapus dari Admin"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
