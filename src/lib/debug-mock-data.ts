@@ -330,3 +330,19 @@ export const getMediaDebugData = () => ({
   crews: MOCK_CREWS.filter(c => c.profile_id === 'p1'),
   payments: MOCK_PAYMENTS.filter(p => p.pesantren_name === 'PP Al-Hikmah Singosari'),
 });
+
+// ============= UNIFIED MOCK_DATA OBJECT (for DebugView) =============
+export const MOCK_DATA = {
+  // Profiles
+  adminPusat: MOCK_ADMIN_PUSAT,
+  regionalAdmin: MOCK_ADMIN_REGIONAL_MALANG,
+  mediaPlatinum: MOCK_MEDIA_PLATINUM,
+  crewMilitan: MOCK_CREW_MILITAN,
+  
+  // Data collections
+  pesantrenMultiRegion: MOCK_PESANTREN,
+  crewMultiPesantren: MOCK_CREWS,
+  regionsForFilter: MOCK_REGIONS,
+  paymentsForVerification: MOCK_PAYMENTS,
+  claimsRegionalApproved: getRegionalApprovedClaims(),
+};
