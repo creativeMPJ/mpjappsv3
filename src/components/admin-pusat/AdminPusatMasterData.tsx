@@ -352,13 +352,13 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     if (!editingPesantren) return;
     setIsSaving(true);
     try {
+      // NIP is immutable - do not include in update
       const { error } = await supabase
         .from("profiles")
         .update({
           nama_pesantren: editFormData.nama_pesantren,
           nama_pengasuh: editFormData.nama_pengasuh,
           alamat_singkat: editFormData.alamat_singkat,
-          nip: editFormData.nip || null,
         })
         .eq("id", editingPesantren.id);
 
@@ -378,13 +378,13 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     if (!editingMedia) return;
     setIsSaving(true);
     try {
+      // NIP is immutable - do not include in update
       const { error } = await supabase
         .from("profiles")
         .update({
           nama_pesantren: editFormData.nama_pesantren,
           nama_media: editFormData.nama_media,
           no_wa_pendaftar: editFormData.no_wa_pendaftar,
-          nip: editFormData.nip || null,
         })
         .eq("id", editingMedia.id);
 
@@ -404,12 +404,12 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     if (!editingCrew) return;
     setIsSaving(true);
     try {
+      // NIAM is immutable - do not include in update
       const { error } = await supabase
         .from("crews")
         .update({
           nama: editFormData.nama,
           jabatan: editFormData.jabatan,
-          niam: editFormData.niam || null,
         })
         .eq("id", editingCrew.id);
 
@@ -856,13 +856,16 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>NIP (Nomor Induk Pesantren)</Label>
+              <Label className="flex items-center gap-2">
+                NIP (Nomor Induk Pesantren)
+                <Badge variant="outline" className="text-xs text-muted-foreground">Permanen</Badge>
+              </Label>
               <Input
-                value={editFormData.nip || ""}
-                onChange={(e) => setEditFormData({ ...editFormData, nip: e.target.value })}
-                placeholder="Contoh: 2601001"
-                className="font-mono"
+                value={editFormData.nip ? formatNIP(editFormData.nip, true) : "-"}
+                disabled
+                className="font-mono bg-muted cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">NIP tidak dapat diubah setelah diterbitkan</p>
             </div>
             <div className="space-y-2">
               <Label>Nama Pesantren</Label>
@@ -907,13 +910,16 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>NIP</Label>
+              <Label className="flex items-center gap-2">
+                NIP
+                <Badge variant="outline" className="text-xs text-muted-foreground">Permanen</Badge>
+              </Label>
               <Input
-                value={editFormData.nip || ""}
-                onChange={(e) => setEditFormData({ ...editFormData, nip: e.target.value })}
-                placeholder="Contoh: 2601001"
-                className="font-mono"
+                value={editFormData.nip ? formatNIP(editFormData.nip, true) : "-"}
+                disabled
+                className="font-mono bg-muted cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">NIP tidak dapat diubah setelah diterbitkan</p>
             </div>
             <div className="space-y-2">
               <Label>Nama Pesantren</Label>
@@ -958,13 +964,16 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>NIAM (Nomor Induk Anggota Media)</Label>
+              <Label className="flex items-center gap-2">
+                NIAM (Nomor Induk Anggota Media)
+                <Badge variant="outline" className="text-xs text-muted-foreground">Permanen</Badge>
+              </Label>
               <Input
-                value={editFormData.niam || ""}
-                onChange={(e) => setEditFormData({ ...editFormData, niam: e.target.value })}
-                placeholder="Contoh: AN260100101"
-                className="font-mono"
+                value={editFormData.niam ? formatNIAM(editFormData.niam, true) : "-"}
+                disabled
+                className="font-mono bg-muted cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">NIAM tidak dapat diubah setelah diterbitkan</p>
             </div>
             <div className="space-y-2">
               <Label>Nama Lengkap</Label>
