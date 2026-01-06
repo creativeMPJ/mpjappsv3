@@ -15,8 +15,18 @@ type ViewType =
   | "mpj-hub"
   | "pengaturan";
 
+interface DebugData {
+  pesantren?: unknown[];
+  crews?: unknown[];
+  regions?: unknown[];
+  payments?: unknown[];
+  claims?: unknown[];
+}
+
 interface Props {
   onNavigate?: (view: ViewType) => void;
+  isDebugMode?: boolean;
+  debugData?: DebugData;
 }
 
 interface RecentUser {
@@ -36,7 +46,7 @@ interface LevelStats {
   platinum: number;
 }
 
-const AdminPusatHome = ({ onNavigate }: Props) => {
+const AdminPusatHome = ({ onNavigate, isDebugMode, debugData }: Props) => {
   const [stats, setStats] = useState({
     totalPesantren: 0,
     totalKru: 0,

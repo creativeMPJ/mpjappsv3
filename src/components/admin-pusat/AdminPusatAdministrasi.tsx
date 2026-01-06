@@ -44,6 +44,18 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatNIP } from "@/lib/id-utils";
 import JabatanCodesManagement from "./JabatanCodesManagement";
+interface DebugData {
+  pesantren?: unknown[];
+  crews?: unknown[];
+  regions?: unknown[];
+  payments?: unknown[];
+  claims?: unknown[];
+}
+
+interface Props {
+  isDebugMode?: boolean;
+  debugData?: DebugData;
+}
 
 interface ClaimRecord {
   id: string;
@@ -208,7 +220,7 @@ const LevelingCard = ({
   </Card>
 );
 
-const AdminPusatAdministrasi = () => {
+const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const { toast } = useToast();
   
   // Tab state

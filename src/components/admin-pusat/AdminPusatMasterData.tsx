@@ -57,7 +57,20 @@ interface Region {
   code: string;
 }
 
-const AdminPusatMasterData = () => {
+interface DebugData {
+  pesantren?: unknown[];
+  crews?: unknown[];
+  regions?: unknown[];
+  payments?: unknown[];
+  claims?: unknown[];
+}
+
+interface Props {
+  isDebugMode?: boolean;
+  debugData?: DebugData;
+}
+
+const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("pesantren");
   const [pesantrenList, setPesantrenList] = useState<Pesantren[]>([]);

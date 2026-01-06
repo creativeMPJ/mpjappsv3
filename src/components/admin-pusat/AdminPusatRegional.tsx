@@ -26,6 +26,19 @@ import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
+interface DebugData {
+  pesantren?: unknown[];
+  crews?: unknown[];
+  regions?: unknown[];
+  payments?: unknown[];
+  claims?: unknown[];
+}
+
+interface Props {
+  isDebugMode?: boolean;
+  debugData?: DebugData;
+}
+
 interface Region {
   id: string;
   name: string;
@@ -53,7 +66,7 @@ interface RegionWithStats extends Region {
   admin_count: number;
 }
 
-const AdminPusatRegional = () => {
+const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
   const { toast } = useToast();
   const [regions, setRegions] = useState<Region[]>([]);
   const [cities, setCities] = useState<City[]>([]);

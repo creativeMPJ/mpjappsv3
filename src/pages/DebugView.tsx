@@ -11,7 +11,8 @@ import {
   Shield,
   ArrowRight,
   Sparkles,
-  Eye
+  Eye,
+  Crown
 } from "lucide-react";
 import { VirtualIDCard } from "@/components/shared/VirtualIDCard";
 import { ProfileLevelBadge, XPLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
@@ -93,19 +94,19 @@ const MOCK_DATA = {
   // 10 Pesantren from 4 regions for Master Data testing
   pesantrenMultiRegion: [
     // Malang (01)
-    { id: 'p1', nama_pesantren: 'PP Al-Hikmah Singosari', nip: '2601001', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Ahmad Fauzi' },
-    { id: 'p2', nama_pesantren: 'PP Nurul Huda Kepanjen', nip: '2601002', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Zainuddin' },
-    { id: 'p3', nama_pesantren: 'PP Darul Ulum Pakis', nip: '2601003', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'pending', profile_level: 'silver', nama_pengasuh: 'Nyai Hj. Fatimah' },
+    { id: 'p1', nama_pesantren: 'PP Al-Hikmah Singosari', nip: '2601001', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Ahmad Fauzi', nama_media: 'Media Al-Hikmah TV', city_name: 'Kota Malang' },
+    { id: 'p2', nama_pesantren: 'PP Nurul Huda Kepanjen', nip: '2601002', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Zainuddin', nama_media: 'Media Nurul Huda', city_name: 'Kab. Malang' },
+    { id: 'p3', nama_pesantren: 'PP Darul Ulum Pakis', nip: '2601003', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'pending', profile_level: 'silver', nama_pengasuh: 'Nyai Hj. Fatimah', nama_media: 'Media Darul Ulum', city_name: 'Kab. Malang' },
     // Kediri (02)
-    { id: 'p4', nama_pesantren: 'PP Lirboyo', nip: '2602001', region_id: 'kediri-id', region_name: 'Kediri Raya', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Anwar Mansur' },
-    { id: 'p5', nama_pesantren: 'PP Al-Falah Ploso', nip: '2602002', region_id: 'kediri-id', region_name: 'Kediri Raya', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Misbahul Munir' },
+    { id: 'p4', nama_pesantren: 'PP Lirboyo', nip: '2602001', region_id: 'kediri-id', region_name: 'Kediri Raya', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Anwar Mansur', nama_media: 'Media Lirboyo', city_name: 'Kota Kediri' },
+    { id: 'p5', nama_pesantren: 'PP Al-Falah Ploso', nip: '2602002', region_id: 'kediri-id', region_name: 'Kediri Raya', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Misbahul Munir', nama_media: 'Media Al-Falah', city_name: 'Kab. Kediri' },
     // Jombang (07)
-    { id: 'p6', nama_pesantren: 'PP Tebuireng', nip: '2607001', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Abdul Hakim' },
-    { id: 'p7', nama_pesantren: 'PP Darul Ulum Rejoso', nip: '2607002', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Tamim Romli' },
-    { id: 'p8', nama_pesantren: 'PP Bahrul Ulum Tambakberas', nip: '2607003', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'silver', nama_pengasuh: 'KH. Syaiful Bahri' },
+    { id: 'p6', nama_pesantren: 'PP Tebuireng', nip: '2607001', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Abdul Hakim', nama_media: 'Media Tebuireng', city_name: 'Jombang' },
+    { id: 'p7', nama_pesantren: 'PP Darul Ulum Rejoso', nip: '2607002', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Tamim Romli', nama_media: 'Media Darul Ulum Rejoso', city_name: 'Jombang' },
+    { id: 'p8', nama_pesantren: 'PP Bahrul Ulum Tambakberas', nip: '2607003', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'silver', nama_pengasuh: 'KH. Syaiful Bahri', nama_media: 'Media Bahrul Ulum', city_name: 'Jombang' },
     // Probolinggo (10)
-    { id: 'p9', nama_pesantren: 'PP Nurul Jadid Paiton', nip: '2610001', region_id: 'probolinggo-id', region_name: 'Probolinggo', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Zaini' },
-    { id: 'p10', nama_pesantren: 'PP Zainul Hasan Genggong', nip: '2610002', region_id: 'probolinggo-id', region_name: 'Probolinggo', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Hasan' },
+    { id: 'p9', nama_pesantren: 'PP Nurul Jadid Paiton', nip: '2610001', region_id: 'probolinggo-id', region_name: 'Probolinggo', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Zaini', nama_media: 'Media Nurul Jadid', city_name: 'Probolinggo' },
+    { id: 'p10', nama_pesantren: 'PP Zainul Hasan Genggong', nip: '2610002', region_id: 'probolinggo-id', region_name: 'Probolinggo', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Hasan', nama_media: 'Media Zainul Hasan', city_name: 'Probolinggo' },
   ],
   // Regions for filter testing
   regionsForFilter: [
@@ -114,13 +115,44 @@ const MOCK_DATA = {
     { id: 'jombang-id', name: 'Jombang', code: '07' },
     { id: 'probolinggo-id', name: 'Probolinggo', code: '10' },
   ],
-  // Kru from multiple pesantren
+  // 10 Kru from multiple pesantren across 4 regions
   crewMultiPesantren: [
-    { id: 'c1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', pesantren_name: 'PP Al-Hikmah Singosari', region_name: 'Malang Raya' },
-    { id: 'c2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', pesantren_name: 'PP Al-Hikmah Singosari', region_name: 'Malang Raya' },
-    { id: 'c3', nama: 'Dewi Kartika', niam: 'AN260200101', jabatan: 'Admin Media', pesantren_name: 'PP Lirboyo', region_name: 'Kediri Raya' },
-    { id: 'c4', nama: 'Eko Prasetyo', niam: 'AN260700101', jabatan: 'Fotografer', pesantren_name: 'PP Tebuireng', region_name: 'Jombang' },
-    { id: 'c5', nama: 'Fatimah Zahra', niam: 'AN261000101', jabatan: 'Penulis', pesantren_name: 'PP Nurul Jadid Paiton', region_name: 'Probolinggo' },
+    // Malang
+    { id: 'c1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'malang-id', region_name: 'Malang Raya', xp_level: 1500 },
+    { id: 'c2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'malang-id', region_name: 'Malang Raya', xp_level: 2500 },
+    { id: 'c3', nama: 'Siti Aminah', niam: 'AN260100201', jabatan: 'Admin', pesantren_name: 'PP Nurul Huda Kepanjen', region_id: 'malang-id', region_name: 'Malang Raya', xp_level: 800 },
+    // Kediri
+    { id: 'c4', nama: 'Dewi Kartika', niam: 'AN260200101', jabatan: 'Admin Media', pesantren_name: 'PP Lirboyo', region_id: 'kediri-id', region_name: 'Kediri Raya', xp_level: 3500 },
+    { id: 'c5', nama: 'Rudi Hartono', niam: 'AN260200102', jabatan: 'Fotografer', pesantren_name: 'PP Lirboyo', region_id: 'kediri-id', region_name: 'Kediri Raya', xp_level: 1200 },
+    // Jombang
+    { id: 'c6', nama: 'Eko Prasetyo', niam: 'AN260700101', jabatan: 'Videografer', pesantren_name: 'PP Tebuireng', region_id: 'jombang-id', region_name: 'Jombang', xp_level: 4800 },
+    { id: 'c7', nama: 'Nur Hidayah', niam: 'AN260700102', jabatan: 'Desainer', pesantren_name: 'PP Tebuireng', region_id: 'jombang-id', region_name: 'Jombang', xp_level: 950 },
+    { id: 'c8', nama: 'Hadi Wijaya', niam: 'AN260700201', jabatan: 'Editor', pesantren_name: 'PP Darul Ulum Rejoso', region_id: 'jombang-id', region_name: 'Jombang', xp_level: 2100 },
+    // Probolinggo
+    { id: 'c9', nama: 'Fatimah Zahra', niam: 'AN261000101', jabatan: 'Penulis', pesantren_name: 'PP Nurul Jadid Paiton', region_id: 'probolinggo-id', region_name: 'Probolinggo', xp_level: 6200 },
+    { id: 'c10', nama: 'Ali Mahmud', niam: 'AN261000102', jabatan: 'Videografer', pesantren_name: 'PP Nurul Jadid Paiton', region_id: 'probolinggo-id', region_name: 'Probolinggo', xp_level: 1800 },
+  ],
+  // Payment verification scenarios
+  paymentsForVerification: [
+    // Pending Payment (belum upload bukti)
+    { id: 'pay-001', user_id: 'u1', pesantren_claim_id: 'claim-1', base_amount: 500000, unique_code: 123, total_amount: 500123, status: 'pending_payment', created_at: '2026-01-05T08:00:00Z', proof_file_url: null, rejection_reason: null, pesantren_name: 'PP Baru Malang', nama_pengelola: 'Ahmad Supriyadi', region_name: 'Malang Raya', jenis_pengajuan: 'pesantren_baru' },
+    { id: 'pay-002', user_id: 'u2', pesantren_claim_id: 'claim-2', base_amount: 450000, unique_code: 456, total_amount: 450456, status: 'pending_payment', created_at: '2026-01-04T10:00:00Z', proof_file_url: null, rejection_reason: null, pesantren_name: 'PP Al-Muttaqin', nama_pengelola: 'Hj. Siti Khadijah', region_name: 'Kediri Raya', jenis_pengajuan: 'klaim' },
+    // Pending Verification (sudah upload, menunggu verifikasi)
+    { id: 'pay-003', user_id: 'u3', pesantren_claim_id: 'claim-3', base_amount: 500000, unique_code: 789, total_amount: 500789, status: 'pending_verification', created_at: '2026-01-03T09:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Bukti+Transfer', rejection_reason: null, pesantren_name: 'PP Riyadlul Ulum', nama_pengelola: 'KH. Zainal Abidin', region_name: 'Jombang', jenis_pengajuan: 'pesantren_baru' },
+    { id: 'pay-004', user_id: 'u4', pesantren_claim_id: 'claim-4', base_amount: 450000, unique_code: 321, total_amount: 450321, status: 'pending_verification', created_at: '2026-01-02T14:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Bukti+Transfer+2', rejection_reason: null, pesantren_name: 'PP Salafiyah Syafiiyah', nama_pengelola: 'Nyai Hj. Aisyah', region_name: 'Probolinggo', jenis_pengajuan: 'klaim' },
+    { id: 'pay-005', user_id: 'u5', pesantren_claim_id: 'claim-5', base_amount: 500000, unique_code: 654, total_amount: 500654, status: 'pending_verification', created_at: '2026-01-01T11:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Bukti+Transfer+3', rejection_reason: null, pesantren_name: 'PP Miftahul Huda', nama_pengelola: 'KH. Abdul Rahman', region_name: 'Malang Raya', jenis_pengajuan: 'pesantren_baru' },
+    // Verified (sudah terverifikasi & NIP diterbitkan)
+    { id: 'pay-006', user_id: 'u6', pesantren_claim_id: 'claim-6', base_amount: 500000, unique_code: 987, total_amount: 500987, status: 'verified', created_at: '2025-12-20T08:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Verified', rejection_reason: null, pesantren_name: 'PP Darussalam', nama_pengelola: 'KH. Muhammad Ridwan', region_name: 'Kediri Raya', jenis_pengajuan: 'pesantren_baru', verified_at: '2025-12-21T10:00:00Z', nip_issued: '2602003' },
+    { id: 'pay-007', user_id: 'u7', pesantren_claim_id: 'claim-7', base_amount: 450000, unique_code: 159, total_amount: 450159, status: 'verified', created_at: '2025-12-15T09:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Verified+2', rejection_reason: null, pesantren_name: 'PP Roudlotul Jannah', nama_pengelola: 'Nyai Hj. Fatimah', region_name: 'Jombang', jenis_pengajuan: 'klaim', verified_at: '2025-12-16T14:00:00Z', nip_issued: '2607004' },
+    // Rejected (ditolak dengan alasan)
+    { id: 'pay-008', user_id: 'u8', pesantren_claim_id: 'claim-8', base_amount: 500000, unique_code: 753, total_amount: 500753, status: 'rejected', created_at: '2025-12-10T10:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Rejected', rejection_reason: 'Nominal transfer tidak sesuai dengan total tagihan', pesantren_name: 'PP An-Nur', nama_pengelola: 'Ahmad Fauzi', region_name: 'Probolinggo', jenis_pengajuan: 'pesantren_baru' },
+    { id: 'pay-009', user_id: 'u9', pesantren_claim_id: 'claim-9', base_amount: 450000, unique_code: 852, total_amount: 450852, status: 'rejected', created_at: '2025-12-05T11:00:00Z', proof_file_url: 'https://placehold.co/400x600/png?text=Rejected+2', rejection_reason: 'Bukti transfer blur/tidak jelas', pesantren_name: 'PP Al-Amin', nama_pengelola: 'Budi Hartono', region_name: 'Malang Raya', jenis_pengajuan: 'klaim' },
+  ],
+  // Claims approved by regional (waiting for payment)
+  claimsRegionalApproved: [
+    { id: 'claim-10', user_id: 'u10', pesantren_name: 'PP Bustanul Ulum', nama_pengelola: 'KH. Hasyim Asyari', jenis_pengajuan: 'pesantren_baru', status: 'regional_approved', region_name: 'Malang Raya', created_at: '2026-01-04T08:00:00Z' },
+    { id: 'claim-11', user_id: 'u11', pesantren_name: 'PP Al-Hidayah', nama_pengelola: 'Nyai Aminah', jenis_pengajuan: 'klaim', status: 'regional_approved', region_name: 'Kediri Raya', created_at: '2026-01-03T10:00:00Z' },
+    { id: 'claim-12', user_id: 'u12', pesantren_name: 'PP Mambaul Hikam', nama_pengelola: 'KH. Abdurrahman Wahid', jenis_pengajuan: 'pesantren_baru', status: 'regional_approved', region_name: 'Jombang', created_at: '2026-01-02T12:00:00Z' },
   ],
   // Payment history mock data for Administrasi testing
   paymentsPaid: [
@@ -313,7 +345,68 @@ const DebugView = () => {
         </Card>
 
         {/* Dashboard Navigation Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Admin Pusat Dashboard - COMMAND CENTER */}
+          <Card className="hover:shadow-lg transition-shadow border-red-200 ring-2 ring-red-100 md:col-span-2">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-red-600 to-amber-600 flex items-center justify-center">
+                  <Crown className="h-7 w-7 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-xl">Admin Pusat Dashboard</CardTitle>
+                    <Badge className="bg-red-100 text-red-700 border-red-200">Command Center</Badge>
+                  </div>
+                  <CardDescription>Pusat Kendali Tertinggi MPJ Apps</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">Role: admin_pusat</Badge>
+                <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
+                <Badge className="bg-amber-100 text-amber-700">Full Access</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm text-slate-600">
+                <div className="space-y-1">
+                  <p className="font-medium text-slate-800">Menu Utama:</p>
+                  <p>• Beranda (Statistik Global)</p>
+                  <p>• Administrasi (Approval Hub)</p>
+                  <p>• Master Data (Full CRUD)</p>
+                  <p>• Master Regional (Mapping)</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-slate-800">Fitur Testing:</p>
+                  <p>• 10 Pesantren dari 4 Regional</p>
+                  <p>• 10 Kru dengan XP bervariasi</p>
+                  <p>• 9 Payment (Pending/Verified/Rejected)</p>
+                  <p>• Filter Regional & Search</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                ✓ Verifikasi Pembayaran, ✓ Terbitkan NIP/NIAM, ✓ Edit/Hapus Data, ✓ Kode Jabatan, ✓ Setting Harga
+              </p>
+              <Button 
+                className="w-full bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white py-6"
+                onClick={() => navigateWithState('/admin-pusat', { 
+                  debugProfile: MOCK_DATA.adminPusat,
+                  debugData: {
+                    pesantren: MOCK_DATA.pesantrenMultiRegion,
+                    crews: MOCK_DATA.crewMultiPesantren,
+                    regions: MOCK_DATA.regionsForFilter,
+                    payments: MOCK_DATA.paymentsForVerification,
+                    claims: MOCK_DATA.claimsRegionalApproved,
+                  }
+                })}
+              >
+                <Crown className="h-5 w-5 mr-2" />
+                Buka Command Center
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Regional Dashboard */}
           <Card className="hover:shadow-lg transition-shadow border-emerald-200">
             <CardHeader>
@@ -333,10 +426,10 @@ const DebugView = () => {
                 <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
               </div>
               <p className="text-xs sm:text-sm text-slate-600">
-                Menu: Beranda → Verifikasi (Baru/Legacy) → Data Regional → Event (Soon) → Regional Hub (Soon) → Militansi (Soon) → Pengaturan
+                Menu: Beranda → Verifikasi → Data Regional → Event (Soon) → Regional Hub (Soon) → Militansi (Soon) → Pengaturan
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                ✓ Mobile Cards, Read-Only Data, Filter Akun Baru/Lama, Detail View
+                ✓ Mobile Cards, Read-Only Data, Filter Akun Baru/Lama
               </p>
               <div className="flex gap-2">
                 <Button 

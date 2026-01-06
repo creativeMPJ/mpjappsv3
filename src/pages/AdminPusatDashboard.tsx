@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Database,
@@ -62,14 +62,25 @@ const menuItems: MenuItem[] = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
+  
+  // Debug mode check
+  const isDebugMode = location.state?.isDebugMode === true;
+  const debugProfile = location.state?.debugProfile;
+  const debugData = location.state?.debugData;
+  
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
+    if (isDebugMode) {
+      navigate('/debug-view', { replace: true });
+      return;
+    }
     await signOut();
     toast({
       title: "Berhasil keluar",
@@ -81,13 +92,13 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeView) {
       case "dashboard":
-        return <AdminPusatHome onNavigate={setActiveView} />;
+        return <AdminPusatHome onNavigate={setActiveView} isDebugMode={isDebugMode} debugData={debugData} />;
       case "administrasi":
-        return <AdminPusatAdministrasi />;
+        return <AdminPusatAdministrasi isDebugMode={isDebugMode} debugData={debugData} />;
       case "master-data":
-        return <AdminPusatMasterData />;
+        return <AdminPusatMasterData isDebugMode={isDebugMode} debugData={debugData} />;
       case "master-regional":
-        return <AdminPusatRegional />;
+        return <AdminPusatRegional isDebugMode={isDebugMode} debugData={debugData} />;
       case "manajemen-event":
         return <ComingSoonOverlay title="Manajemen Event" description="Kelola event dan kegiatan pesantren se-Jawa Timur" />;
       case "manajemen-militansi":
@@ -97,7 +108,7 @@ const Dashboard = () => {
       case "pengaturan":
         return <AdminPusatPengaturan />;
       default:
-        return <AdminPusatHome onNavigate={setActiveView} />;
+        return <AdminPusatHome onNavigate={setActiveView} isDebugMode={isDebugMode} debugData={debugData} />;
     }
   };
 
