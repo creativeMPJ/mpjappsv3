@@ -169,8 +169,61 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
   };
 
   useEffect(() => {
+    // DEBUG MODE: Use mock data instead of fetching from database
+    if (isDebugMode && debugData) {
+      const regionsData = (debugData.regions || []) as Array<Record<string, unknown>>;
+      const pesantrenData = (debugData.pesantren || []) as Array<Record<string, unknown>>;
+
+      // Map regions from debug data
+      const mappedRegions: Region[] = regionsData.map((item) => ({
+        id: String(item.id),
+        name: (item.name as string) || '',
+        code: (item.code as string) || '',
+      }));
+      setRegions(mappedRegions);
+
+      // Create mock cities (2 per region)
+      const mockCities: City[] = [];
+      regionsData.forEach((region) => {
+        mockCities.push(
+          { id: `city-1-${region.id}`, name: `Kota ${region.name}`, region_id: String(region.id) },
+          { id: `city-2-${region.id}`, name: `Kabupaten ${region.name}`, region_id: String(region.id) }
+        );
+      });
+      setCities(mockCities);
+
+      // Map users from pesantren data
+      const mappedUsers: UserData[] = pesantrenData.map((item) => ({
+        id: String(item.id),
+        nama_pesantren: (item.nama_pesantren as string) || null,
+        nama_pengasuh: (item.nama_pengasuh as string) || null,
+        region_id: (item.region_id as string) || null,
+        region_name: (item.region_name as string) || null,
+        role: 'user' as AppRole,
+        status_account: String(item.status_account || 'pending'),
+      }));
+      setUserList(mappedUsers);
+
+      // Calculate stats for regions with stats
+      const cityCountMap: Record<string, number> = {};
+      mockCities.forEach((city) => {
+        cityCountMap[city.region_id] = (cityCountMap[city.region_id] || 0) + 1;
+      });
+
+      setRegionsWithStats(
+        mappedRegions.map((region) => ({
+          ...region,
+          city_count: cityCountMap[region.id] || 0,
+          admin_count: 1, // Mock 1 admin per region
+        }))
+      );
+
+      setLoading(false);
+      return;
+    }
+
     fetchData();
-  }, []);
+  }, [isDebugMode, debugData]);
 
   // ══════════════════════════════════════════════════════════════
   // STEP 1 & 2: Regional & City Management

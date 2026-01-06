@@ -250,13 +250,81 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const [isSavingPrices, setIsSavingPrices] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-  // Fetch all data on mount
+  // Fetch all data on mount or use debug data
   useEffect(() => {
+    // DEBUG MODE: Use mock data instead of fetching from database
+    if (isDebugMode && debugData) {
+      // Map payments from debug data
+      const paymentsData = (debugData.payments || []) as Array<Record<string, unknown>>;
+      const mappedPayments: PaymentRecord[] = paymentsData.map((p) => ({
+        id: String(p.id),
+        user_id: String(p.user_id || ''),
+        pesantren_claim_id: String(p.pesantren_claim_id || ''),
+        base_amount: Number(p.base_amount) || 0,
+        unique_code: Number(p.unique_code) || 0,
+        total_amount: Number(p.total_amount) || 0,
+        proof_file_url: (p.proof_file_url as string) || null,
+        status: String(p.status || 'pending_payment'),
+        created_at: (p.created_at as string) || new Date().toISOString(),
+        pesantren_claims: {
+          pesantren_name: (p.pesantren_name as string) || '-',
+          nama_pengelola: (p.nama_pengelola as string) || '-',
+          jenis_pengajuan: (p.jenis_pengajuan as string) || 'klaim',
+          region_id: String(p.region_id || ''),
+          mpj_id_number: (p.nip_issued as string) || null,
+        },
+      }));
+      setPayments(mappedPayments);
+      setIsLoadingPayments(false);
+
+      // Map claims from debug data
+      const claimsData = (debugData.claims || []) as Array<Record<string, unknown>>;
+      const mappedClaims: ClaimRecord[] = claimsData.map((c) => ({
+        id: String(c.id),
+        user_id: String(c.user_id || ''),
+        pesantren_name: (c.pesantren_name as string) || '-',
+        nama_pengelola: (c.nama_pengelola as string) || null,
+        jenis_pengajuan: String(c.jenis_pengajuan || 'klaim'),
+        status: String(c.status || 'pending'),
+        created_at: (c.created_at as string) || new Date().toISOString(),
+        region_id: null,
+        region_name: (c.region_name as string) || '-',
+        mpj_id_number: null,
+      }));
+      setClaims(mappedClaims);
+      setIsLoadingClaims(false);
+
+      // Map leveling profiles from pesantren debug data
+      const pesantrenData = (debugData.pesantren || []) as Array<Record<string, unknown>>;
+      const mappedLeveling: LevelingProfile[] = pesantrenData
+        .filter((p) => p.status_account === 'active' && ['silver', 'gold'].includes(String(p.profile_level)))
+        .map((p) => ({
+          id: String(p.id),
+          nama_pesantren: (p.nama_pesantren as string) || null,
+          nip: (p.nip as string) || null,
+          profile_level: String(p.profile_level || 'basic'),
+          sejarah: (p.sejarah as string) || null,
+          visi_misi: (p.visi_misi as string) || null,
+          logo_url: (p.logo_url as string) || null,
+          foto_pengasuh_url: (p.foto_pengasuh_url as string) || null,
+          region_name: (p.region_name as string) || '-',
+        }));
+      setLevelingProfiles(mappedLeveling);
+      setIsLoadingLeveling(false);
+
+      // Set default prices for debug
+      setRegistrationPrice("50000");
+      setClaimPrice("20000");
+      setIsLoadingPrices(false);
+
+      return;
+    }
+
     fetchClaims();
     fetchPayments();
     fetchLevelingProfiles();
     fetchPriceSettings();
-  }, []);
+  }, [isDebugMode, debugData]);
 
   const fetchClaims = async () => {
     setIsLoadingClaims(true);
