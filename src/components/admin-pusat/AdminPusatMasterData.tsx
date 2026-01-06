@@ -1,30 +1,54 @@
-import { useState, useEffect } from "react";
-import { Building2, Users, MapPin, Plus, Settings2, Pencil } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Building2, Users, Tv, Search, Pencil, Trash2, Eye, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import JabatanCodesManagement from "./JabatanCodesManagement";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatNIP, formatNIAM } from "@/lib/id-utils";
 
 interface Pesantren {
   id: string;
   nama_pesantren: string | null;
+  nip: string | null;
+  region_id: string | null;
+  region_name: string | null;
+  city_name: string | null;
+  status_account: string;
+  profile_level: string;
+  alamat_singkat: string | null;
+  nama_pengasuh: string | null;
+}
+
+interface MediaAdmin {
+  id: string;
+  nama_pesantren: string | null;
+  nama_media: string | null;
+  nip: string | null;
+  region_id: string | null;
   region_name: string | null;
   status_account: string;
   profile_level: string;
+  no_wa_pendaftar: string | null;
 }
 
 interface Crew {
   id: string;
   nama: string;
+  niam: string | null;
   jabatan: string | null;
+  xp_level: number | null;
+  profile_id: string;
   pesantren_name: string | null;
+  region_id: string | null;
+  region_name: string | null;
 }
 
 interface Region {
@@ -33,58 +57,67 @@ interface Region {
   code: string;
 }
 
-interface City {
-  id: string;
-  name: string;
-  region_id: string;
-}
-
 const AdminPusatMasterData = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("lembaga");
+  const [activeTab, setActiveTab] = useState("pesantren");
   const [pesantrenList, setPesantrenList] = useState<Pesantren[]>([]);
+  const [mediaList, setMediaList] = useState<MediaAdmin[]>([]);
   const [crewList, setCrewList] = useState<Crew[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Region/City management state
-  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
-  const [isAddRegionOpen, setIsAddRegionOpen] = useState(false);
-  const [isAddCityOpen, setIsAddCityOpen] = useState(false);
-  const [isEditRegionOpen, setIsEditRegionOpen] = useState(false);
-  const [isEditCityOpen, setIsEditCityOpen] = useState(false);
-  const [newRegionName, setNewRegionName] = useState("");
-  const [newRegionCode, setNewRegionCode] = useState("");
-  const [newCityName, setNewCityName] = useState("");
-  const [editingRegion, setEditingRegion] = useState<Region | null>(null);
-  const [editingCity, setEditingCity] = useState<City | null>(null);
-  const [editRegionName, setEditRegionName] = useState("");
-  const [editCityName, setEditCityName] = useState("");
+
+  // Filter & Search state
+  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Edit modal state
+  const [isEditPesantrenOpen, setIsEditPesantrenOpen] = useState(false);
+  const [isEditMediaOpen, setIsEditMediaOpen] = useState(false);
+  const [isEditCrewOpen, setIsEditCrewOpen] = useState(false);
+  const [editingPesantren, setEditingPesantren] = useState<Pesantren | null>(null);
+  const [editingMedia, setEditingMedia] = useState<MediaAdmin | null>(null);
+  const [editingCrew, setEditingCrew] = useState<Crew | null>(null);
+
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'pesantren' | 'media' | 'crew'; id: string; name: string } | null>(null);
+
+  // Detail view state
+  const [detailPesantren, setDetailPesantren] = useState<Pesantren | null>(null);
+
+  // Form state for editing
+  const [editFormData, setEditFormData] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchData = async () => {
     try {
-      // Fetch all pesantren
+      // Fetch all pesantren with region info
       const { data: pesantrenData } = await supabase
         .from("profiles")
         .select(`
           id,
           nama_pesantren,
+          nip,
+          region_id,
           status_account,
           profile_level,
-          regions!profiles_region_id_fkey (name)
+          alamat_singkat,
+          nama_pengasuh,
+          regions!profiles_region_id_fkey (name),
+          cities!profiles_city_id_fkey (name)
         `)
         .order("nama_pesantren", { ascending: true });
 
-      // Fetch all crews
+      // Fetch all crews with pesantren info
       const { data: crewData } = await supabase
         .from("crews")
         .select(`
           id,
           nama,
+          niam,
           jabatan,
-          profiles!crews_profile_id_fkey (nama_pesantren)
+          xp_level,
+          profile_id,
+          profiles!crews_profile_id_fkey (nama_pesantren, region_id, regions!profiles_region_id_fkey (name))
         `)
         .order("nama", { ascending: true });
 
@@ -92,24 +125,34 @@ const AdminPusatMasterData = () => {
       const { data: regionsData } = await supabase
         .from("regions")
         .select("id, name, code")
-        .order("name", { ascending: true });
-
-      // Fetch all cities
-      const { data: citiesData } = await supabase
-        .from("cities")
-        .select("id, name, region_id")
-        .order("name", { ascending: true });
+        .order("code", { ascending: true });
 
       if (pesantrenData) {
-        setPesantrenList(
-          pesantrenData.map((item: any) => ({
-            id: item.id,
-            nama_pesantren: item.nama_pesantren,
-            region_name: item.regions?.name || "Unknown",
-            status_account: item.status_account,
-            profile_level: item.profile_level,
-          }))
-        );
+        const mapped = pesantrenData.map((item: any) => ({
+          id: item.id,
+          nama_pesantren: item.nama_pesantren,
+          nip: item.nip,
+          region_id: item.region_id,
+          region_name: item.regions?.name || null,
+          city_name: item.cities?.name || null,
+          status_account: item.status_account,
+          profile_level: item.profile_level,
+          alamat_singkat: item.alamat_singkat,
+          nama_pengasuh: item.nama_pengasuh,
+        }));
+        setPesantrenList(mapped);
+        // Media is same as pesantren with nama_media
+        setMediaList(pesantrenData.filter((p: any) => p.nama_media || p.nama_pesantren).map((item: any) => ({
+          id: item.id,
+          nama_pesantren: item.nama_pesantren,
+          nama_media: item.nama_media,
+          nip: item.nip,
+          region_id: item.region_id,
+          region_name: item.regions?.name || null,
+          status_account: item.status_account,
+          profile_level: item.profile_level,
+          no_wa_pendaftar: item.no_wa_pendaftar,
+        })));
       }
 
       if (crewData) {
@@ -117,21 +160,19 @@ const AdminPusatMasterData = () => {
           crewData.map((item: any) => ({
             id: item.id,
             nama: item.nama,
+            niam: item.niam,
             jabatan: item.jabatan,
-            pesantren_name: item.profiles?.nama_pesantren || "Unknown",
+            xp_level: item.xp_level,
+            profile_id: item.profile_id,
+            pesantren_name: item.profiles?.nama_pesantren || null,
+            region_id: item.profiles?.region_id || null,
+            region_name: item.profiles?.regions?.name || null,
           }))
         );
       }
 
       if (regionsData) {
         setRegions(regionsData);
-        if (regionsData.length > 0 && !selectedRegion) {
-          setSelectedRegion(regionsData[0]);
-        }
-      }
-
-      if (citiesData) {
-        setCities(citiesData);
       }
     } catch (error) {
       console.error("Error fetching master data:", error);
@@ -143,6 +184,40 @@ const AdminPusatMasterData = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Filtered data based on region and search
+  const filteredPesantren = useMemo(() => {
+    return pesantrenList.filter((item) => {
+      const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
+      const matchesSearch = searchQuery === "" || 
+        item.nama_pesantren?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.nip?.includes(searchQuery) ||
+        item.nama_pengasuh?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesRegion && matchesSearch;
+    });
+  }, [pesantrenList, selectedRegionFilter, searchQuery]);
+
+  const filteredMedia = useMemo(() => {
+    return mediaList.filter((item) => {
+      const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
+      const matchesSearch = searchQuery === "" || 
+        item.nama_pesantren?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.nama_media?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.nip?.includes(searchQuery);
+      return matchesRegion && matchesSearch;
+    });
+  }, [mediaList, selectedRegionFilter, searchQuery]);
+
+  const filteredCrew = useMemo(() => {
+    return crewList.filter((item) => {
+      const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
+      const matchesSearch = searchQuery === "" || 
+        item.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.niam?.includes(searchQuery) ||
+        item.pesantren_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesRegion && matchesSearch;
+    });
+  }, [crewList, selectedRegionFilter, searchQuery]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -162,303 +237,435 @@ const AdminPusatMasterData = () => {
       basic: "bg-slate-100 text-slate-800",
       silver: "bg-gray-200 text-gray-800",
       gold: "bg-yellow-100 text-yellow-800",
-      platinum: "bg-purple-100 text-purple-800",
+      platinum: "bg-cyan-100 text-cyan-800",
     };
-    return <Badge className={colors[level] || colors.basic}>{level.toUpperCase()}</Badge>;
+    return <Badge className={`${colors[level] || colors.basic} hover:${colors[level]}`}>{level.charAt(0).toUpperCase() + level.slice(1)}</Badge>;
   };
 
-  // Add new region
-  const handleAddRegion = async () => {
-    if (!newRegionName.trim() || !newRegionCode.trim()) {
-      toast({
-        title: "Error",
-        description: "Nama dan kode regional harus diisi",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Edit handlers
+  const openEditPesantren = (item: Pesantren) => {
+    setEditingPesantren(item);
+    setEditFormData({
+      nama_pesantren: item.nama_pesantren || "",
+      nama_pengasuh: item.nama_pengasuh || "",
+      alamat_singkat: item.alamat_singkat || "",
+      nip: item.nip || "",
+    });
+    setIsEditPesantrenOpen(true);
+  };
 
-    // Validate RR code is exactly 2 digits
-    if (!/^[0-9]{2}$/.test(newRegionCode)) {
-      toast({
-        title: "Error",
-        description: "Kode RR harus tepat 2 digit angka (contoh: 01, 07, 15)",
-        variant: "destructive",
-      });
-      return;
-    }
+  const openEditMedia = (item: MediaAdmin) => {
+    setEditingMedia(item);
+    setEditFormData({
+      nama_pesantren: item.nama_pesantren || "",
+      nama_media: item.nama_media || "",
+      no_wa_pendaftar: item.no_wa_pendaftar || "",
+      nip: item.nip || "",
+    });
+    setIsEditMediaOpen(true);
+  };
 
-    // Check for duplicate code
-    if (regions.some(r => r.code === newRegionCode)) {
-      toast({
-        title: "Error",
-        description: `Kode RR "${newRegionCode}" sudah digunakan oleh regional lain`,
-        variant: "destructive",
-      });
-      return;
-    }
+  const openEditCrew = (item: Crew) => {
+    setEditingCrew(item);
+    setEditFormData({
+      nama: item.nama || "",
+      jabatan: item.jabatan || "",
+      niam: item.niam || "",
+    });
+    setIsEditCrewOpen(true);
+  };
 
+  const handleSavePesantren = async () => {
+    if (!editingPesantren) return;
     setIsSaving(true);
     try {
-      const { data, error } = await supabase
-        .from("regions")
-        .insert({ name: newRegionName.trim(), code: newRegionCode.trim().toUpperCase() })
-        .select()
-        .single();
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          nama_pesantren: editFormData.nama_pesantren,
+          nama_pengasuh: editFormData.nama_pengasuh,
+          alamat_singkat: editFormData.alamat_singkat,
+          nip: editFormData.nip || null,
+        })
+        .eq("id", editingPesantren.id);
 
       if (error) throw error;
 
-      setRegions(prev => [...prev, data]);
-      setNewRegionName("");
-      setNewRegionCode("");
-      setIsAddRegionOpen(false);
-      
-      toast({
-        title: "Berhasil",
-        description: `Regional "${data.name}" berhasil ditambahkan.`,
-      });
+      toast({ title: "Berhasil", description: "Data pesantren berhasil diperbarui" });
+      setIsEditPesantrenOpen(false);
+      fetchData();
     } catch (error: any) {
-      console.error("Error adding region:", error);
-      toast({
-        title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat menambah regional.",
-        variant: "destructive",
-      });
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Edit region
-  const handleEditRegion = async () => {
-    if (!editingRegion || !editRegionName.trim()) {
-      toast({
-        title: "Error",
-        description: "Nama regional harus diisi",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleSaveMedia = async () => {
+    if (!editingMedia) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
-        .from("regions")
-        .update({ name: editRegionName.trim() })
-        .eq("id", editingRegion.id);
+        .from("profiles")
+        .update({
+          nama_pesantren: editFormData.nama_pesantren,
+          nama_media: editFormData.nama_media,
+          no_wa_pendaftar: editFormData.no_wa_pendaftar,
+          nip: editFormData.nip || null,
+        })
+        .eq("id", editingMedia.id);
 
       if (error) throw error;
 
-      setRegions(prev => prev.map(r => 
-        r.id === editingRegion.id ? { ...r, name: editRegionName.trim() } : r
-      ));
-      
-      if (selectedRegion?.id === editingRegion.id) {
-        setSelectedRegion(prev => prev ? { ...prev, name: editRegionName.trim() } : null);
+      toast({ title: "Berhasil", description: "Data media berhasil diperbarui" });
+      setIsEditMediaOpen(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveCrew = async () => {
+    if (!editingCrew) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from("crews")
+        .update({
+          nama: editFormData.nama,
+          jabatan: editFormData.jabatan,
+          niam: editFormData.niam || null,
+        })
+        .eq("id", editingCrew.id);
+
+      if (error) throw error;
+
+      toast({ title: "Berhasil", description: "Data kru berhasil diperbarui" });
+      setIsEditCrewOpen(false);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsSaving(true);
+    try {
+      if (deleteTarget.type === "crew") {
+        const { error } = await supabase.from("crews").delete().eq("id", deleteTarget.id);
+        if (error) throw error;
+      } else {
+        // For pesantren/media, we cannot delete profiles due to RLS
+        toast({ 
+          title: "Tidak Diizinkan", 
+          description: "Profil pesantren tidak dapat dihapus dari Master Data. Gunakan menu administrasi.", 
+          variant: "destructive" 
+        });
+        setDeleteTarget(null);
+        setIsSaving(false);
+        return;
       }
-      
-      setIsEditRegionOpen(false);
-      setEditingRegion(null);
-      setEditRegionName("");
-      
-      toast({
-        title: "Berhasil",
-        description: "Nama regional berhasil diperbarui.",
-      });
+      toast({ title: "Berhasil", description: `${deleteTarget.name} berhasil dihapus` });
+      setDeleteTarget(null);
+      fetchData();
     } catch (error: any) {
-      console.error("Error editing region:", error);
-      toast({
-        title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat mengubah regional.",
-        variant: "destructive",
-      });
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
-
-  // Add new city
-  const handleAddCity = async () => {
-    if (!newCityName.trim() || !selectedRegion) {
-      toast({
-        title: "Error",
-        description: "Pilih regional dan masukkan nama kota",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const { data, error } = await supabase
-        .from("cities")
-        .insert({ name: newCityName.trim(), region_id: selectedRegion.id })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setCities(prev => [...prev, data]);
-      setNewCityName("");
-      setIsAddCityOpen(false);
-      
-      toast({
-        title: "Berhasil",
-        description: `Kota "${data.name}" berhasil ditambahkan ke ${selectedRegion.name}.`,
-      });
-    } catch (error: any) {
-      console.error("Error adding city:", error);
-      toast({
-        title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat menambah kota.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Edit city
-  const handleEditCity = async () => {
-    if (!editingCity || !editCityName.trim()) {
-      toast({
-        title: "Error",
-        description: "Nama kota harus diisi",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from("cities")
-        .update({ name: editCityName.trim() })
-        .eq("id", editingCity.id);
-
-      if (error) throw error;
-
-      setCities(prev => prev.map(c => 
-        c.id === editingCity.id ? { ...c, name: editCityName.trim() } : c
-      ));
-      
-      setIsEditCityOpen(false);
-      setEditingCity(null);
-      setEditCityName("");
-      
-      toast({
-        title: "Berhasil",
-        description: "Nama kota berhasil diperbarui.",
-      });
-    } catch (error: any) {
-      console.error("Error editing city:", error);
-      toast({
-        title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat mengubah kota.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Open edit region dialog
-  const openEditRegion = (region: Region, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingRegion(region);
-    setEditRegionName(region.name);
-    setIsEditRegionOpen(true);
-  };
-
-  // Open edit city dialog
-  const openEditCity = (city: City) => {
-    setEditingCity(city);
-    setEditCityName(city.name);
-    setIsEditCityOpen(true);
-  };
-
-  // Filter cities by selected region
-  const filteredCities = selectedRegion 
-    ? cities.filter(c => c.region_id === selectedRegion.id)
-    : [];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#166534]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Master Data</h1>
-        <p className="text-slate-500 mt-1">Database lengkap pesantren, kru, dan wilayah MPJ</p>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Master Data</h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-1">Database lengkap pesantren, media, dan kru MPJ Jawa Timur</p>
       </div>
+
+      {/* Global Filter & Search */}
+      <Card className="bg-card border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Regional Filter */}
+            <div className="flex-1 min-w-[200px]">
+              <Label className="text-xs text-muted-foreground mb-1 block">Filter Regional</Label>
+              <Select value={selectedRegionFilter} onValueChange={setSelectedRegionFilter}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Semua Regional" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Regional</SelectItem>
+                  {regions.map((region) => (
+                    <SelectItem key={region.id} value={region.id}>
+                      [{region.code}] {region.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Search */}
+            <div className="flex-1 md:flex-[2]">
+              <Label className="text-xs text-muted-foreground mb-1 block">Pencarian</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari nama, NIP, atau NIAM..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-100">
-          <TabsTrigger value="lembaga" className="flex items-center gap-2">
+        <TabsList className="bg-muted w-full md:w-auto flex">
+          <TabsTrigger value="pesantren" className="flex-1 md:flex-none items-center gap-2 text-xs md:text-sm">
             <Building2 className="h-4 w-4" />
-            Data Lembaga
+            <span className="hidden sm:inline">Data</span> Pesantren
           </TabsTrigger>
-          <TabsTrigger value="kru" className="flex items-center gap-2">
+          <TabsTrigger value="media" className="flex-1 md:flex-none items-center gap-2 text-xs md:text-sm">
+            <Tv className="h-4 w-4" />
+            <span className="hidden sm:inline">Data</span> Media
+          </TabsTrigger>
+          <TabsTrigger value="kru" className="flex-1 md:flex-none items-center gap-2 text-xs md:text-sm">
             <Users className="h-4 w-4" />
-            Data Kru
-          </TabsTrigger>
-          <TabsTrigger value="wilayah" className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Data Wilayah
-          </TabsTrigger>
-          <TabsTrigger value="jabatan" className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4" />
-            Kode Jabatan
+            <span className="hidden sm:inline">Data</span> Kru
           </TabsTrigger>
         </TabsList>
 
-        {/* Data Lembaga Tab */}
-        <TabsContent value="lembaga">
-          <Card className="bg-white border-0 shadow-sm">
+        {/* Data Pesantren Tab */}
+        <TabsContent value="pesantren">
+          <Card className="bg-card border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-slate-900 font-semibold">
-                Daftar Pesantren ({pesantrenList.length})
+              <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
+                <span>Daftar Pesantren ({filteredPesantren.length})</span>
+                {selectedRegionFilter !== "all" && (
+                  <Badge variant="outline" className="font-normal">
+                    {regions.find(r => r.id === selectedRegionFilter)?.name}
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-slate-600">Nama Pesantren</TableHead>
-                      <TableHead className="text-slate-600">Wilayah</TableHead>
-                      <TableHead className="text-slate-600">Status</TableHead>
-                      <TableHead className="text-slate-600">Level</TableHead>
+                      <TableHead className="text-muted-foreground">NIP</TableHead>
+                      <TableHead className="text-muted-foreground">Nama Pesantren</TableHead>
+                      <TableHead className="text-muted-foreground">Regional</TableHead>
+                      <TableHead className="text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-muted-foreground">Level</TableHead>
+                      <TableHead className="text-muted-foreground text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {pesantrenList.length > 0 ? (
-                      pesantrenList.map((item) => (
+                    {filteredPesantren.length > 0 ? (
+                      filteredPesantren.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium text-slate-900">
+                          <TableCell className="font-mono text-sm font-medium">
+                            {item.nip ? formatNIP(item.nip, true) : "-"}
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">
                             {item.nama_pesantren || "Belum diisi"}
                           </TableCell>
-                          <TableCell className="text-slate-600">{item.region_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.region_name || "-"}</TableCell>
                           <TableCell>{getStatusBadge(item.status_account)}</TableCell>
                           <TableCell>{getLevelBadge(item.profile_level)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => setDetailPesantren(item)} title="Lihat Detail">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => openEditPesantren(item)} title="Edit">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-slate-500 py-8">
-                          Belum ada data pesantren
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data pesantren"}
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {filteredPesantren.length > 0 ? (
+                  filteredPesantren.map((item) => (
+                    <div key={item.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground text-base">
+                            {item.nama_pesantren || "Belum diisi"}
+                          </p>
+                          {item.nip && (
+                            <p className="font-mono text-sm text-primary font-bold mt-1">
+                              NIP: {formatNIP(item.nip, true)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setDetailPesantren(item)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditPesantren(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {getStatusBadge(item.status_account)}
+                        {getLevelBadge(item.profile_level)}
+                        {item.region_name && (
+                          <Badge variant="outline" className="text-xs">{item.region_name}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data pesantren"}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Data Media Tab */}
+        <TabsContent value="media">
+          <Card className="bg-card border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
+                <span>Daftar Admin Media ({filteredMedia.length})</span>
+                {selectedRegionFilter !== "all" && (
+                  <Badge variant="outline" className="font-normal">
+                    {regions.find(r => r.id === selectedRegionFilter)?.name}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-muted-foreground">NIP</TableHead>
+                      <TableHead className="text-muted-foreground">Pesantren</TableHead>
+                      <TableHead className="text-muted-foreground">Nama Media</TableHead>
+                      <TableHead className="text-muted-foreground">Regional</TableHead>
+                      <TableHead className="text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-muted-foreground text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMedia.length > 0 ? (
+                      filteredMedia.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-mono text-sm font-medium">
+                            {item.nip ? formatNIP(item.nip, true) : "-"}
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            {item.nama_pesantren || "Belum diisi"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{item.nama_media || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.region_name || "-"}</TableCell>
+                          <TableCell>{getStatusBadge(item.status_account)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditMedia(item)} title="Edit">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data media"}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {filteredMedia.length > 0 ? (
+                  filteredMedia.map((item) => (
+                    <div key={item.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground text-base">
+                            {item.nama_pesantren || "Belum diisi"}
+                          </p>
+                          {item.nama_media && (
+                            <p className="text-sm text-muted-foreground">{item.nama_media}</p>
+                          )}
+                          {item.nip && (
+                            <p className="font-mono text-sm text-primary font-bold mt-1">
+                              NIP: {formatNIP(item.nip, true)}
+                            </p>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditMedia(item)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {getStatusBadge(item.status_account)}
+                        {getLevelBadge(item.profile_level)}
+                        {item.region_name && (
+                          <Badge variant="outline" className="text-xs">{item.region_name}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data media"}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -466,339 +673,326 @@ const AdminPusatMasterData = () => {
 
         {/* Data Kru Tab */}
         <TabsContent value="kru">
-          <Card className="bg-white border-0 shadow-sm">
+          <Card className="bg-card border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-slate-900 font-semibold">
-                Daftar Kru ({crewList.length})
+              <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
+                <span>Daftar Kru ({filteredCrew.length})</span>
+                {selectedRegionFilter !== "all" && (
+                  <Badge variant="outline" className="font-normal">
+                    {regions.find(r => r.id === selectedRegionFilter)?.name}
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-slate-600">Nama Kru</TableHead>
-                      <TableHead className="text-slate-600">Jabatan</TableHead>
-                      <TableHead className="text-slate-600">Pesantren</TableHead>
+                      <TableHead className="text-muted-foreground">NIAM</TableHead>
+                      <TableHead className="text-muted-foreground">Nama Kru</TableHead>
+                      <TableHead className="text-muted-foreground">Jabatan</TableHead>
+                      <TableHead className="text-muted-foreground">Pesantren</TableHead>
+                      <TableHead className="text-muted-foreground">Regional</TableHead>
+                      <TableHead className="text-muted-foreground text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {crewList.length > 0 ? (
-                      crewList.map((item) => (
+                    {filteredCrew.length > 0 ? (
+                      filteredCrew.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium text-slate-900">{item.nama}</TableCell>
-                          <TableCell className="text-slate-600">{item.jabatan || "-"}</TableCell>
-                          <TableCell className="text-slate-600">{item.pesantren_name}</TableCell>
+                          <TableCell className="font-mono text-sm font-medium">
+                            {item.niam ? formatNIAM(item.niam, true) : "-"}
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">{item.nama}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.jabatan || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.pesantren_name || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.region_name || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditCrew(item)} title="Edit">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ type: 'crew', id: item.id, name: item.nama })} title="Hapus" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center text-slate-500 py-8">
-                          Belum ada data kru
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data kru"}
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
+                {filteredCrew.length > 0 ? (
+                  filteredCrew.map((item) => (
+                    <div key={item.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground text-base">{item.nama}</p>
+                          {item.niam && (
+                            <p className="font-mono text-sm text-primary font-bold mt-1">
+                              NIAM: {formatNIAM(item.niam, true)}
+                            </p>
+                          )}
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {item.jabatan || "Tanpa Jabatan"} • {item.pesantren_name || "-"}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditCrew(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteTarget({ type: 'crew', id: item.id, name: item.nama })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      {item.region_name && (
+                        <Badge variant="outline" className="text-xs mt-2">{item.region_name}</Badge>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data kru"}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Data Wilayah Tab */}
-        <TabsContent value="wilayah">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Regions */}
-            <Card className="bg-white border-0 shadow-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg text-slate-900 font-semibold">
-                    Daftar Regional ({regions.length})
-                  </CardTitle>
-                  <Button 
-                    size="sm" 
-                    onClick={() => setIsAddRegionOpen(true)}
-                    className="bg-[#166534] hover:bg-emerald-700 text-white gap-1"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Regional
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {regions.length > 0 ? (
-                    regions.map((region) => {
-                      const isValidCode = /^[0-9]{2}$/.test(region.code);
-                      return (
-                        <div 
-                          key={region.id}
-                          className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                            selectedRegion?.id === region.id 
-                              ? "bg-emerald-50 border-2 border-[#166534]" 
-                              : "bg-slate-50 hover:bg-slate-100 border-2 border-transparent"
-                          }`}
-                          onClick={() => setSelectedRegion(region)}
-                        >
-                          <div>
-                            <p className="font-medium text-slate-900">{region.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-sm text-slate-500">Kode RR:</span>
-                              <Badge className={isValidCode ? "bg-emerald-100 text-emerald-800 font-mono" : "bg-red-100 text-red-800 font-mono"}>
-                                {region.code}
-                              </Badge>
-                              {!isValidCode && (
-                                <span className="text-xs text-red-500">⚠️ Harus 2 digit angka!</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge className="bg-blue-100 text-blue-800">
-                              {cities.filter(c => c.region_id === region.id).length} Kota
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => openEditRegion(region, e)}
-                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                              title="Edit Nama Regional"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center text-slate-500 py-8">
-                      Belum ada data regional
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Right Column - Cities */}
-            <Card className="bg-white border-0 shadow-sm">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg text-slate-900 font-semibold">
-                    {selectedRegion ? `Kota di ${selectedRegion.name}` : "Pilih Regional"}
-                    {selectedRegion && ` (${filteredCities.length})`}
-                  </CardTitle>
-                  {selectedRegion && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => setIsAddCityOpen(true)}
-                      className="bg-[#166534] hover:bg-emerald-700 text-white gap-1"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Tambah Kota
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {selectedRegion ? (
-                  <div className="space-y-2">
-                    {filteredCities.length > 0 ? (
-                      filteredCities.map((city) => (
-                        <div 
-                          key={city.id}
-                          className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
-                        >
-                          <p className="font-medium text-slate-900">{city.name}</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditCity(city)}
-                            className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
-                            title="Edit Nama Kota"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center text-slate-500 py-8">
-                        Belum ada kota di regional ini
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-slate-500 py-8">
-                    Pilih regional di sebelah kiri untuk melihat daftar kota
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Kode Jabatan Tab */}
-        <TabsContent value="jabatan">
-          <JabatanCodesManagement />
-        </TabsContent>
       </Tabs>
 
-      {/* Add Region Dialog */}
-      <Dialog open={isAddRegionOpen} onOpenChange={setIsAddRegionOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Edit Pesantren Dialog */}
+      <Dialog open={isEditPesantrenOpen} onOpenChange={setIsEditPesantrenOpen}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Tambah Regional Baru</DialogTitle>
-            <DialogDescription>
-              Buat regional baru untuk mengelompokkan kota-kota cakupan.
-            </DialogDescription>
+            <DialogTitle>Edit Data Pesantren</DialogTitle>
+            <DialogDescription>Perbarui informasi pesantren. Perubahan akan langsung tersimpan ke database.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nama Regional</Label>
+              <Label>NIP (Nomor Induk Pesantren)</Label>
               <Input
-                value={newRegionName}
-                onChange={(e) => setNewRegionName(e.target.value)}
-                placeholder="Contoh: Regional Tapal Kuda"
+                value={editFormData.nip || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nip: e.target.value })}
+                placeholder="Contoh: 2601001"
+                className="font-mono"
               />
-              <p className="text-xs text-slate-500">Nama regional sesuai kesepakatan pengurus</p>
             </div>
             <div className="space-y-2">
-              <Label>Kode RR (2 Digit Angka) <span className="text-red-500">*</span></Label>
+              <Label>Nama Pesantren</Label>
               <Input
-                value={newRegionCode}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, '').slice(0, 2);
-                  setNewRegionCode(val);
-                }}
-                placeholder="Contoh: 07"
-                maxLength={2}
-                className="font-mono text-lg tracking-widest"
+                value={editFormData.nama_pesantren || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nama_pesantren: e.target.value })}
+                placeholder="Masukkan nama pesantren"
               />
-              <p className="text-xs text-amber-600 font-medium">
-                ⚠️ WAJIB 2 digit angka unik (01-99). Kode ini akan digunakan untuk generate NIP Lembaga.
-              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Pengasuh</Label>
+              <Input
+                value={editFormData.nama_pengasuh || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nama_pengasuh: e.target.value })}
+                placeholder="Masukkan nama pengasuh"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Alamat Singkat</Label>
+              <Input
+                value={editFormData.alamat_singkat || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, alamat_singkat: e.target.value })}
+                placeholder="Masukkan alamat singkat"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddRegionOpen(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={handleAddRegion} 
-              disabled={isSaving || newRegionCode.length !== 2}
-              className="bg-[#166534] hover:bg-emerald-700 text-white"
-            >
-              {isSaving ? "Menyimpan..." : "Simpan"}
+            <Button variant="outline" onClick={() => setIsEditPesantrenOpen(false)}>Batal</Button>
+            <Button onClick={handleSavePesantren} disabled={isSaving} className="bg-primary">
+              {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Region Dialog */}
-      <Dialog open={isEditRegionOpen} onOpenChange={setIsEditRegionOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Edit Media Dialog */}
+      <Dialog open={isEditMediaOpen} onOpenChange={setIsEditMediaOpen}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Nama Regional</DialogTitle>
-            <DialogDescription>
-              Ubah nama regional. Kode RR tidak dapat diubah untuk menjaga integritas NIP.
-            </DialogDescription>
+            <DialogTitle>Edit Data Media</DialogTitle>
+            <DialogDescription>Perbarui informasi admin media pesantren.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nama Regional</Label>
+              <Label>NIP</Label>
               <Input
-                value={editRegionName}
-                onChange={(e) => setEditRegionName(e.target.value)}
-                placeholder="Masukkan nama regional"
+                value={editFormData.nip || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nip: e.target.value })}
+                placeholder="Contoh: 2601001"
+                className="font-mono"
               />
             </div>
-            {editingRegion && (
-              <div className="p-3 bg-slate-100 rounded-lg">
-                <p className="text-xs text-slate-500">Kode RR (Tidak dapat diubah)</p>
-                <p className="font-mono font-bold text-lg">{editingRegion.code}</p>
+            <div className="space-y-2">
+              <Label>Nama Pesantren</Label>
+              <Input
+                value={editFormData.nama_pesantren || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nama_pesantren: e.target.value })}
+                placeholder="Masukkan nama pesantren"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Media</Label>
+              <Input
+                value={editFormData.nama_media || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nama_media: e.target.value })}
+                placeholder="Masukkan nama media"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Nomor WhatsApp</Label>
+              <Input
+                value={editFormData.no_wa_pendaftar || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, no_wa_pendaftar: e.target.value })}
+                placeholder="Contoh: 081234567890"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditMediaOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveMedia} disabled={isSaving} className="bg-primary">
+              {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Crew Dialog */}
+      <Dialog open={isEditCrewOpen} onOpenChange={setIsEditCrewOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Data Kru</DialogTitle>
+            <DialogDescription>Perbarui informasi kru media pesantren.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>NIAM (Nomor Induk Anggota Media)</Label>
+              <Input
+                value={editFormData.niam || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, niam: e.target.value })}
+                placeholder="Contoh: AN260100101"
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Nama Lengkap</Label>
+              <Input
+                value={editFormData.nama || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, nama: e.target.value })}
+                placeholder="Masukkan nama lengkap"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Jabatan</Label>
+              <Input
+                value={editFormData.jabatan || ""}
+                onChange={(e) => setEditFormData({ ...editFormData, jabatan: e.target.value })}
+                placeholder="Contoh: Videografer"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditCrewOpen(false)}>Batal</Button>
+            <Button onClick={handleSaveCrew} disabled={isSaving} className="bg-primary">
+              {isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Pesantren Dialog */}
+      <Dialog open={!!detailPesantren} onOpenChange={() => setDetailPesantren(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detail Pesantren</DialogTitle>
+          </DialogHeader>
+          {detailPesantren && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">NIP</Label>
+                  <p className="font-mono font-bold text-lg">
+                    {detailPesantren.nip ? formatNIP(detailPesantren.nip, true) : "-"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Status</Label>
+                  <div className="mt-1">{getStatusBadge(detailPesantren.status_account)}</div>
+                </div>
               </div>
-            )}
-          </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Nama Pesantren</Label>
+                <p className="font-semibold text-lg">{detailPesantren.nama_pesantren || "-"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Nama Pengasuh</Label>
+                <p>{detailPesantren.nama_pengasuh || "-"}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Alamat</Label>
+                <p>{detailPesantren.alamat_singkat || "-"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-xs">Regional</Label>
+                  <p>{detailPesantren.region_name || "-"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-xs">Kota</Label>
+                  <p>{detailPesantren.city_name || "-"}</p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">Level Profil</Label>
+                <div className="mt-1">{getLevelBadge(detailPesantren.profile_level)}</div>
+              </div>
+            </div>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditRegionOpen(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={handleEditRegion} 
-              disabled={isSaving || !editRegionName.trim()}
-              className="bg-[#166534] hover:bg-emerald-700 text-white"
-            >
-              {isSaving ? "Menyimpan..." : "Simpan"}
+            <Button variant="outline" onClick={() => setDetailPesantren(null)}>Tutup</Button>
+            <Button onClick={() => { setDetailPesantren(null); openEditPesantren(detailPesantren!); }} className="bg-primary">
+              Edit Data
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add City Dialog */}
-      <Dialog open={isAddCityOpen} onOpenChange={setIsAddCityOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Tambah Kota Cakupan</DialogTitle>
-            <DialogDescription>
-              Tambahkan kota ke regional {selectedRegion?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nama Kota</Label>
-              <Input
-                value={newCityName}
-                onChange={(e) => setNewCityName(e.target.value)}
-                placeholder="Contoh: Banyuwangi"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddCityOpen(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={handleAddCity} 
-              disabled={isSaving}
-              className="bg-[#166534] hover:bg-emerald-700 text-white"
-            >
-              {isSaving ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit City Dialog */}
-      <Dialog open={isEditCityOpen} onOpenChange={setIsEditCityOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Nama Kota</DialogTitle>
-            <DialogDescription>
-              Ubah nama kota dalam regional {selectedRegion?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nama Kota</Label>
-              <Input
-                value={editCityName}
-                onChange={(e) => setEditCityName(e.target.value)}
-                placeholder="Masukkan nama kota"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditCityOpen(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={handleEditCity} 
-              disabled={isSaving || !editCityName.trim()}
-              className="bg-[#166534] hover:bg-emerald-700 text-white"
-            >
-              {isSaving ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus <strong>{deleteTarget?.name}</strong>? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isSaving ? "Menghapus..." : "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
