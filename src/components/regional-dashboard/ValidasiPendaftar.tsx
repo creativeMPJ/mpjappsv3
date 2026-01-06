@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,7 +50,9 @@ import {
   ExternalLink,
   Clock,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Building2,
+  History
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,17 +72,165 @@ interface PesantrenClaim {
   notes: string | null;
   claimed_at: string;
   created_at: string;
-  // Manually joined profile data
+  jenis_pengajuan: 'klaim' | 'pesantren_baru';
   nama_pengasuh?: string | null;
   alamat_singkat?: string | null;
   no_wa_pendaftar?: string | null;
 }
 
-const ValidasiPendaftar = () => {
+interface ValidasiPendaftarProps {
+  isDebugMode?: boolean;
+}
+
+// Mobile Card Component
+const ClaimCard = memo(({ 
+  claim, 
+  onView, 
+  formatDate, 
+  getStatusBadge, 
+  getJenisBadge 
+}: { 
+  claim: PesantrenClaim;
+  onView: (claim: PesantrenClaim) => void;
+  formatDate: (date: string) => string;
+  getStatusBadge: (status: string) => JSX.Element;
+  getJenisBadge: (jenis: string) => JSX.Element;
+}) => (
+  <Card className="bg-card border border-border hover:shadow-md transition-shadow">
+    <CardContent className="p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-foreground text-base truncate">{claim.pesantren_name}</h3>
+          <p className="text-sm text-muted-foreground">{claim.kecamatan || 'Kecamatan tidak diisi'}</p>
+        </div>
+        {getJenisBadge(claim.jenis_pengajuan)}
+      </div>
+      
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="w-4 h-4" />
+          <span>{formatDate(claim.created_at)}</span>
+        </div>
+        {getStatusBadge(claim.status)}
+      </div>
+      
+      <div className="text-sm text-muted-foreground mb-4">
+        <span className="font-medium">Pengelola:</span> {maskName(claim.nama_pengelola) || '-'}
+      </div>
+      
+      <Button
+        onClick={() => onView(claim)}
+        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px]"
+      >
+        <Eye className="w-4 h-4 mr-2" />
+        Periksa Detail
+      </Button>
+    </CardContent>
+  </Card>
+));
+
+ClaimCard.displayName = 'ClaimCard';
+
+// Mock data for debug mode
+const MOCK_CLAIMS: PesantrenClaim[] = [
+  {
+    id: 'mock-1',
+    user_id: 'user-1',
+    pesantren_name: 'PP Al-Hikmah Singosari',
+    status: 'pending',
+    region_id: 'malang-region',
+    kecamatan: 'Singosari',
+    nama_pengelola: 'Ahmad Fauzi',
+    email_pengelola: 'fauzi@email.com',
+    dokumen_bukti_url: '/placeholder.svg',
+    notes: null,
+    claimed_at: '2025-01-05T10:00:00Z',
+    created_at: '2025-01-05T10:00:00Z',
+    jenis_pengajuan: 'pesantren_baru',
+    nama_pengasuh: 'KH. Ahmad Fauzi',
+    alamat_singkat: 'Jl. Raya Singosari No. 123',
+    no_wa_pendaftar: '081234567890',
+  },
+  {
+    id: 'mock-2',
+    user_id: 'user-2',
+    pesantren_name: 'PP Darul Ulum Jombang',
+    status: 'pending',
+    region_id: 'malang-region',
+    kecamatan: 'Lowokwaru',
+    nama_pengelola: 'Budi Santoso',
+    email_pengelola: 'budi@email.com',
+    dokumen_bukti_url: '/placeholder.svg',
+    notes: null,
+    claimed_at: '2025-01-04T09:00:00Z',
+    created_at: '2025-01-04T09:00:00Z',
+    jenis_pengajuan: 'klaim',
+    nama_pengasuh: 'KH. Budi Santoso',
+    alamat_singkat: 'Jl. Veteran No. 45',
+    no_wa_pendaftar: '081234567891',
+  },
+  {
+    id: 'mock-3',
+    user_id: 'user-3',
+    pesantren_name: 'PP Nurul Jadid',
+    status: 'rejected',
+    region_id: 'malang-region',
+    kecamatan: 'Kedungkandang',
+    nama_pengelola: 'Cahya Dewi',
+    email_pengelola: 'cahya@email.com',
+    dokumen_bukti_url: null,
+    notes: 'Dokumen SK tidak valid',
+    claimed_at: '2025-01-03T08:00:00Z',
+    created_at: '2025-01-03T08:00:00Z',
+    jenis_pengajuan: 'klaim',
+    nama_pengasuh: 'KH. M. Yusuf',
+    alamat_singkat: 'Jl. Masjid No. 12',
+    no_wa_pendaftar: '081234567892',
+  },
+  {
+    id: 'mock-4',
+    user_id: 'user-4',
+    pesantren_name: 'PP Al-Falah Blitar',
+    status: 'pending',
+    region_id: 'malang-region',
+    kecamatan: 'Blimbing',
+    nama_pengelola: 'Dedi Kurniawan',
+    email_pengelola: 'dedi@email.com',
+    dokumen_bukti_url: '/placeholder.svg',
+    notes: null,
+    claimed_at: '2025-01-02T14:00:00Z',
+    created_at: '2025-01-02T14:00:00Z',
+    jenis_pengajuan: 'pesantren_baru',
+    nama_pengasuh: 'KH. Dedi Kurniawan',
+    alamat_singkat: 'Jl. Sukarno Hatta No. 78',
+    no_wa_pendaftar: '081234567893',
+  },
+  {
+    id: 'mock-5',
+    user_id: 'user-5',
+    pesantren_name: 'PP Miftahul Huda',
+    status: 'pending',
+    region_id: 'malang-region',
+    kecamatan: 'Sukun',
+    nama_pengelola: 'Eva Fitriani',
+    email_pengelola: 'eva@email.com',
+    dokumen_bukti_url: '/placeholder.svg',
+    notes: null,
+    claimed_at: '2025-01-01T11:00:00Z',
+    created_at: '2025-01-01T11:00:00Z',
+    jenis_pengajuan: 'klaim',
+    nama_pengasuh: 'Nyai Hj. Eva Fitriani',
+    alamat_singkat: 'Jl. Sukun Raya No. 56',
+    no_wa_pendaftar: '081234567894',
+  },
+];
+
+const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PesantrenClaim[]>([]);
   const [filteredData, setFilteredData] = useState<PesantrenClaim[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterJenis, setFilterJenis] = useState<'all' | 'klaim' | 'pesantren_baru'>('all');
   const [selectedClaim, setSelectedClaim] = useState<PesantrenClaim | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
@@ -96,13 +246,19 @@ const ValidasiPendaftar = () => {
 
   // Fetch claims from database
   const fetchClaims = async () => {
+    if (isDebugMode) {
+      setData(MOCK_CLAIMS);
+      setFilteredData(MOCK_CLAIMS);
+      setLoading(false);
+      return;
+    }
+
     if (!profile?.region_id) {
       setLoading(false);
       return;
     }
 
     try {
-      // Fetch claims first
       const { data: claims, error } = await supabase
         .from('pesantren_claims')
         .select('*')
@@ -127,14 +283,12 @@ const ValidasiPendaftar = () => {
         return;
       }
 
-      // Fetch related profiles
       const userIds = claims.map(c => c.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, nama_pengasuh, alamat_singkat, no_wa_pendaftar')
         .in('id', userIds);
 
-      // Merge profile data into claims
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       const enrichedClaims: PesantrenClaim[] = claims.map(claim => ({
         ...claim,
@@ -154,17 +308,33 @@ const ValidasiPendaftar = () => {
 
   useEffect(() => {
     fetchClaims();
-  }, [profile?.region_id]);
+  }, [profile?.region_id, isDebugMode]);
+
+  // Memoized filtered data
+  const processedData = useMemo(() => {
+    let result = data;
+    
+    // Filter by jenis
+    if (filterJenis !== 'all') {
+      result = result.filter(item => item.jenis_pengajuan === filterJenis);
+    }
+    
+    // Filter by search
+    if (searchQuery) {
+      result = result.filter(
+        (item) =>
+          item.pesantren_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.nama_pengelola?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      );
+    }
+    
+    return result;
+  }, [data, filterJenis, searchQuery]);
 
   useEffect(() => {
-    const filtered = data.filter(
-      (item) =>
-        item.pesantren_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.nama_pengelola?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-    );
-    setFilteredData(filtered);
+    setFilteredData(processedData);
     setCurrentPage(1);
-  }, [searchQuery, data]);
+  }, [processedData]);
 
   // Pagination calculations
   const totalItems = filteredData.length;
@@ -207,7 +377,6 @@ const ValidasiPendaftar = () => {
     setDialogOpen(true);
   };
 
-  // Open document in new tab
   const handleViewDocument = async () => {
     if (!selectedClaim?.dokumen_bukti_url) {
       toast({
@@ -218,10 +387,18 @@ const ValidasiPendaftar = () => {
       return;
     }
 
+    if (isDebugMode) {
+      toast({
+        title: "Mode Debug",
+        description: "Dokumen tidak tersedia di mode simulasi",
+      });
+      return;
+    }
+
     try {
       const { data: urlData } = await supabase.storage
         .from('registration-documents')
-        .createSignedUrl(selectedClaim.dokumen_bukti_url, 3600); // 1 hour expiry
+        .createSignedUrl(selectedClaim.dokumen_bukti_url, 3600);
 
       if (urlData?.signedUrl) {
         window.open(urlData.signedUrl, '_blank');
@@ -242,9 +419,18 @@ const ValidasiPendaftar = () => {
     }
   };
 
-  // Approve claim
   const handleApprove = async () => {
     if (!selectedClaim) return;
+
+    if (isDebugMode) {
+      toast({
+        title: "Mode Debug",
+        description: `Klaim ${selectedClaim.pesantren_name} akan disetujui (simulasi)`,
+      });
+      setApproveDialogOpen(false);
+      setDialogOpen(false);
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -261,10 +447,9 @@ const ValidasiPendaftar = () => {
 
       toast({
         title: "Berhasil Disetujui!",
-        description: `Klaim ${selectedClaim.pesantren_name} telah disetujui wilayah dan menunggu verifikasi pusat.`,
+        description: `Klaim ${selectedClaim.pesantren_name} telah disetujui wilayah.`,
       });
 
-      // Refresh data
       await fetchClaims();
       setApproveDialogOpen(false);
       setDialogOpen(false);
@@ -280,7 +465,6 @@ const ValidasiPendaftar = () => {
     }
   };
 
-  // Reject claim
   const handleReject = async () => {
     if (!selectedClaim) return;
 
@@ -290,6 +474,18 @@ const ValidasiPendaftar = () => {
         description: "Mohon isi alasan penolakan",
         variant: "destructive",
       });
+      return;
+    }
+
+    if (isDebugMode) {
+      toast({
+        title: "Mode Debug",
+        description: `Klaim ${selectedClaim.pesantren_name} akan ditolak (simulasi)`,
+        variant: "destructive",
+      });
+      setRejectDialogOpen(false);
+      setRejectReason("");
+      setDialogOpen(false);
       return;
     }
 
@@ -307,11 +503,10 @@ const ValidasiPendaftar = () => {
 
       toast({
         title: "Klaim Ditolak",
-        description: `Pendaftaran ${selectedClaim.pesantren_name} telah ditolak dengan alasan yang tercatat.`,
+        description: `Pendaftaran ${selectedClaim.pesantren_name} telah ditolak.`,
         variant: "destructive",
       });
 
-      // Refresh data
       await fetchClaims();
       setRejectDialogOpen(false);
       setRejectReason("");
@@ -342,6 +537,24 @@ const ValidasiPendaftar = () => {
     }
   };
 
+  // Jenis Pengajuan Badge (Blue for Baru, Gold for Klaim/Legacy)
+  const getJenisBadge = (jenis: string) => {
+    if (jenis === 'pesantren_baru') {
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-blue-200 gap-1">
+          <Building2 className="w-3 h-3" />
+          Baru
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
+        <History className="w-3 h-3" />
+        Legacy
+      </Badge>
+    );
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: '2-digit',
@@ -351,6 +564,8 @@ const ValidasiPendaftar = () => {
   };
 
   const pendingCount = data.filter((d) => d.status === "pending").length;
+  const baruCount = data.filter((d) => d.jenis_pengajuan === "pesantren_baru").length;
+  const legacyCount = data.filter((d) => d.jenis_pengajuan === "klaim").length;
 
   if (loading) {
     return (
@@ -371,11 +586,11 @@ const ValidasiPendaftar = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <UserCheck className="w-7 h-7 text-primary" />
+          <h1 className="text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
+            <UserCheck className="w-6 h-6 md:w-7 md:h-7 text-primary" />
             Verifikasi Pesantren
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {pendingCount} pengajuan menunggu validasi wilayah
           </p>
         </div>
@@ -385,29 +600,66 @@ const ValidasiPendaftar = () => {
             placeholder="Cari nama pesantren atau pengelola..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11"
           />
         </div>
       </div>
 
-      {/* Status Legend */}
-      <div className="flex flex-wrap gap-3 p-3 bg-muted/50 rounded-lg">
-        <div className="flex items-center gap-2 text-sm">
-          <div className="w-3 h-3 rounded-full bg-amber-500" />
-          <span className="text-muted-foreground">Pending</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <div className="w-3 h-3 rounded-full bg-blue-500" />
-          <span className="text-muted-foreground">Regional Approved</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <span className="text-muted-foreground">Ditolak</span>
-        </div>
+      {/* Filter Tabs - Akun Baru vs Akun Lama */}
+      <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
+        <Button
+          variant={filterJenis === 'all' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilterJenis('all')}
+          className="min-h-[40px]"
+        >
+          Semua ({data.length})
+        </Button>
+        <Button
+          variant={filterJenis === 'pesantren_baru' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilterJenis('pesantren_baru')}
+          className={`min-h-[40px] gap-2 ${filterJenis === 'pesantren_baru' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+        >
+          <Building2 className="w-4 h-4" />
+          Akun Baru ({baruCount})
+        </Button>
+        <Button
+          variant={filterJenis === 'klaim' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFilterJenis('klaim')}
+          className={`min-h-[40px] gap-2 ${filterJenis === 'klaim' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+        >
+          <History className="w-4 h-4" />
+          Akun Lama ({legacyCount})
+        </Button>
       </div>
 
-      {/* Table Card */}
-      <Card className="bg-card shadow-sm border-0">
+      {/* Mobile: Card Layout */}
+      <div className="md:hidden space-y-4">
+        {paginatedData.map((claim) => (
+          <ClaimCard
+            key={claim.id}
+            claim={claim}
+            onView={handleViewClick}
+            formatDate={formatDate}
+            getStatusBadge={getStatusBadge}
+            getJenisBadge={getJenisBadge}
+          />
+        ))}
+        {paginatedData.length === 0 && (
+          <Card className="bg-card">
+            <CardContent className="py-12 text-center">
+              <CheckCircle className="w-12 h-12 text-green-500/50 mx-auto mb-3" />
+              <p className="font-medium text-foreground">Tidak ada pengajuan pending</p>
+              <p className="text-sm text-muted-foreground">Semua pengajuan sudah diverifikasi</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <Card className="bg-card shadow-sm border-0 hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
@@ -415,8 +667,9 @@ const ValidasiPendaftar = () => {
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-semibold text-foreground">Tanggal</TableHead>
                   <TableHead className="font-semibold text-foreground">Nama Pesantren</TableHead>
-                  <TableHead className="font-semibold text-foreground hidden sm:table-cell">Pengelola</TableHead>
-                  <TableHead className="font-semibold text-foreground hidden md:table-cell">Kecamatan</TableHead>
+                  <TableHead className="font-semibold text-foreground">Jenis</TableHead>
+                  <TableHead className="font-semibold text-foreground">Pengelola</TableHead>
+                  <TableHead className="font-semibold text-foreground">Kecamatan</TableHead>
                   <TableHead className="font-semibold text-foreground">Status</TableHead>
                   <TableHead className="font-semibold text-foreground text-center">Aksi</TableHead>
                 </TableRow>
@@ -434,10 +687,11 @@ const ValidasiPendaftar = () => {
                     <TableCell className="font-medium text-foreground">
                       {item.pesantren_name}
                     </TableCell>
-                    <TableCell className="text-foreground hidden sm:table-cell">
+                    <TableCell>{getJenisBadge(item.jenis_pengajuan)}</TableCell>
+                    <TableCell className="text-foreground">
                       {maskName(item.nama_pengelola) || '-'}
                     </TableCell>
-                    <TableCell className="text-foreground hidden md:table-cell">
+                    <TableCell className="text-foreground">
                       {item.kecamatan || '-'}
                     </TableCell>
                     <TableCell>{getStatusBadge(item.status)}</TableCell>
@@ -452,14 +706,14 @@ const ValidasiPendaftar = () => {
                         className="border-primary text-primary hover:bg-primary hover:text-primary-foreground min-h-[44px]"
                       >
                         <Eye className="w-4 h-4 mr-1" />
-                        <span className="hidden sm:inline">Periksa</span>
+                        Periksa
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
                 {paginatedData.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <CheckCircle className="w-12 h-12 text-green-500/50" />
                         <p className="font-medium">Tidak ada pengajuan pending</p>
@@ -475,41 +729,11 @@ const ValidasiPendaftar = () => {
           {/* Pagination Controls */}
           {totalItems > 0 && (
             <div className="border-t border-border px-4 py-3">
-              {/* Mobile: Simple Prev/Next */}
-              <div className="flex sm:hidden items-center justify-between">
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {startIndex + 1}-{endIndex} dari {totalItems}
                 </span>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="min-h-[44px] min-w-[44px]"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="min-h-[44px] min-w-[44px]"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Desktop: Full Controls */}
-              <div className="hidden sm:flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Showing {startIndex + 1}-{endIndex} of {totalItems} entries
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Rows per page:</span>
                   <Select value={String(rowsPerPage)} onValueChange={handleRowsPerPageChange}>
                     <SelectTrigger className="w-[70px] h-9 bg-card">
                       <SelectValue />
@@ -521,7 +745,6 @@ const ValidasiPendaftar = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="flex items-center gap-1">
                   <Button
                     variant="outline"
@@ -530,10 +753,8 @@ const ValidasiPendaftar = () => {
                     disabled={currentPage === 1}
                     className="h-9"
                   >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Previous
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  
                   {getVisiblePages().map((page) => (
                     <Button
                       key={page}
@@ -545,7 +766,6 @@ const ValidasiPendaftar = () => {
                       {page}
                     </Button>
                   ))}
-
                   <Button
                     variant="outline"
                     size="sm"
@@ -553,8 +773,7 @@ const ValidasiPendaftar = () => {
                     disabled={currentPage === totalPages}
                     className="h-9"
                   >
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -562,6 +781,36 @@ const ValidasiPendaftar = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Mobile Pagination */}
+      {totalItems > 0 && (
+        <div className="md:hidden flex items-center justify-between px-2">
+          <span className="text-sm text-muted-foreground">
+            {startIndex + 1}-{endIndex} dari {totalItems}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="min-h-[44px] min-w-[44px]"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm font-medium">{currentPage}/{totalPages}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="min-h-[44px] min-w-[44px]"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Detail Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -578,9 +827,9 @@ const ValidasiPendaftar = () => {
 
           {selectedClaim && (
             <div className="space-y-4 py-4">
-              {/* Status Badge */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status Saat Ini</span>
+              {/* Jenis & Status Badge */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                {getJenisBadge(selectedClaim.jenis_pengajuan)}
                 {getStatusBadge(selectedClaim.status)}
               </div>
 

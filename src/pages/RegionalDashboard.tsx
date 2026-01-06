@@ -9,7 +9,8 @@ import {
   LayoutDashboard,
   CheckCircle,
   Calendar,
-  Share2
+  Share2,
+  Trophy
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,7 +25,7 @@ import DataMasterRegional from "@/components/regional-dashboard/DataMasterRegion
 import RegionalHub from "@/components/regional-dashboard/RegionalHub";
 import Pengaturan from "@/components/regional-dashboard/Pengaturan";
 
-type ViewType = "beranda" | "verifikasi" | "data-utama" | "event" | "regional-hub" | "pengaturan";
+type ViewType = "beranda" | "verifikasi" | "data-regional" | "event" | "regional-hub" | "militansi" | "pengaturan";
 
 interface MenuItem {
   id: ViewType;
@@ -69,13 +70,14 @@ const RegionalDashboard = () => {
     fetchPendingCount();
   }, [profile?.region_id]);
 
-  // Dynamic menu items with real pending count
+  // Dynamic menu items with real pending count - Strict Order
   const menuItems: MenuItem[] = [
-    { id: "beranda", label: "DASHBOARD BERANDA", icon: LayoutDashboard },
-    { id: "verifikasi", label: "VERIFIKASI PESANTREN", icon: CheckCircle, badge: pendingCount > 0 ? pendingCount : undefined },
-    { id: "data-utama", label: "DATA UTAMA", icon: Database },
-    { id: "event", label: "MANAJEMEN EVENT", icon: Calendar, comingSoon: true },
-    { id: "regional-hub", label: "REGIONAL-HUB", icon: Share2, comingSoon: true },
+    { id: "beranda", label: "BERANDA", icon: LayoutDashboard },
+    { id: "verifikasi", label: "VERIFIKASI", icon: CheckCircle, badge: pendingCount > 0 ? pendingCount : undefined },
+    { id: "data-regional", label: "DATA REGIONAL", icon: Database },
+    { id: "event", label: "EVENT", icon: Calendar, comingSoon: true },
+    { id: "regional-hub", label: "REGIONAL HUB", icon: Share2, comingSoon: true },
+    { id: "militansi", label: "MILITANSI", icon: Trophy, comingSoon: true },
     { id: "pengaturan", label: "PENGATURAN", icon: Settings },
   ];
 
@@ -115,15 +117,17 @@ const RegionalDashboard = () => {
       case "beranda":
         return <RegionalDashboardHome />;
       case "verifikasi":
-        return <ValidasiPendaftar />;
-      case "data-utama":
-        return <DataMasterRegional />;
+        return <ValidasiPendaftar isDebugMode={isDebugMode} />;
+      case "data-regional":
+        return <DataMasterRegional isDebugMode={isDebugMode} />;
       case "event":
-        return <ComingSoonPlaceholder title="Manajemen Event" />;
+        return <ComingSoonPlaceholder title="Event" />;
       case "regional-hub":
         return <ComingSoonPlaceholder title="Regional Hub" />;
+      case "militansi":
+        return <ComingSoonPlaceholder title="Militansi & Leaderboard" />;
       case "pengaturan":
-        return <Pengaturan />;
+        return <Pengaturan isDebugMode={isDebugMode} />;
       default:
         return <RegionalDashboardHome />;
     }

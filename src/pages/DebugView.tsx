@@ -289,8 +289,11 @@ const DebugView = () => {
                 <Badge variant="outline">Role: admin_regional</Badge>
                 <Badge className="bg-emerald-100 text-emerald-700">Active</Badge>
               </div>
-              <p className="text-sm text-slate-600">
-                Mock data untuk menguji dashboard Admin Regional dengan data wilayah Malang.
+              <p className="text-xs sm:text-sm text-slate-600">
+                Menu: Beranda → Verifikasi (Baru/Legacy) → Data Regional → Event (Soon) → Regional Hub (Soon) → Militansi (Soon) → Pengaturan
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                ✓ Mobile Cards, Read-Only Data, Filter Akun Baru/Lama, Detail View
               </p>
               <div className="flex gap-2">
                 <Button 

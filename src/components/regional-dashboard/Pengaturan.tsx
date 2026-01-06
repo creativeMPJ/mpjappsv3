@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,23 +6,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Building, Shield, Upload, Camera, Eye, EyeOff, CreditCard, MapPin } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { User, Building, Shield, Camera, Eye, EyeOff, MapPin, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-const bankOptions = [
-  "Bank BCA",
-  "Bank Mandiri",
-  "Bank BRI",
-  "Bank BNI",
-  "Bank Jatim",
-  "Bank Syariah Indonesia (BSI)",
-  "Bank CIMB Niaga",
-  "Bank Permata",
-];
+interface PengaturanProps {
+  isDebugMode?: boolean;
+}
+
+// Mock data for debug mode
+const MOCK_ADMIN = {
+  nama: 'Ahmad Admin Regional',
+  email: 'admin.malang@mpj.or.id',
+  whatsapp: '081234567890',
+  jabatan: 'Admin Regional',
+};
+
+const MOCK_REGION = {
+  code: '01',
+  name: 'Malang Raya',
+};
 
 function centerAspectCrop(
   mediaWidth: number,
@@ -30,31 +37,31 @@ function centerAspectCrop(
   aspect: number
 ) {
   return centerCrop(
-    makeAspectCrop(
-      {
-        unit: "%",
-        width: 90,
-      },
-      aspect,
-      mediaWidth,
-      mediaHeight
-    ),
+    makeAspectCrop({ unit: "%", width: 90 }, aspect, mediaWidth, mediaHeight),
     mediaWidth,
     mediaHeight
   );
 }
 
-const Pengaturan = () => {
+const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
   const { toast } = useToast();
+  const { profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState("profil");
+  const [loading, setLoading] = useState(true);
 
-  // Profile state
-  const [profileForm, setProfileForm] = useState({
+  // Profile state (Read-only from database)
+  const [profileData, setProfileData] = useState({
     avatar: "",
-    namaLengkap: "Ahmad Admin",
-    email: "admin.malang@mpj.or.id",
-    whatsapp: "081234567890",
+    namaLengkap: "",
+    email: "",
+    whatsapp: "",
     jabatan: "Admin Regional",
+  });
+
+  // Regional data (Read-only from database)
+  const [regionalData, setRegionalData] = useState({
+    regionCode: "",
+    regionName: "",
   });
 
   // Avatar crop state
@@ -65,17 +72,6 @@ const Pengaturan = () => {
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Regional Office state
-  const [regionalForm, setRegionalForm] = useState({
-    namaWilayah: "MPJ Koordinator Malang Raya",
-    alamatSekretariat: "Jl. Soekarno Hatta No. 123, Lowokwaru, Malang",
-    hotlineWa: "081234567890",
-    googleMapsLink: "https://maps.google.com/?q=...",
-    namaBank: "Bank Jatim",
-    nomorRekening: "0123456789",
-    atasNama: "MPJ Media Regional Malang",
-  });
-
   // Password state
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -85,6 +81,96 @@ const Pengaturan = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // Fetch admin data from crews table
+  useEffect(() => {
+    const fetchData = async () => {
+      if (isDebugMode) {
+        setProfileData({
+          avatar: "",
+          namaLengkap: MOCK_ADMIN.nama,
+          email: MOCK_ADMIN.email,
+          whatsapp: MOCK_ADMIN.whatsapp,
+          jabatan: MOCK_ADMIN.jabatan,
+        });
+        setRegionalData({
+          regionCode: MOCK_REGION.code,
+          regionName: MOCK_REGION.name,
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!user?.id || !profile?.region_id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Set email from auth user
+        setProfileData(prev => ({
+          ...prev,
+          email: user.email || '',
+        }));
+
+        // Fetch region data
+        const { data: regionData } = await supabase
+          .from('regions')
+          .select('code, name')
+          .eq('id', profile.region_id)
+          .single();
+
+        if (regionData) {
+          setRegionalData({
+            regionCode: regionData.code,
+            regionName: regionData.name,
+          });
+        }
+
+        // Try to fetch crew data for this admin (if they have a crew record)
+        const { data: crewData } = await supabase
+          .from('crews')
+          .select('nama, jabatan')
+          .eq('profile_id', user.id)
+          .single();
+
+        if (crewData) {
+          setProfileData(prev => ({
+            ...prev,
+            namaLengkap: crewData.nama || profile.nama_pesantren || '',
+            jabatan: crewData.jabatan || 'Admin Regional',
+          }));
+        } else {
+          // Fallback to profile data
+          setProfileData(prev => ({
+            ...prev,
+            namaLengkap: profile.nama_pesantren || 'Admin Regional',
+          }));
+        }
+
+        // Get WhatsApp from full profile query
+        const { data: fullProfile } = await supabase
+          .from('profiles')
+          .select('no_wa_pendaftar')
+          .eq('id', user.id)
+          .single();
+
+        if (fullProfile?.no_wa_pendaftar) {
+          setProfileData(prev => ({
+            ...prev,
+            whatsapp: fullProfile.no_wa_pendaftar || '',
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user?.id, profile?.region_id, isDebugMode]);
 
   // Handle avatar file selection
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,13 +185,11 @@ const Pengaturan = () => {
     }
   };
 
-  // Handle image load for crop
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
     setCrop(centerAspectCrop(width, height, 1));
   }, []);
 
-  // Generate cropped image
   const generateCroppedImage = useCallback(() => {
     if (!completedCrop || !imgRef.current || !previewCanvasRef.current) {
       return;
@@ -138,7 +222,7 @@ const Pengaturan = () => {
     canvas.toBlob((blob) => {
       if (blob) {
         const url = URL.createObjectURL(blob);
-        setProfileForm({ ...profileForm, avatar: url });
+        setProfileData({ ...profileData, avatar: url });
         setCropModalOpen(false);
         toast({
           title: "Foto profil diperbarui",
@@ -146,44 +230,10 @@ const Pengaturan = () => {
         });
       }
     }, "image/jpeg");
-  }, [completedCrop, profileForm, toast]);
-
-  // Save profile
-  const handleSaveProfile = () => {
-    if (!profileForm.namaLengkap) {
-      toast({
-        title: "Nama diperlukan",
-        description: "Mohon isi nama lengkap.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Profil berhasil diperbarui",
-      description: "Data profil Anda telah tersimpan.",
-    });
-  };
-
-  // Save regional data
-  const handleSaveRegional = () => {
-    if (!regionalForm.nomorRekening || !regionalForm.atasNama) {
-      toast({
-        title: "Data rekening tidak lengkap",
-        description: "Mohon lengkapi data rekening operasional.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Data wilayah berhasil diperbarui",
-      description: "Informasi wilayah dan rekening telah tersimpan.",
-    });
-  };
+  }, [completedCrop, profileData, toast]);
 
   // Update password
-  const handleUpdatePassword = () => {
+  const handleUpdatePassword = async () => {
     if (!passwordForm.currentPassword) {
       toast({
         title: "Password saat ini diperlukan",
@@ -211,16 +261,38 @@ const Pengaturan = () => {
       return;
     }
 
-    toast({
-      title: "Password berhasil diperbarui",
-      description: "Silakan gunakan password baru untuk login berikutnya.",
-    });
+    if (isDebugMode) {
+      toast({
+        title: "Mode Debug",
+        description: "Password akan diperbarui (simulasi)",
+      });
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      return;
+    }
 
-    setPasswordForm({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password berhasil diperbarui",
+        description: "Silakan gunakan password baru untuk login berikutnya.",
+      });
+
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      toast({
+        title: "Gagal memperbarui password",
+        description: error.message || "Terjadi kesalahan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const isPasswordFormValid =
@@ -229,12 +301,29 @@ const Pengaturan = () => {
     passwordForm.confirmPassword &&
     passwordForm.newPassword === passwordForm.confirmPassword;
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Pengaturan</h1>
-        <p className="text-muted-foreground">Kelola profil, informasi wilayah, dan keamanan akun</p>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Pengaturan</h1>
+        <p className="text-sm text-muted-foreground">Kelola profil dan keamanan akun</p>
       </div>
 
       <Card>
@@ -242,17 +331,17 @@ const Pengaturan = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-6 px-6 mb-6">
               <TabsList className="inline-flex w-auto min-w-full sm:w-full justify-start sm:justify-center">
-                <TabsTrigger value="profil" className="flex-shrink-0 gap-2">
+                <TabsTrigger value="profil" className="flex-shrink-0 gap-2 min-h-[44px]">
                   <User className="h-4 w-4" />
                   <span className="hidden sm:inline">Profil Saya</span>
                   <span className="sm:hidden">Profil</span>
                 </TabsTrigger>
-                <TabsTrigger value="wilayah" className="flex-shrink-0 gap-2">
-                  <Building className="h-4 w-4" />
-                  <span className="hidden sm:inline">Profil Wilayah</span>
-                  <span className="sm:hidden">Wilayah</span>
+                <TabsTrigger value="regional" className="flex-shrink-0 gap-2 min-h-[44px]">
+                  <MapPin className="h-4 w-4" />
+                  <span className="hidden sm:inline">Regional</span>
+                  <span className="sm:hidden">Regional</span>
                 </TabsTrigger>
-                <TabsTrigger value="keamanan" className="flex-shrink-0 gap-2">
+                <TabsTrigger value="keamanan" className="flex-shrink-0 gap-2 min-h-[44px]">
                   <Shield className="h-4 w-4" />
                   <span className="hidden sm:inline">Keamanan</span>
                   <span className="sm:hidden">Password</span>
@@ -260,16 +349,16 @@ const Pengaturan = () => {
               </TabsList>
             </div>
 
-            {/* TAB 1: PROFIL SAYA */}
+            {/* TAB 1: PROFIL SAYA (Read-Only) */}
             <TabsContent value="profil" className="space-y-6">
               <Card className="bg-muted/30">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <User className="h-5 w-5" />
-                    Data Pribadi
+                    Data Pribadi Admin
                   </CardTitle>
                   <CardDescription>
-                    Kelola informasi identitas akun Anda
+                    Data diambil dari database (Read-Only)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -277,13 +366,13 @@ const Pengaturan = () => {
                   <div className="flex flex-col sm:flex-row items-center gap-6">
                     <div className="relative">
                       <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-                        <AvatarImage src={profileForm.avatar || "/placeholder.svg"} />
-                        <AvatarFallback className="bg-emerald-600 text-white text-2xl">
-                          {profileForm.namaLengkap.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        <AvatarImage src={profileData.avatar || "/placeholder.svg"} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                          {profileData.namaLengkap.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
-                      <label className="absolute bottom-0 right-0 p-2 bg-emerald-600 rounded-full cursor-pointer hover:bg-emerald-700 transition-colors shadow-lg">
-                        <Camera className="h-4 w-4 text-white" />
+                      <label className="absolute bottom-0 right-0 p-2 bg-primary rounded-full cursor-pointer hover:bg-primary/90 transition-colors shadow-lg">
+                        <Camera className="h-4 w-4 text-primary-foreground" />
                         <input
                           type="file"
                           accept="image/*"
@@ -293,28 +382,20 @@ const Pengaturan = () => {
                       </label>
                     </div>
                     <div className="text-center sm:text-left">
-                      <h3 className="font-semibold text-lg">{profileForm.namaLengkap}</h3>
-                      <p className="text-sm text-muted-foreground">{profileForm.jabatan}</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Ubah Foto
-                      </Button>
+                      <h3 className="font-semibold text-lg">{profileData.namaLengkap}</h3>
+                      <p className="text-sm text-muted-foreground">{profileData.jabatan}</p>
                     </div>
                   </div>
 
-                  {/* Form Fields */}
+                  {/* Form Fields (Read-Only) */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="nama">Nama Lengkap</Label>
                       <Input
                         id="nama"
-                        value={profileForm.namaLengkap}
-                        onChange={(e) => setProfileForm({ ...profileForm, namaLengkap: e.target.value })}
+                        value={profileData.namaLengkap}
+                        disabled
+                        className="bg-muted"
                       />
                     </div>
                     <div className="space-y-2">
@@ -322,163 +403,83 @@ const Pengaturan = () => {
                       <Input
                         id="email"
                         type="email"
-                        value={profileForm.email}
+                        value={profileData.email}
                         disabled
                         className="bg-muted"
                       />
-                      <p className="text-xs text-muted-foreground">Email tidak dapat diubah</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp">No. WhatsApp</Label>
                       <Input
                         id="whatsapp"
                         type="tel"
-                        placeholder="081234567890"
-                        value={profileForm.whatsapp}
-                        onChange={(e) => setProfileForm({ ...profileForm, whatsapp: e.target.value })}
+                        value={profileData.whatsapp}
+                        disabled
+                        className="bg-muted"
                       />
-                      <p className="text-xs text-muted-foreground">Untuk notifikasi sistem</p>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="jabatan">Jabatan/Role</Label>
                       <Input
                         id="jabatan"
-                        value={profileForm.jabatan}
+                        value={profileData.jabatan}
                         disabled
                         className="bg-muted"
                       />
                     </div>
                   </div>
 
-                  <Button onClick={handleSaveProfile} className="bg-emerald-600 hover:bg-emerald-700">
-                    Simpan Profil
-                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Data profil diambil otomatis dari database. Hubungi Admin Pusat untuk perubahan.
+                  </p>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* TAB 2: PROFIL WILAYAH & KEUANGAN */}
-            <TabsContent value="wilayah" className="space-y-6">
-              {/* Office Info */}
+            {/* TAB 2: REGIONAL INFO (Read-Only) */}
+            <TabsContent value="regional" className="space-y-6">
               <Card className="bg-muted/30">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
-                    Informasi Wilayah
+                    Informasi Regional
                   </CardTitle>
                   <CardDescription>
-                    Data ini ditampilkan ke member di aplikasi
+                    Data wilayah tugas Anda (Read-Only)
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="namaWilayah">Nama Wilayah</Label>
-                    <Input
-                      id="namaWilayah"
-                      value={regionalForm.namaWilayah}
-                      disabled
-                      className="bg-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="alamat">Alamat Sekretariat</Label>
-                    <Textarea
-                      id="alamat"
-                      placeholder="Masukkan alamat lengkap sekretariat..."
-                      value={regionalForm.alamatSekretariat}
-                      onChange={(e) => setRegionalForm({ ...regionalForm, alamatSekretariat: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="hotline">Hotline / WA Admin</Label>
+                      <Label htmlFor="regionCode">Kode Regional (RR)</Label>
                       <Input
-                        id="hotline"
-                        type="tel"
-                        placeholder="081234567890"
-                        value={regionalForm.hotlineWa}
-                        onChange={(e) => setRegionalForm({ ...regionalForm, hotlineWa: e.target.value })}
+                        id="regionCode"
+                        value={regionalData.regionCode}
+                        disabled
+                        className="bg-muted font-mono text-lg"
                       />
-                      <p className="text-xs text-muted-foreground">Untuk dukungan member</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="maps">Link Google Maps (Opsional)</Label>
+                      <Label htmlFor="regionName">Nama Regional</Label>
                       <Input
-                        id="maps"
-                        type="url"
-                        placeholder="https://maps.google.com/..."
-                        value={regionalForm.googleMapsLink}
-                        onChange={(e) => setRegionalForm({ ...regionalForm, googleMapsLink: e.target.value })}
+                        id="regionName"
+                        value={regionalData.regionName}
+                        disabled
+                        className="bg-muted"
                       />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Bank Account - Critical for Event Module */}
-              <Card className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-amber-600" />
-                    Rekening Operasional
-                  </CardTitle>
-                  <CardDescription>
-                    Rekening pembayaran untuk event berbayar
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-3 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-700">
-                    <p className="text-sm text-amber-800 dark:text-amber-300">
-                      💡 Data rekening ini akan muncul otomatis saat Member mendaftar Event berbayar.
+                  <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <p className="text-sm text-foreground">
+                      <strong>Regional [{regionalData.regionCode}]</strong> - {regionalData.regionName}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Wilayah tugas ini ditetapkan oleh Admin Pusat dan tidak dapat diubah.
                     </p>
                   </div>
-
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="bank">Nama Bank</Label>
-                      <Select
-                        value={regionalForm.namaBank}
-                        onValueChange={(value) => setRegionalForm({ ...regionalForm, namaBank: value })}
-                      >
-                        <SelectTrigger id="bank">
-                          <SelectValue placeholder="Pilih Bank" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bankOptions.map((bank) => (
-                            <SelectItem key={bank} value={bank}>
-                              {bank}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="norek">Nomor Rekening</Label>
-                      <Input
-                        id="norek"
-                        type="text"
-                        placeholder="0123456789"
-                        value={regionalForm.nomorRekening}
-                        onChange={(e) => setRegionalForm({ ...regionalForm, nomorRekening: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="atasNama">Atas Nama</Label>
-                      <Input
-                        id="atasNama"
-                        placeholder="Nama pemilik rekening"
-                        value={regionalForm.atasNama}
-                        onChange={(e) => setRegionalForm({ ...regionalForm, atasNama: e.target.value })}
-                      />
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
-
-              <Button onClick={handleSaveRegional} className="bg-emerald-600 hover:bg-emerald-700">
-                Simpan Data Wilayah
-              </Button>
             </TabsContent>
 
             {/* TAB 3: KEAMANAN */}
@@ -490,19 +491,19 @@ const Pengaturan = () => {
                     Ubah Password
                   </CardTitle>
                   <CardDescription>
-                    Perbarui password akun Anda untuk keamanan
+                    Perbarui password akun Anda secara berkala
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 max-w-md">
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="currentPassword">Password Saat Ini</Label>
                     <div className="relative">
                       <Input
                         id="currentPassword"
                         type={showCurrentPassword ? "text" : "password"}
-                        placeholder="Masukkan password saat ini"
                         value={passwordForm.currentPassword}
                         onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                        className="pr-10"
                       />
                       <button
                         type="button"
@@ -520,9 +521,9 @@ const Pengaturan = () => {
                       <Input
                         id="newPassword"
                         type={showNewPassword ? "text" : "password"}
-                        placeholder="Minimal 6 karakter"
                         value={passwordForm.newPassword}
                         onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        className="pr-10"
                       />
                       <button
                         type="button"
@@ -532,6 +533,7 @@ const Pengaturan = () => {
                         {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                    <p className="text-xs text-muted-foreground">Minimal 6 karakter</p>
                   </div>
 
                   <div className="space-y-2">
@@ -540,9 +542,9 @@ const Pengaturan = () => {
                       <Input
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Ulangi password baru"
                         value={passwordForm.confirmPassword}
                         onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        className="pr-10"
                       />
                       <button
                         type="button"
@@ -559,10 +561,17 @@ const Pengaturan = () => {
 
                   <Button
                     onClick={handleUpdatePassword}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    disabled={!isPasswordFormValid}
+                    disabled={!isPasswordFormValid || isUpdatingPassword}
+                    className="bg-primary hover:bg-primary/90 min-h-[44px]"
                   >
-                    Update Password
+                    {isUpdatingPassword ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Memperbarui...
+                      </span>
+                    ) : (
+                      "Perbarui Password"
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -571,46 +580,42 @@ const Pengaturan = () => {
         </CardContent>
       </Card>
 
-      {/* Avatar Crop Modal */}
+      {/* Crop Modal */}
       <Dialog open={cropModalOpen} onOpenChange={setCropModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Crop Foto Profil</DialogTitle>
             <DialogDescription>
-              Sesuaikan area foto yang akan digunakan (1:1 rasio)
+              Sesuaikan area foto yang akan ditampilkan
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="py-4">
             {imgSrc && (
               <ReactCrop
                 crop={crop}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onChange={(c) => setCrop(c)}
                 onComplete={(c) => setCompletedCrop(c)}
                 aspect={1}
                 circularCrop
               >
                 <img
                   ref={imgRef}
-                  alt="Crop preview"
                   src={imgSrc}
+                  alt="Crop preview"
                   onLoad={onImageLoad}
-                  className="max-h-[400px] mx-auto"
+                  style={{ maxHeight: "400px", width: "100%" }}
                 />
               </ReactCrop>
             )}
-            <canvas ref={previewCanvasRef} className="hidden" />
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setCropModalOpen(false)}>
-                Batal
-              </Button>
-              <Button
-                onClick={generateCroppedImage}
-                className="bg-emerald-600 hover:bg-emerald-700"
-                disabled={!completedCrop}
-              >
-                Simpan Foto
-              </Button>
-            </div>
+            <canvas ref={previewCanvasRef} style={{ display: "none" }} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCropModalOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={generateCroppedImage} className="bg-primary hover:bg-primary/90">
+              Simpan
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
