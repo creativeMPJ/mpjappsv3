@@ -145,17 +145,25 @@ const DebugView = () => {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-2">
             <Shield className="h-8 w-8 text-emerald-600" />
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900">
               MPJ Debug View
             </h1>
           </div>
-          <p className="text-slate-600 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto px-4">
             Halaman audit untuk menguji tampilan dashboard tanpa login. 
-            Klik tombol di bawah untuk menavigasi ke dashboard dengan data simulasi lengkap.
+            Klik tombol di bawah untuk menavigasi ke dashboard dengan data simulasi.
           </p>
-          <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-            Development Mode Only
-          </Badge>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+              Development Mode Only
+            </Badge>
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+              Mobile Friendly PWA
+            </Badge>
+          </div>
+          <p className="text-xs text-slate-500">
+            Tip: Gunakan tombol device di atas preview untuk menguji tampilan Mobile/Tablet/Desktop
+          </p>
         </div>
 
         <Separator />
@@ -325,14 +333,17 @@ const DebugView = () => {
             <CardContent className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <ProfileLevelBadge level="platinum" size="sm" />
-                <Badge variant="outline" className="font-mono">
+                <Badge variant="outline" className="font-mono text-xs">
                   NIP: {formatNIP(MOCK_DATA.mediaPlatinum.nip, true)}
                 </Badge>
                 <Badge className="bg-green-100 text-green-700">Paid</Badge>
               </div>
-              <p className="text-sm text-slate-600">
-                Mock data Platinum: Pembayaran Lunas, Slot Kru Penuh (3/3), Diamond Crystal Theme. 
-                Nav Order: Beranda → Identitas → Administrasi → Tim Media → E-ID & Aset → Event (Soon) → MPJ HUB (Soon) → Pengaturan.
+              <p className="text-xs sm:text-sm text-slate-600">
+                Platinum: Paid, Slot 3/3, Card-based UI. 
+                Urutan: Beranda → Identitas → Administrasi → Tim Media → E-ID & Aset → Event → MPJ HUB → Pengaturan.
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                ✓ Mobile Friendly: List Cards, Touch-friendly, Auto-save, Update Data button
               </p>
               <div className="flex gap-2">
                 <Button 
