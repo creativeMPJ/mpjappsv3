@@ -195,8 +195,68 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   };
 
   useEffect(() => {
+    // DEBUG MODE: Use mock data instead of fetching from database
+    if (isDebugMode && debugData) {
+      // Map pesantren from debug data
+      const pesantrenData = (debugData.pesantren || []) as Array<Record<string, unknown>>;
+      const mappedPesantren: Pesantren[] = pesantrenData.map((item) => ({
+        id: String(item.id),
+        nama_pesantren: (item.nama_pesantren as string) || null,
+        nip: (item.nip as string) || null,
+        region_id: (item.region_id as string) || null,
+        region_name: (item.region_name as string) || null,
+        city_name: (item.city_name as string) || null,
+        status_account: String(item.status_account || 'pending'),
+        profile_level: String(item.profile_level || 'basic'),
+        alamat_singkat: (item.alamat_singkat as string) || null,
+        nama_pengasuh: (item.nama_pengasuh as string) || null,
+      }));
+      setPesantrenList(mappedPesantren);
+
+      // Map media from debug data (same as pesantren with nama_media)
+      const mappedMedia: MediaAdmin[] = pesantrenData.map((item) => ({
+        id: String(item.id),
+        nama_pesantren: (item.nama_pesantren as string) || null,
+        nama_media: (item.nama_media as string) || null,
+        nip: (item.nip as string) || null,
+        region_id: (item.region_id as string) || null,
+        region_name: (item.region_name as string) || null,
+        status_account: String(item.status_account || 'pending'),
+        profile_level: String(item.profile_level || 'basic'),
+        no_wa_pendaftar: (item.no_wa_pendaftar as string) || null,
+      }));
+      setMediaList(mappedMedia);
+
+      // Map crews from debug data
+      const crewData = (debugData.crews || []) as Array<Record<string, unknown>>;
+      const mappedCrew: Crew[] = crewData.map((item) => ({
+        id: String(item.id),
+        nama: (item.nama as string) || '',
+        niam: (item.niam as string) || null,
+        jabatan: (item.jabatan as string) || null,
+        xp_level: Number(item.xp_level) || null,
+        profile_id: (item.profile_id as string) || '',
+        pesantren_name: (item.pesantren_name as string) || null,
+        region_id: (item.region_id as string) || null,
+        region_name: (item.region_name as string) || null,
+      }));
+      setCrewList(mappedCrew);
+
+      // Map regions from debug data
+      const regionsData = (debugData.regions || []) as Array<Record<string, unknown>>;
+      const mappedRegions: Region[] = regionsData.map((item) => ({
+        id: String(item.id),
+        name: (item.name as string) || '',
+        code: (item.code as string) || '',
+      }));
+      setRegions(mappedRegions);
+
+      setLoading(false);
+      return;
+    }
+
     fetchData();
-  }, []);
+  }, [isDebugMode, debugData]);
 
   // Filtered data based on region and search
   const filteredPesantren = useMemo(() => {

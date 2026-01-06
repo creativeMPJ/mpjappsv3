@@ -64,6 +64,55 @@ const AdminPusatHome = ({ onNavigate, isDebugMode, debugData }: Props) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // DEBUG MODE: Use mock data instead of fetching from database
+    if (isDebugMode && debugData) {
+      const pesantrenData = (debugData.pesantren || []) as Array<Record<string, unknown>>;
+      const crewData = (debugData.crews || []) as Array<Record<string, unknown>>;
+      const regionData = (debugData.regions || []) as Array<Record<string, unknown>>;
+      const paymentData = (debugData.payments || []) as Array<Record<string, unknown>>;
+
+      // Calculate stats from mock data
+      const activePesantren = pesantrenData.filter((p) => p.status_account === 'active');
+      const verifiedPayments = paymentData.filter((p) => p.status === 'verified');
+      const pendingPayments = paymentData.filter((p) => p.status === 'pending_verification');
+      const totalIncome = verifiedPayments.reduce((sum, p) => sum + (Number(p.total_amount) || 0), 0);
+
+      // Calculate level distribution
+      const levels: LevelStats = { basic: 0, silver: 0, gold: 0, platinum: 0 };
+      activePesantren.forEach((p) => {
+        const level = p.profile_level as keyof LevelStats;
+        if (level in levels) {
+          levels[level]++;
+        }
+      });
+
+      setStats({
+        totalPesantren: activePesantren.length,
+        totalKru: crewData.length,
+        totalWilayah: regionData.length,
+        pendingPayments: pendingPayments.length,
+        totalIncome,
+      });
+
+      setLevelStats(levels);
+
+      // Set recent users from mock pesantren data
+      setRecentUsers(
+        pesantrenData.slice(0, 8).map((item) => ({
+          id: String(item.id),
+          nama_pesantren: (item.nama_pesantren as string) || null,
+          nip: (item.nip as string) || null,
+          region_name: (item.region_name as string) || '-',
+          status_account: String(item.status_account || 'pending'),
+          profile_level: String(item.profile_level || 'basic'),
+          created_at: (item.created_at as string) || new Date().toISOString(),
+        }))
+      );
+
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         // Fetch total pesantren (active users)
@@ -155,7 +204,7 @@ const AdminPusatHome = ({ onNavigate, isDebugMode, debugData }: Props) => {
     };
 
     fetchData();
-  }, []);
+  }, [isDebugMode, debugData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID").format(amount);
