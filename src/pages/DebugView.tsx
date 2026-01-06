@@ -19,6 +19,17 @@ import { formatNIP, formatNIAM } from "@/lib/id-utils";
 
 // Comprehensive mock data for debugging/audit
 const MOCK_DATA = {
+  // Admin Pusat mock data
+  adminPusat: {
+    id: 'mock-admin-pusat',
+    nama_pesantren: 'Admin Pusat MPJ',
+    region_id: null,
+    region_name: null,
+    role: 'admin_pusat' as const,
+    status_account: 'active' as const,
+    status_payment: 'paid' as const,
+    profile_level: 'platinum' as const,
+  },
   regionalAdmin: {
     id: 'mock-regional-admin',
     nama_pesantren: 'Admin Regional Malang',
@@ -78,6 +89,38 @@ const MOCK_DATA = {
     { id: '1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', xp_level: 1500, skill: ['Videografi'], jabatan_code_id: null },
     { id: '2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', xp_level: 2500, skill: ['Editing'], jabatan_code_id: null },
     { id: '3', nama: 'Cahya Dewi', niam: 'AN260100103', jabatan: 'Desainer', xp_level: 800, skill: ['Desain Grafis'], jabatan_code_id: null },
+  ],
+  // 10 Pesantren from 4 regions for Master Data testing
+  pesantrenMultiRegion: [
+    // Malang (01)
+    { id: 'p1', nama_pesantren: 'PP Al-Hikmah Singosari', nip: '2601001', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Ahmad Fauzi' },
+    { id: 'p2', nama_pesantren: 'PP Nurul Huda Kepanjen', nip: '2601002', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Zainuddin' },
+    { id: 'p3', nama_pesantren: 'PP Darul Ulum Pakis', nip: '2601003', region_id: 'malang-id', region_name: 'Malang Raya', status_account: 'pending', profile_level: 'silver', nama_pengasuh: 'Nyai Hj. Fatimah' },
+    // Kediri (02)
+    { id: 'p4', nama_pesantren: 'PP Lirboyo', nip: '2602001', region_id: 'kediri-id', region_name: 'Kediri Raya', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Anwar Mansur' },
+    { id: 'p5', nama_pesantren: 'PP Al-Falah Ploso', nip: '2602002', region_id: 'kediri-id', region_name: 'Kediri Raya', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Misbahul Munir' },
+    // Jombang (07)
+    { id: 'p6', nama_pesantren: 'PP Tebuireng', nip: '2607001', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Abdul Hakim' },
+    { id: 'p7', nama_pesantren: 'PP Darul Ulum Rejoso', nip: '2607002', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Tamim Romli' },
+    { id: 'p8', nama_pesantren: 'PP Bahrul Ulum Tambakberas', nip: '2607003', region_id: 'jombang-id', region_name: 'Jombang', status_account: 'active', profile_level: 'silver', nama_pengasuh: 'KH. Syaiful Bahri' },
+    // Probolinggo (10)
+    { id: 'p9', nama_pesantren: 'PP Nurul Jadid Paiton', nip: '2610001', region_id: 'probolinggo-id', region_name: 'Probolinggo', status_account: 'active', profile_level: 'platinum', nama_pengasuh: 'KH. Zaini' },
+    { id: 'p10', nama_pesantren: 'PP Zainul Hasan Genggong', nip: '2610002', region_id: 'probolinggo-id', region_name: 'Probolinggo', status_account: 'active', profile_level: 'gold', nama_pengasuh: 'KH. Hasan' },
+  ],
+  // Regions for filter testing
+  regionsForFilter: [
+    { id: 'malang-id', name: 'Malang Raya', code: '01' },
+    { id: 'kediri-id', name: 'Kediri Raya', code: '02' },
+    { id: 'jombang-id', name: 'Jombang', code: '07' },
+    { id: 'probolinggo-id', name: 'Probolinggo', code: '10' },
+  ],
+  // Kru from multiple pesantren
+  crewMultiPesantren: [
+    { id: 'c1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', pesantren_name: 'PP Al-Hikmah Singosari', region_name: 'Malang Raya' },
+    { id: 'c2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', pesantren_name: 'PP Al-Hikmah Singosari', region_name: 'Malang Raya' },
+    { id: 'c3', nama: 'Dewi Kartika', niam: 'AN260200101', jabatan: 'Admin Media', pesantren_name: 'PP Lirboyo', region_name: 'Kediri Raya' },
+    { id: 'c4', nama: 'Eko Prasetyo', niam: 'AN260700101', jabatan: 'Fotografer', pesantren_name: 'PP Tebuireng', region_name: 'Jombang' },
+    { id: 'c5', nama: 'Fatimah Zahra', niam: 'AN261000101', jabatan: 'Penulis', pesantren_name: 'PP Nurul Jadid Paiton', region_name: 'Probolinggo' },
   ],
   // Payment history mock data for Administrasi testing
   paymentsPaid: [
