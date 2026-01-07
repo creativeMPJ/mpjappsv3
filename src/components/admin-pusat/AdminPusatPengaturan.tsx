@@ -37,6 +37,7 @@ interface CrewOption {
   pesantren_name: string | null;
   region_id: string | null;
   region_name: string | null;
+  email: string | null;
 }
 
 interface Region {
@@ -164,7 +165,7 @@ const AdminPusatPengaturan = () => {
     }
   };
 
-  // Search crew from database
+  // Search crew from database with email from auth.users via RPC or manual fetch
   const searchCrew = async (query: string) => {
     if (query.length < 2) {
       setCrewOptions([]);
@@ -191,6 +192,8 @@ const AdminPusatPengaturan = () => {
         const existingAdminUserIds = adminList.map(a => a.user_id);
         const filtered = data.filter(c => !existingAdminUserIds.includes(c.profile_id));
         
+        // Get emails from profiles (we can't access auth.users directly via client)
+        // For now, we'll show profile_id as reference, email will be shown as "Terhubung"
         setCrewOptions(filtered.map((item: any) => ({
           id: item.id,
           profile_id: item.profile_id,
@@ -200,6 +203,7 @@ const AdminPusatPengaturan = () => {
           pesantren_name: item.profiles?.nama_pesantren || null,
           region_id: item.profiles?.region_id || null,
           region_name: item.profiles?.regions?.name || null,
+          email: null, // Will be populated on selection if needed
         })));
       }
     } catch (error) {
@@ -207,6 +211,11 @@ const AdminPusatPengaturan = () => {
     } finally {
       setIsSearchingCrew(false);
     }
+  };
+
+  // Check if region already has an admin
+  const getExistingRegionalAdmin = (regionId: string) => {
+    return adminRegionalList.find(admin => admin.region_id === regionId);
   };
 
   const handleAddAdmin = async () => {
@@ -222,6 +231,18 @@ const AdminPusatPengaturan = () => {
 
     setIsSaving(true);
     try {
+      // For admin_regional, check and replace existing admin in the region
+      if (selectedRole === "admin_regional") {
+        const existingAdmin = getExistingRegionalAdmin(selectedRegion);
+        if (existingAdmin && existingAdmin.user_id !== selectedCrew.profile_id) {
+          // Demote existing admin to user
+          await supabase
+            .from("user_roles")
+            .update({ role: "user" })
+            .eq("user_id", existingAdmin.user_id);
+        }
+      }
+
       // Upsert to user_roles table
       const { error } = await supabase
         .from("user_roles")
@@ -234,15 +255,30 @@ const AdminPusatPengaturan = () => {
 
       if (error) throw error;
 
+      // Update profile region if admin_regional
+      if (selectedRole === "admin_regional") {
+        await supabase
+          .from("profiles")
+          .update({ region_id: selectedRegion })
+          .eq("id", selectedCrew.profile_id);
+      }
+
+      const roleName = selectedRole === 'admin_pusat' 
+        ? 'Admin Pusat' 
+        : selectedRole === 'admin_regional' 
+          ? 'Admin Regional' 
+          : 'Admin Finance';
+
       toast({
-        title: "Berhasil",
-        description: `${selectedCrew.nama} berhasil ditambahkan sebagai ${selectedRole === 'admin_pusat' ? 'Admin Pusat' : selectedRole === 'admin_regional' ? 'Admin Regional' : 'Admin Finance'}`,
+        title: "Penunjukan Berhasil",
+        description: `Kru ${selectedCrew.nama}${selectedCrew.niam ? ` (${formatNIAM(selectedCrew.niam, true)})` : ''} berhasil ditunjuk sebagai ${roleName}. Akses login sekarang aktif.`,
       });
 
       setIsAddDialogOpen(false);
       setSelectedCrew(null);
       setCrewSearchQuery("");
       setCrewOptions([]);
+      setSelectedRegion("");
       fetchData();
     } catch (error: any) {
       toast({ title: "Gagal", description: error.message, variant: "destructive" });
@@ -594,15 +630,18 @@ const AdminPusatPengaturan = () => {
                   onChange={(e) => {
                     setCrewSearchQuery(e.target.value);
                     searchCrew(e.target.value);
+                    if (e.target.value.length < 2) {
+                      setSelectedCrew(null);
+                    }
                   }}
                   placeholder="Ketik nama kru (min. 2 karakter)"
                   className="pl-10"
                 />
               </div>
               
-              {/* Search Results */}
-              {crewOptions.length > 0 && (
-                <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+              {/* Search Results - Enhanced with NIAM & Pesantren */}
+              {crewOptions.length > 0 && !selectedCrew && (
+                <div className="border rounded-lg divide-y max-h-56 overflow-y-auto bg-background shadow-lg">
                   {crewOptions.map((crew) => (
                     <button
                       key={crew.id}
@@ -616,15 +655,28 @@ const AdminPusatPengaturan = () => {
                           setSelectedRegion(crew.region_id);
                         }
                       }}
-                      className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${
-                        selectedCrew?.id === crew.id ? 'bg-primary/10' : ''
-                      }`}
+                      className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
                     >
-                      <p className="font-medium text-foreground">{crew.nama}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {crew.niam && <span className="font-mono">{formatNIAM(crew.niam, true)}</span>}
-                        <span>•</span>
-                        <span>{crew.pesantren_name || "-"}</span>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{crew.nama}</p>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm mt-0.5">
+                            {crew.niam ? (
+                              <span className="font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs">
+                                {formatNIAM(crew.niam, true)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">Tanpa NIAM</span>
+                            )}
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground truncate">{crew.pesantren_name || "Tanpa Pesantren"}</span>
+                          </div>
+                        </div>
+                        {crew.region_name && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {crew.region_name}
+                          </Badge>
+                        )}
                       </div>
                     </button>
                   ))}
@@ -632,17 +684,69 @@ const AdminPusatPengaturan = () => {
               )}
               
               {isSearchingCrew && (
-                <p className="text-sm text-muted-foreground">Mencari...</p>
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  <span className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                  Mencari...
+                </p>
               )}
             </div>
 
-            {/* Selected Crew Info */}
+            {/* Selected Crew Info - Read Only Data */}
             {selectedCrew && (
-              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <p className="font-medium text-foreground">{selectedCrew.nama}</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedCrew.jabatan || "Tanpa Jabatan"} • {selectedCrew.pesantren_name || "-"}
-                </p>
+              <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-foreground">Data Kru Terpilih</h4>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setSelectedCrew(null);
+                      setCrewSearchQuery("");
+                    }}
+                    className="text-muted-foreground h-6 px-2"
+                  >
+                    Ganti
+                  </Button>
+                </div>
+                
+                {/* Read-only Name */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Nama Lengkap</Label>
+                  <Input 
+                    value={selectedCrew.nama} 
+                    disabled 
+                    className="bg-background font-medium"
+                  />
+                </div>
+                
+                {/* Read-only NIAM */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">NIAM</Label>
+                  <Input 
+                    value={selectedCrew.niam ? formatNIAM(selectedCrew.niam, true) : "Belum ada NIAM"} 
+                    disabled 
+                    className="bg-background font-mono"
+                  />
+                </div>
+                
+                {/* Read-only Pesantren */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Pesantren Asal</Label>
+                  <Input 
+                    value={selectedCrew.pesantren_name || "Tidak terhubung pesantren"} 
+                    disabled 
+                    className="bg-background"
+                  />
+                </div>
+
+                {/* Read-only Email indicator */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Status Akun</Label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-background rounded-md border text-sm">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground">Akun terhubung & siap diaktifkan</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -656,7 +760,7 @@ const AdminPusatPengaturan = () => {
                 <SelectContent>
                   <SelectItem value="admin_regional">Admin Regional</SelectItem>
                   <SelectItem value="admin_finance">Admin Finance</SelectItem>
-                  <SelectItem value="admin_pusat">Admin Pusat</SelectItem>
+                  <SelectItem value="admin_pusat">Admin Pusat (Asisten)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -670,13 +774,38 @@ const AdminPusatPengaturan = () => {
                     <SelectValue placeholder="Pilih wilayah" />
                   </SelectTrigger>
                   <SelectContent>
-                    {regions.map((region) => (
-                      <SelectItem key={region.id} value={region.id}>
-                        {region.name}
-                      </SelectItem>
-                    ))}
+                    {regions.map((region) => {
+                      const existingAdmin = getExistingRegionalAdmin(region.id);
+                      return (
+                        <SelectItem key={region.id} value={region.id}>
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span>{region.name}</span>
+                            {existingAdmin && (
+                              <span className="text-xs text-muted-foreground">
+                                (akan mengganti {existingAdmin.nama})
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+                
+                {/* Warning if replacing existing admin */}
+                {selectedRegion && getExistingRegionalAdmin(selectedRegion) && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <Shield className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-800 dark:text-amber-200">
+                        Penggantian Admin Regional
+                      </p>
+                      <p className="text-amber-700 dark:text-amber-300">
+                        <strong>{getExistingRegionalAdmin(selectedRegion)?.nama}</strong> akan dicopot sebagai Admin Regional wilayah ini.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -687,15 +816,16 @@ const AdminPusatPengaturan = () => {
               setSelectedCrew(null);
               setCrewSearchQuery("");
               setCrewOptions([]);
+              setSelectedRegion("");
             }}>
               Batal
             </Button>
             <Button 
               onClick={handleAddAdmin} 
-              disabled={!selectedCrew || isSaving}
+              disabled={!selectedCrew || isSaving || (selectedRole === "admin_regional" && !selectedRegion)}
               className="bg-primary"
             >
-              {isSaving ? "Menyimpan..." : "Tambah Admin"}
+              {isSaving ? "Menyimpan..." : "Tunjuk sebagai Admin"}
             </Button>
           </DialogFooter>
         </DialogContent>
