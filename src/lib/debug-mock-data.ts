@@ -60,6 +60,7 @@ export interface MockCrew {
   xp_level: number;
   skill?: string[];
   jabatan_code_id?: string | null;
+  email?: string;
 }
 
 // Pesantren claim
@@ -195,20 +196,20 @@ export const MOCK_PESANTREN: MockPesantren[] = [
 // ============= CREWS (10 entries from multiple pesantren) =============
 export const MOCK_CREWS: MockCrew[] = [
   // Malang Raya - PP Al-Hikmah Singosari (Platinum) - includes Koordinator
-  { id: 'c0', nama: 'Muhammad Fadli', niam: 'KD260100100', jabatan: 'Koordinator', profile_id: 'p1', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 5000, skill: ['Manajemen', 'Leadership'], jabatan_code_id: 'jc-koordinator' },
-  { id: 'c1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', profile_id: 'p1', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 1500, skill: ['Videografi'] },
-  { id: 'c2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', profile_id: 'p1', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 2500, skill: ['Editing'] },
-  { id: 'c3', nama: 'Siti Aminah', niam: 'AN260100201', jabatan: 'Admin', profile_id: 'p2', pesantren_name: 'PP Nurul Huda Kepanjen', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 800, skill: ['Administrasi'] },
+  { id: 'c0', nama: 'Muhammad Fadli', niam: 'KD260100100', jabatan: 'Koordinator', profile_id: 'p1', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 5000, skill: ['Manajemen', 'Leadership'], jabatan_code_id: 'jc-koordinator', email: 'muhammad.fadli@email.com' },
+  { id: 'c1', nama: 'Ahmad Rizky', niam: 'AN260100101', jabatan: 'Videografer', profile_id: 'p1', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 1500, skill: ['Videografi'], email: 'ahmad.rizky@email.com' },
+  { id: 'c2', nama: 'Budi Santoso', niam: 'AN260100102', jabatan: 'Editor', profile_id: 'p1', pesantren_name: 'PP Al-Hikmah Singosari', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 2500, skill: ['Editing'], email: 'budi.santoso@email.com' },
+  { id: 'c3', nama: 'Siti Aminah', niam: 'AN260100201', jabatan: 'Admin', profile_id: 'p2', pesantren_name: 'PP Nurul Huda Kepanjen', region_id: 'reg-01', region_name: 'Malang Raya', xp_level: 800, skill: ['Administrasi'], email: 'siti.aminah@email.com' },
   // Kediri Raya
-  { id: 'c4', nama: 'Dewi Kartika', niam: 'AN260200101', jabatan: 'Admin Media', profile_id: 'p4', pesantren_name: 'PP Lirboyo', region_id: 'reg-02', region_name: 'Kediri Raya', xp_level: 3500, skill: ['Social Media'] },
-  { id: 'c5', nama: 'Rudi Hartono', niam: 'AN260200102', jabatan: 'Fotografer', profile_id: 'p4', pesantren_name: 'PP Lirboyo', region_id: 'reg-02', region_name: 'Kediri Raya', xp_level: 1200, skill: ['Fotografi'] },
+  { id: 'c4', nama: 'Dewi Kartika', niam: 'AN260200101', jabatan: 'Admin Media', profile_id: 'p4', pesantren_name: 'PP Lirboyo', region_id: 'reg-02', region_name: 'Kediri Raya', xp_level: 3500, skill: ['Social Media'], email: 'dewi.kartika@email.com' },
+  { id: 'c5', nama: 'Rudi Hartono', niam: 'AN260200102', jabatan: 'Fotografer', profile_id: 'p4', pesantren_name: 'PP Lirboyo', region_id: 'reg-02', region_name: 'Kediri Raya', xp_level: 1200, skill: ['Fotografi'], email: 'rudi.hartono@email.com' },
   // Jombang & Sekitarnya
-  { id: 'c6', nama: 'Eko Prasetyo', niam: 'AN260300101', jabatan: 'Videografer', profile_id: 'p6', pesantren_name: 'PP Tebuireng', region_id: 'reg-03', region_name: 'Jombang & Sekitarnya', xp_level: 4800, skill: ['Videografi'] },
-  { id: 'c7', nama: 'Nur Hidayah', niam: 'AN260300102', jabatan: 'Desainer', profile_id: 'p6', pesantren_name: 'PP Tebuireng', region_id: 'reg-03', region_name: 'Jombang & Sekitarnya', xp_level: 950, skill: ['Desain Grafis'] },
-  { id: 'c8', nama: 'Hadi Wijaya', niam: 'AN260300201', jabatan: 'Editor', profile_id: 'p7', pesantren_name: 'PP Darul Ulum Rejoso', region_id: 'reg-03', region_name: 'Jombang & Sekitarnya', xp_level: 2100, skill: ['Editing'] },
+  { id: 'c6', nama: 'Eko Prasetyo', niam: 'AN260300101', jabatan: 'Videografer', profile_id: 'p6', pesantren_name: 'PP Tebuireng', region_id: 'reg-03', region_name: 'Jombang & Sekitarnya', xp_level: 4800, skill: ['Videografi'], email: 'eko.prasetyo@email.com' },
+  { id: 'c7', nama: 'Nur Hidayah', niam: 'AN260300102', jabatan: 'Desainer', profile_id: 'p6', pesantren_name: 'PP Tebuireng', region_id: 'reg-03', region_name: 'Jombang & Sekitarnya', xp_level: 950, skill: ['Desain Grafis'], email: 'nur.hidayah@email.com' },
+  { id: 'c8', nama: 'Hadi Wijaya', niam: 'AN260300201', jabatan: 'Editor', profile_id: 'p7', pesantren_name: 'PP Darul Ulum Rejoso', region_id: 'reg-03', region_name: 'Jombang & Sekitarnya', xp_level: 2100, skill: ['Editing'], email: 'hadi.wijaya@email.com' },
   // Probolinggo
-  { id: 'c9', nama: 'Fatimah Zahra', niam: 'AN261000101', jabatan: 'Penulis', profile_id: 'p9', pesantren_name: 'PP Nurul Jadid Paiton', region_id: 'reg-04', region_name: 'Probolinggo', xp_level: 6200, skill: ['Penulisan'] },
-  { id: 'c10', nama: 'Ali Mahmud', niam: 'AN261000102', jabatan: 'Videografer', profile_id: 'p9', pesantren_name: 'PP Nurul Jadid Paiton', region_id: 'reg-04', region_name: 'Probolinggo', xp_level: 1800, skill: ['Videografi'] },
+  { id: 'c9', nama: 'Fatimah Zahra', niam: 'AN261000101', jabatan: 'Penulis', profile_id: 'p9', pesantren_name: 'PP Nurul Jadid Paiton', region_id: 'reg-04', region_name: 'Probolinggo', xp_level: 6200, skill: ['Penulisan'], email: 'fatimah.zahra@email.com' },
+  { id: 'c10', nama: 'Ali Mahmud', niam: 'AN261000102', jabatan: 'Videografer', profile_id: 'p9', pesantren_name: 'PP Nurul Jadid Paiton', region_id: 'reg-04', region_name: 'Probolinggo', xp_level: 1800, skill: ['Videografi'], email: 'ali.mahmud@email.com' },
 ];
 
 // ============= CLAIMS (Pending & Regional Approved) =============

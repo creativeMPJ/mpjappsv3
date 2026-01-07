@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Building, Shield, Camera, Eye, EyeOff, MapPin, Loader2 } from "lucide-react";
+import { User, Building, Shield, Camera, Eye, EyeOff, MapPin, Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import AsistenRegionalManagement from "./AsistenRegionalManagement";
 
 interface PengaturanProps {
   isDebugMode?: boolean;
@@ -23,7 +24,7 @@ const MOCK_ADMIN = {
   nama: 'Ahmad Admin Regional',
   email: 'admin.malang@mpj.or.id',
   whatsapp: '081234567890',
-  jabatan: 'Admin Regional',
+  jabatan: 'Admin Regional Utama',
 };
 
 const MOCK_REGION = {
@@ -341,6 +342,11 @@ const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
                   <span className="hidden sm:inline">Regional</span>
                   <span className="sm:hidden">Regional</span>
                 </TabsTrigger>
+                <TabsTrigger value="tim" className="flex-shrink-0 gap-2 min-h-[44px]">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Tim Regional</span>
+                  <span className="sm:hidden">Tim</span>
+                </TabsTrigger>
                 <TabsTrigger value="keamanan" className="flex-shrink-0 gap-2 min-h-[44px]">
                   <Shield className="h-4 w-4" />
                   <span className="hidden sm:inline">Keamanan</span>
@@ -482,7 +488,12 @@ const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
               </Card>
             </TabsContent>
 
-            {/* TAB 3: KEAMANAN */}
+            {/* TAB 3: TIM REGIONAL (Asisten Management) */}
+            <TabsContent value="tim" className="space-y-6">
+              <AsistenRegionalManagement isDebugMode={isDebugMode} />
+            </TabsContent>
+
+            {/* TAB 4: KEAMANAN */}
             <TabsContent value="keamanan" className="space-y-6">
               <Card className="bg-muted/30">
                 <CardHeader className="pb-4">
