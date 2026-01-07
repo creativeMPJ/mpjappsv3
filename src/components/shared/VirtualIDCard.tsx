@@ -23,7 +23,7 @@ interface VirtualIDCardProps {
 /**
  * Virtual ID Card Component (Landscape)
  * Simple and elegant without photo/QR
- * Shows NIP for institution, NIAM for crew
+ * NIAM uses clean format (no dots)
  */
 export const VirtualIDCard = ({
   type,
@@ -115,13 +115,13 @@ export const VirtualIDCard = ({
                     </p>
                   </div>
                   
-                  {/* NIAM */}
+                  {/* NIAM - Clean format without dots */}
                   <div className="pt-2">
                     <p className="text-xs text-white/50 uppercase tracking-wider mb-1">
                       Nomor Induk Anggota Media
                     </p>
                     <p className="text-2xl font-mono font-bold text-amber-400 tracking-wider">
-                      {niam ? formatNIAM(niam, true) : 'XX00000000'}
+                      {niam ? formatNIAM(niam, true) : '—'}
                     </p>
                   </div>
                 </>

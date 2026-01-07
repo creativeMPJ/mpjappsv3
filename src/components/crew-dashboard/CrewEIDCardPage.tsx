@@ -13,12 +13,15 @@ import { XPLevelBadge } from "@/components/shared/LevelBadge";
 interface CrewEIDCardPageProps {
   isGold: boolean;
   onBack: () => void;
+  // Crew data from crews table - required for proper E-ID card generation
   debugCrew?: {
     nama?: string;
-    niam?: string;
+    niam?: string | null;
     jabatan?: string;
     xp_level?: number;
     skill?: string[];
+    photoUrl?: string;
+    // Institution context
     institution_name?: string;
     pesantren_asal?: string;
     alamat_asal?: string;
@@ -33,21 +36,22 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
   const isDebugMode = (location.state as any)?.isDebugMode || !!propDebugCrew;
   const debugCrew = propDebugCrew || stateDebugCrew;
 
-  const userData = isDebugMode && debugCrew ? {
-    name: debugCrew.nama,
-    noId: debugCrew.niam || "AN260100102",
-    asalMedia: debugCrew.institution_name || debugCrew.pesantren_asal || "PP. Al-Hikmah Malang",
-    alamatPesantren: debugCrew.alamat_asal || "Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur",
+  // Build crew data - ALL fields from crews table
+  const crewData = isDebugMode && debugCrew ? {
+    name: debugCrew.nama || "Nama Kru",
+    noId: debugCrew.niam ? formatNIAM(debugCrew.niam, true) : "—",
+    asalMedia: debugCrew.institution_name || debugCrew.pesantren_asal || "Media Pesantren",
+    alamatPesantren: debugCrew.alamat_asal || "Alamat Pesantren",
     role: debugCrew.jabatan || "Kru Media",
-    xp: debugCrew.xp_level || 2500,
-    skills: debugCrew.skill || ["Fotografer", "Editor"],
+    xp: debugCrew.xp_level || 0,
+    skills: debugCrew.skill || [],
+    photoUrl: debugCrew.photoUrl,
     socialMedia: {
-      facebook: "@mpj.alhikmah",
-      instagram: "@mpj_alhikmah",
-      twitter: "@mpj_alhikmah",
-      youtube: "MPJ Al-Hikmah",
+      instagram: "@mpj_jatim",
+      youtube: "Media Pondok Jatim",
     },
   } : {
+    // Default/demo crew data
     name: "Ahmad Fauzi",
     noId: "AN260100101",
     asalMedia: "PP. Nurul Huda",
@@ -55,15 +59,14 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
     role: "Kru Media",
     xp: 150,
     skills: ["Fotografer", "Editor", "Desainer"],
+    photoUrl: undefined,
     socialMedia: {
-      facebook: "@mpj.nurulhuda",
       instagram: "@mpj_nurulhuda",
-      twitter: "@mpj_nurulhuda",
       youtube: "MPJ Nurul Huda",
     },
   };
 
-  const xpLevel = getXPLevel(userData.xp);
+  const xpLevel = getXPLevel(crewData.xp);
 
   const handleDownloadPDF = () => {
     toast({
@@ -127,18 +130,18 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
           {/* XP Badge Display */}
           <div className="flex items-center justify-center gap-2 mb-2">
             <span className="text-sm text-muted-foreground">Militansi Level:</span>
-            <XPLevelBadge xp={userData.xp} size="md" showXP />
+            <XPLevelBadge xp={crewData.xp} size="md" showXP />
           </div>
           
           {/* Virtual Member Card - Landscape with flip */}
           <VirtualMemberCard
-            noId={userData.noId}
-            name={userData.name}
-            asalMedia={userData.asalMedia}
-            alamat={userData.alamatPesantren}
-            role={userData.role}
-            xp={userData.xp}
-            socialMedia={userData.socialMedia}
+            noId={crewData.noId}
+            name={crewData.name}
+            asalMedia={crewData.asalMedia}
+            alamat={crewData.alamatPesantren}
+            role={crewData.role}
+            xp={crewData.xp}
+            socialMedia={crewData.socialMedia}
           />
 
           {/* Info Notice */}
@@ -157,13 +160,14 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
         <TabsContent value="physical" className="space-y-4">
           {/* Physical Member Card - Portrait with flip */}
           <PhysicalMemberCard
-            noId={userData.noId}
-            name={userData.name}
-            asalMedia={userData.asalMedia}
-            alamat={userData.alamatPesantren}
-            role={userData.role}
-            xp={userData.xp}
-            socialMedia={userData.socialMedia}
+            noId={crewData.noId}
+            name={crewData.name}
+            asalMedia={crewData.asalMedia}
+            alamat={crewData.alamatPesantren}
+            role={crewData.role}
+            xp={crewData.xp}
+            photoUrl={crewData.photoUrl}
+            socialMedia={crewData.socialMedia}
           />
 
           {/* Download Button */}
@@ -203,7 +207,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">No. ID</span>
-              <span className="font-mono font-medium">{userData.noId}</span>
+              <span className="font-mono font-medium">{crewData.noId}</span>
             </div>
           </div>
         </CardContent>

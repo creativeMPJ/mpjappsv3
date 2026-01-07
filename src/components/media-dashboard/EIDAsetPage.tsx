@@ -3,13 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Lock, Award, IdCard, Eye } from "lucide-react";
+import { Download, Lock, Award, IdCard, Eye, Info } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { VirtualCharter } from "@/components/shared/VirtualCharter";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
-import { formatNIP } from "@/lib/id-utils";
+import { formatNIP, formatNIAM } from "@/lib/id-utils";
 
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+
+interface KoordinatorData {
+  nama: string;
+  niam: string | null;
+  jabatan: string;
+  xp_level?: number;
+  photoUrl?: string;
+}
 
 interface EIDAsetPageProps {
   paymentStatus: "paid" | "unpaid";
@@ -22,27 +30,35 @@ interface EIDAsetPageProps {
     nama_media?: string;
     profile_level?: string;
   };
-  koordinatorName?: string;
+  // Koordinator data from crews table
+  koordinator?: KoordinatorData;
 }
 
 /**
  * E-ID & Aset Page
- * - Piagam Pesantren: Single Virtual Charter (highest tier achieved)
- * - E-ID Koordinator: Virtual and Physical Member Card for admin
+ * - Piagam Pesantren: Single Virtual Charter (highest tier achieved) - uses institution data
+ * - E-ID Koordinator: Virtual and Physical Member Card - uses CREW data (NIAM)
  */
 const EIDAsetPage = ({ 
   paymentStatus, 
   profileLevel,
   debugProfile,
-  koordinatorName
+  koordinator
 }: EIDAsetPageProps) => {
   const [activeTab, setActiveTab] = useState("piagam");
 
+  // Institution data (for Piagam)
   const displayNIP = debugProfile?.nip || "2601001";
   const displayPesantrenName = debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah";
   const displayAddress = debugProfile?.alamat_singkat || "Jl. Raya No. 123, Malang";
   const displayMediaName = debugProfile?.nama_media || displayPesantrenName;
-  const adminName = koordinatorName || debugProfile?.nama_pengasuh || "Ahmad Fauzi";
+  
+  // Koordinator data from crews table (for E-ID)
+  const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
+  const koordinatorNIAM = koordinator?.niam || null;
+  const koordinatorJabatan = koordinator?.jabatan || "Koordinator";
+  const koordinatorXP = koordinator?.xp_level || 0;
+  const koordinatorPhoto = koordinator?.photoUrl;
 
   // Get highest achieved level
   const getHighestLevel = (): "silver" | "gold" | "platinum" => {
@@ -53,6 +69,7 @@ const EIDAsetPage = ({
 
   const highestLevel = getHighestLevel();
   const canAccessEID = paymentStatus === "paid" && (profileLevel === "gold" || profileLevel === "platinum");
+  const hasKoordinator = koordinator && koordinator.niam;
 
   const getLevelBadgeColor = () => {
     switch (highestLevel) {
@@ -114,7 +131,7 @@ const EIDAsetPage = ({
                   level={highestLevel}
                   noId={displayNIP}
                   namaPesantren={displayPesantrenName}
-                  namaKoordinator={koordinatorName}
+                  namaKoordinator={hasKoordinator ? koordinatorName : undefined}
                   alamat={displayAddress}
                 />
               </div>
@@ -132,7 +149,7 @@ const EIDAsetPage = ({
           </Card>
         </TabsContent>
 
-        {/* Tab 2: E-ID Koordinator */}
+        {/* Tab 2: E-ID Koordinator - Uses CREW data with NIAM */}
         <TabsContent value="eid" className="space-y-6">
           {!canAccessEID ? (
             <Card className="bg-slate-100 relative overflow-hidden">
@@ -151,9 +168,24 @@ const EIDAsetPage = ({
                 </p>
               </div>
             </Card>
+          ) : !hasKoordinator ? (
+            <Card className="bg-amber-50 border-amber-200">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold text-amber-800 mb-1">Koordinator Belum Ditunjuk</h3>
+                    <p className="text-sm text-amber-700">
+                      E-ID Card hanya dapat dibuat setelah menunjuk salah satu kru sebagai Koordinator.
+                      Silakan tambahkan kru dengan jabatan "Koordinator" di menu Manajemen Kru.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Virtual Card */}
+              {/* Virtual Card - Uses NIAM */}
               <Card className="bg-white">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
@@ -163,12 +195,12 @@ const EIDAsetPage = ({
                 </CardHeader>
                 <CardContent>
                   <VirtualMemberCard
-                    noId={displayNIP}
-                    name={adminName}
+                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "—"}
+                    name={koordinatorName}
                     asalMedia={displayMediaName}
                     alamat={displayAddress}
-                    role="Koordinator"
-                    xp={150}
+                    role={koordinatorJabatan}
+                    xp={koordinatorXP}
                     socialMedia={{
                       instagram: "@mpj_jatim",
                       youtube: "Media Pondok Jatim"
@@ -177,7 +209,7 @@ const EIDAsetPage = ({
                 </CardContent>
               </Card>
 
-              {/* Physical Card Preview */}
+              {/* Physical Card Preview - Uses NIAM and crew photo */}
               <Card className="bg-white">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
@@ -187,12 +219,13 @@ const EIDAsetPage = ({
                 </CardHeader>
                 <CardContent>
                   <PhysicalMemberCard
-                    noId={displayNIP}
-                    name={adminName}
+                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "—"}
+                    name={koordinatorName}
                     asalMedia={displayMediaName}
                     alamat={displayAddress}
-                    role="Koordinator"
-                    xp={150}
+                    role={koordinatorJabatan}
+                    xp={koordinatorXP}
+                    photoUrl={koordinatorPhoto}
                     socialMedia={{
                       instagram: "@mpj_jatim",
                       youtube: "Media Pondok Jatim"
@@ -203,7 +236,7 @@ const EIDAsetPage = ({
             </div>
           )}
 
-          {canAccessEID && (
+          {canAccessEID && hasKoordinator && (
             <div className="flex justify-center">
               <Button 
                 onClick={handleDownload}

@@ -16,10 +16,10 @@ interface VirtualCharterProps {
 }
 
 /**
- * Virtual Charter Component - A4 Portrait (YouTube Play Button Style)
- * Silver: Embossed silver logo - Lunas Administrasi
- * Gold: Embossed gold logo - Profil Lengkap
- * Platinum/Diamond: White logo with glow effect
+ * Virtual Charter Component - A4 Portrait
+ * Silver: Embossed silver logo
+ * Gold: Embossed gold logo
+ * Platinum/Diamond: Pure white logo for exclusivity
  */
 export const VirtualCharter = ({
   level,
