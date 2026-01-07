@@ -22,6 +22,7 @@ interface EIDAsetPageProps {
     nama_media?: string;
     profile_level?: string;
   };
+  koordinatorName?: string;
 }
 
 /**
@@ -32,15 +33,16 @@ interface EIDAsetPageProps {
 const EIDAsetPage = ({ 
   paymentStatus, 
   profileLevel,
-  debugProfile 
+  debugProfile,
+  koordinatorName
 }: EIDAsetPageProps) => {
   const [activeTab, setActiveTab] = useState("piagam");
 
   const displayNIP = debugProfile?.nip || "2601001";
-  const displayName = debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah";
+  const displayPesantrenName = debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah";
   const displayAddress = debugProfile?.alamat_singkat || "Jl. Raya No. 123, Malang";
-  const displayMediaName = debugProfile?.nama_media || displayName;
-  const adminName = debugProfile?.nama_pengasuh || "Ahmad Fauzi";
+  const displayMediaName = debugProfile?.nama_media || displayPesantrenName;
+  const adminName = koordinatorName || debugProfile?.nama_pengasuh || "Ahmad Fauzi";
 
   // Get highest achieved level
   const getHighestLevel = (): "silver" | "gold" | "platinum" => {
@@ -103,18 +105,16 @@ const EIDAsetPage = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Award className="h-5 w-5 text-[#166534]" />
-                Piagam Virtual Keanggotaan
+                Piagam Virtual
               </CardTitle>
-              <p className="text-sm text-slate-500">
-                Piagam digital dengan desain YouTube Play Button Style sesuai level tertinggi
-              </p>
             </CardHeader>
             <CardContent>
               <div className="max-w-sm mx-auto">
                 <VirtualCharter
                   level={highestLevel}
                   noId={displayNIP}
-                  namaMedia={displayMediaName}
+                  namaPesantren={displayPesantrenName}
+                  namaKoordinator={koordinatorName}
                   alamat={displayAddress}
                 />
               </div>
