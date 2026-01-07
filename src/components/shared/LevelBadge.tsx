@@ -28,6 +28,16 @@ export const ProfileLevelBadge = ({
     lg: 'text-base px-4 py-1.5',
   };
   
+  // Enhanced 3D shadow effect for white backgrounds
+  const getShadowClass = () => {
+    switch (level) {
+      case "platinum": return "shadow-md shadow-cyan-200/60 ring-1 ring-cyan-300/30";
+      case "gold": return "shadow-md shadow-amber-200/60 ring-1 ring-amber-300/30";
+      case "silver": return "shadow-md shadow-slate-200/60 ring-1 ring-slate-300/30";
+      default: return "shadow-sm";
+    }
+  };
+
   return (
     <Badge 
       className={cn(
@@ -35,7 +45,8 @@ export const ProfileLevelBadge = ({
         info.borderColor,
         info.color,
         sizeClasses[size],
-        "font-semibold border shadow-sm",
+        "font-semibold border",
+        getShadowClass(),
         className
       )}
     >
@@ -114,15 +125,15 @@ export const VerifiedBadge = ({
   };
   
   return (
-    <span className={cn("inline-flex items-center gap-1", className)}>
+    <span className={cn("inline-flex items-center gap-1 drop-shadow-sm", className)}>
       <BadgeCheck 
         className={cn(
           sizeClasses[size],
-          "text-blue-500 fill-blue-500/20"
+          "text-blue-500 fill-blue-100 drop-shadow-md"
         )} 
       />
       {showLabel && (
-        <span className="text-xs text-blue-600 font-medium">Verified</span>
+        <span className="text-xs text-blue-600 font-semibold drop-shadow-sm">Verified</span>
       )}
     </span>
   );

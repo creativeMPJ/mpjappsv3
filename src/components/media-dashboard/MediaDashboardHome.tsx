@@ -77,37 +77,37 @@ const MediaDashboardHome = ({
   const levelInfo = getLevelInfo();
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-20 bg-slate-50 min-h-screen -m-4 md:-m-6 p-4 md:p-6">
       {/* Payment Alert */}
       {paymentStatus === "unpaid" && (
-        <Alert className="bg-red-50 border-red-200">
+        <Alert className="bg-red-50 border-red-200 shadow-sm">
           <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-700">
+          <AlertDescription className="text-red-800 font-medium">
             <strong>Tagihan Belum Lunas!</strong> Beberapa fitur seperti Tambah Kru dan Klaim Sertifikat tidak dapat diakses.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Hero Card - With Platinum Diamond Crystal Theme */}
+      {/* Hero Card - Clean White Theme with Premium Border */}
       <Card className={cn(
-        "border-0 overflow-hidden relative",
+        "border overflow-hidden relative shadow-lg",
         isPlatinum 
-          ? "bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white"
-          : "bg-gradient-to-r from-emerald-800 to-emerald-600 text-white"
+          ? "bg-white border-cyan-200 shadow-cyan-100/50"
+          : "bg-white border-emerald-200 shadow-emerald-100/50"
       )}>
-        {/* Decorative Pattern */}
-        <div className="absolute top-0 right-0 w-64 h-64 opacity-10">
+        {/* Decorative Pattern - Subtle */}
+        <div className="absolute top-0 right-0 w-48 h-48 opacity-5">
           {isPlatinum ? (
             <svg viewBox="0 0 200 200" className="w-full h-full">
               <pattern id="diamond-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
-                <polygon points="10,0 20,10 10,20 0,10" fill="currentColor" className="text-cyan-400" />
+                <polygon points="10,0 20,10 10,20 0,10" fill="currentColor" className="text-cyan-600" />
               </pattern>
               <rect width="200" height="200" fill="url(#diamond-pattern)" />
             </svg>
           ) : (
             <svg viewBox="0 0 200 200" className="w-full h-full">
               <pattern id="islamic-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
-                <path d="M20 0L40 20L20 40L0 20Z" fill="currentColor" />
+                <path d="M20 0L40 20L20 40L0 20Z" fill="currentColor" className="text-emerald-600" />
               </pattern>
               <rect width="200" height="200" fill="url(#islamic-pattern)" />
             </svg>
@@ -117,21 +117,21 @@ const MediaDashboardHome = ({
           {/* NIP & Verified Badge Row */}
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge className={cn(
-              "font-mono text-lg px-3 py-1",
+              "font-mono text-lg px-3 py-1 shadow-sm",
               isPlatinum 
-                ? "bg-cyan-500/30 text-cyan-200 border-cyan-400/50" 
-                : "bg-white/20 text-white border-white/30"
+                ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0" 
+                : "bg-emerald-600 text-white border-0"
             )}>
               NIP: {displayNIP}
             </Badge>
             {isPlatinum && <VerifiedBadge isVerified={true} size="lg" showLabel />}
           </div>
           
-          {/* Institution Name */}
+          {/* Institution Name - Bold & Elegant */}
           <div className="flex items-center gap-3 mb-2">
             <h1 className={cn(
-              "text-2xl md:text-4xl font-bold",
-              isPlatinum ? "text-cyan-100" : "text-white"
+              "text-2xl md:text-4xl font-bold tracking-tight",
+              isPlatinum ? "text-slate-900" : "text-emerald-950"
             )}>
               {displayName}
             </h1>
@@ -139,18 +139,29 @@ const MediaDashboardHome = ({
           
           {/* Welcome Message */}
           <p className={cn(
-            "text-base md:text-lg",
-            isPlatinum ? "text-cyan-200/90" : "text-white/90"
+            "text-base md:text-lg font-medium",
+            isPlatinum ? "text-slate-600" : "text-slate-700"
           )}>
             Selamat datang di dashboard Koordinator Media Pondok Jawa Timur.
           </p>
 
-          {/* Level & Status Badges */}
+          {/* Level & Status Badges - Enhanced with 3D effect */}
           <div className="flex flex-wrap items-center gap-2 mt-4">
-            <Badge className={cn(levelInfo.color, "text-white")}>
+            <Badge className={cn(
+              levelInfo.color, 
+              "text-white shadow-md border-0",
+              profileLevel === "platinum" && "shadow-cyan-300/50",
+              profileLevel === "gold" && "shadow-amber-300/50",
+              profileLevel === "silver" && "shadow-slate-300/50"
+            )}>
               {levelInfo.icon} {levelInfo.label}
             </Badge>
-            <Badge className={paymentStatus === "paid" ? "bg-green-500 text-white" : "bg-red-500 text-white"}>
+            <Badge className={cn(
+              "shadow-sm",
+              paymentStatus === "paid" 
+                ? "bg-green-500 text-white shadow-green-200/50" 
+                : "bg-red-500 text-white shadow-red-200/50"
+            )}>
               {paymentStatus === "paid" ? "ACTIVE" : "INACTIVE"}
             </Badge>
           </div>
@@ -158,14 +169,14 @@ const MediaDashboardHome = ({
       </Card>
 
       {/* Profile Completion Progress */}
-      <Card className="bg-white border-gray-200">
+      <Card className="bg-white border border-slate-200 shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-[#166534]" />
+              <Award className="h-5 w-5 text-emerald-600" />
               <h3 className="font-semibold text-slate-900">Kelengkapan Profil</h3>
             </div>
-            <span className="text-lg font-bold text-[#166534]">{profileCompletion}%</span>
+            <span className="text-lg font-bold text-emerald-700">{profileCompletion}%</span>
           </div>
           <Progress value={profileCompletion} className="h-3 mb-4" />
           
@@ -175,10 +186,10 @@ const MediaDashboardHome = ({
               <div 
                 key={index}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg border",
+                  "flex items-center gap-3 p-3 rounded-lg border shadow-sm",
                   mission.completed 
                     ? "bg-emerald-50 border-emerald-200" 
-                    : "bg-slate-50 border-slate-200"
+                    : "bg-white border-slate-200"
                 )}
               >
                 {mission.completed ? (
@@ -189,14 +200,14 @@ const MediaDashboardHome = ({
                 <div className="flex-1 min-w-0">
                   <p className={cn(
                     "text-sm font-medium truncate",
-                    mission.completed ? "text-emerald-800" : "text-slate-600"
+                    mission.completed ? "text-emerald-900" : "text-slate-700"
                   )}>
                     {mission.label}
                   </p>
                 </div>
                 <Badge variant="outline" className={cn(
-                  "text-xs",
-                  mission.completed ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"
+                  "text-xs shadow-sm",
+                  mission.completed ? "border-emerald-300 text-emerald-700 bg-emerald-50" : "border-slate-300 text-slate-600 bg-white"
                 )}>
                   +{mission.points} XP
                 </Badge>
@@ -209,14 +220,14 @@ const MediaDashboardHome = ({
       {/* Stats Grid - 2 Cards Only (MVP) */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Total Santri */}
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900">Total Santri</h3>
               <Users className="h-5 w-5 text-emerald-600" />
             </div>
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center">
+              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
                 <Users className="h-7 w-7 text-emerald-600" />
               </div>
               <div>
@@ -228,14 +239,14 @@ const MediaDashboardHome = ({
         </Card>
 
         {/* Total Kru */}
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900">Total Kru</h3>
               <UserCog className="h-5 w-5 text-emerald-600" />
             </div>
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center">
+              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
                 <UserCog className="h-7 w-7 text-emerald-600" />
               </div>
               <div>
@@ -248,7 +259,7 @@ const MediaDashboardHome = ({
       </div>
 
       {/* Upcoming Events / Agenda */}
-      <Card className="bg-white border-gray-200">
+      <Card className="bg-white border border-slate-200 shadow-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -257,25 +268,25 @@ const MediaDashboardHome = ({
             </div>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
-              <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100">
+              <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Calendar className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-900 truncate">Pelatihan Videografi</p>
                 <p className="text-sm text-slate-600">28 Januari 2026 - 09:00 WIB</p>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-700 hidden sm:inline-flex">Upcoming</Badge>
+              <Badge className="bg-emerald-100 text-emerald-700 shadow-sm hidden sm:inline-flex">Upcoming</Badge>
             </div>
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <div className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100">
+              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Award className="h-6 w-6 text-amber-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-900 truncate">Lomba Konten Digital</p>
                 <p className="text-sm text-slate-600">5 Februari 2026 - 08:00 WIB</p>
               </div>
-              <Badge className="bg-amber-100 text-amber-700 hidden sm:inline-flex">Upcoming</Badge>
+              <Badge className="bg-amber-100 text-amber-700 shadow-sm hidden sm:inline-flex">Upcoming</Badge>
             </div>
           </div>
         </CardContent>
@@ -285,16 +296,16 @@ const MediaDashboardHome = ({
       <div className="grid grid-cols-2 gap-4">
         {/* Identitas Pesantren */}
         <Card 
-          className="bg-white border-gray-200 hover:shadow-lg transition-shadow cursor-pointer group"
+          className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("identitas")}
         >
           <CardContent className="p-4 md:p-6 text-center">
-            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors shadow-sm">
               <Building2 className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
             </div>
             <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Identitas</h3>
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Profil Pesantren</p>
-            <Button className="w-full bg-[#166534] hover:bg-emerald-700 text-white text-sm">
+            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-sm">
               Kelola
             </Button>
           </CardContent>
@@ -302,16 +313,16 @@ const MediaDashboardHome = ({
 
         {/* Tim Media */}
         <Card 
-          className="bg-white border-gray-200 hover:shadow-lg transition-shadow cursor-pointer group"
+          className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("tim")}
         >
           <CardContent className="p-4 md:p-6 text-center">
-            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors shadow-sm">
               <UserCog className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
             </div>
             <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Tim Media</h3>
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Kelola Kru</p>
-            <Button className="w-full bg-[#166534] hover:bg-emerald-700 text-white text-sm">
+            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-sm">
               Kelola
             </Button>
           </CardContent>
@@ -320,14 +331,14 @@ const MediaDashboardHome = ({
         {/* Administrasi */}
         <Card 
           className={cn(
-            "bg-white border-gray-200 transition-shadow cursor-pointer group",
-            paymentStatus === "unpaid" ? "ring-2 ring-red-300" : "hover:shadow-lg"
+            "bg-white border transition-all cursor-pointer group shadow-sm",
+            paymentStatus === "unpaid" ? "ring-2 ring-red-300 border-red-200" : "hover:shadow-lg border-slate-200"
           )}
           onClick={() => onNavigate("administrasi")}
         >
           <CardContent className="p-4 md:p-6 text-center">
             <div className={cn(
-              "h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 rounded-full flex items-center justify-center transition-colors",
+              "h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 rounded-full flex items-center justify-center transition-colors shadow-sm",
               paymentStatus === "unpaid" ? "bg-red-100 group-hover:bg-red-200" : "bg-emerald-100 group-hover:bg-emerald-200"
             )}>
               <CreditCard className={cn("h-6 w-6 md:h-8 md:w-8", paymentStatus === "unpaid" ? "text-red-600" : "text-emerald-600")} />
@@ -336,10 +347,10 @@ const MediaDashboardHome = ({
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Tagihan</p>
             <Button 
               className={cn(
-                "w-full text-sm",
+                "w-full text-sm shadow-sm",
                 paymentStatus === "unpaid" 
                   ? "bg-red-600 hover:bg-red-700 text-white" 
-                  : "bg-[#166534] hover:bg-emerald-700 text-white"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
               )}
             >
               {paymentStatus === "unpaid" ? "Bayar" : "Lihat"}
@@ -349,16 +360,16 @@ const MediaDashboardHome = ({
 
         {/* E-ID & Aset */}
         <Card 
-          className="bg-white border-gray-200 hover:shadow-lg transition-shadow cursor-pointer group"
+          className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("eid")}
         >
           <CardContent className="p-4 md:p-6 text-center">
-            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+            <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors shadow-sm">
               <IdCard className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
             </div>
             <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">E-ID & Aset</h3>
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Piagam & Kartu</p>
-            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm">
+            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm shadow-sm">
               Lihat
             </Button>
           </CardContent>
