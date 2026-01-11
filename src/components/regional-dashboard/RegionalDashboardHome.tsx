@@ -12,12 +12,14 @@ import {
   AlertTriangle,
   Wallet,
   ArrowRight,
-  BarChart3
+  BarChart3,
+  Trophy
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, XAxis, YAxis, Bar, BarChart, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import RegionalPerformanceStats from "./RegionalPerformanceStats";
+import RegionalLeaderboard from "./RegionalLeaderboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
 
@@ -139,7 +141,7 @@ const RegionalDashboardHome = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-flex">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             <span className="hidden sm:inline">Overview</span>
@@ -149,6 +151,11 @@ const RegionalDashboardHome = () => {
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Statistik Performa</span>
             <span className="sm:hidden">Performa</span>
+          </TabsTrigger>
+          <TabsTrigger value="klasemen" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            <span className="hidden sm:inline">Klasemen Regional</span>
+            <span className="sm:hidden">Klasemen</span>
           </TabsTrigger>
         </TabsList>
 
@@ -386,6 +393,10 @@ const RegionalDashboardHome = () => {
 
         <TabsContent value="performa" className="mt-6">
           <RegionalPerformanceStats isDebugMode={isDebugMode} />
+        </TabsContent>
+
+        <TabsContent value="klasemen" className="mt-6">
+          <RegionalLeaderboard isDebugMode={isDebugMode} />
         </TabsContent>
       </Tabs>
     </div>
