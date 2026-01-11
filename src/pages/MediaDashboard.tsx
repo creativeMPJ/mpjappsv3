@@ -82,6 +82,7 @@ const MediaDashboard = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [koordinator, setKoordinator] = useState<KoordinatorData | undefined>();
   const [regionalApprovedAt, setRegionalApprovedAt] = useState<string | null>(null);
+  const [pusatApprovedAt, setPusatApprovedAt] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Support debug mode via location.state
@@ -97,28 +98,34 @@ const MediaDashboard = () => {
   const levelInfo = getProfileLevelInfo(profileLevel);
   const isPlatinum = profileLevel === 'platinum';
 
-  // Fetch regional_approved_at from pesantren_claims
+  // Fetch approval dates from pesantren_claims
   useEffect(() => {
-    const fetchApprovalDate = async () => {
+    const fetchApprovalDates = async () => {
       if (isDebugMode || !user?.id) return;
       
       try {
+        // Fetch both regional_approved_at and approved_at (pusat approval / NIP issue date)
         const { data, error } = await supabase
           .from('pesantren_claims')
-          .select('regional_approved_at')
+          .select('regional_approved_at, approved_at, status')
           .eq('user_id', user.id)
-          .eq('status', 'regional_approved')
           .maybeSingle();
         
-        if (!error && data?.regional_approved_at) {
-          setRegionalApprovedAt(data.regional_approved_at);
+        if (!error && data) {
+          if (data.regional_approved_at) {
+            setRegionalApprovedAt(data.regional_approved_at);
+          }
+          // approved_at is set when Admin Pusat verifies payment (NIP issuance date)
+          if (data.approved_at) {
+            setPusatApprovedAt(data.approved_at);
+          }
         }
       } catch (error) {
-        console.error('Error fetching approval date:', error);
+        console.error('Error fetching approval dates:', error);
       }
     };
 
-    fetchApprovalDate();
+    fetchApprovalDates();
   }, [user?.id, isDebugMode]);
 
   // Fetch Koordinator from crews table
@@ -236,6 +243,15 @@ const MediaDashboard = () => {
             paymentStatus={paymentStatus}
             profileLevel={profileLevel}
             debugProfile={isDebugMode ? profile : undefined}
+            realProfile={!isDebugMode ? {
+              nip: profile?.nip,
+              nama_pesantren: profile?.nama_pesantren,
+              nama_pengasuh: profile?.nama_pengasuh,
+              alamat_singkat: profile?.alamat_singkat,
+              nama_media: profile?.nama_media,
+              profile_level: profile?.profile_level,
+            } : undefined}
+            approvalDate={pusatApprovedAt}
             koordinator={koordinator}
           />
         );
