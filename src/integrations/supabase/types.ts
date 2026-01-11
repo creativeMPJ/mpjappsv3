@@ -121,6 +121,50 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_verifications: {
+        Row: {
+          attempts: number
+          created_at: string
+          expires_at: string
+          id: string
+          is_verified: boolean
+          otp_code: string
+          pesantren_claim_id: string | null
+          user_phone: string
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          expires_at: string
+          id?: string
+          is_verified?: boolean
+          otp_code: string
+          pesantren_claim_id?: string | null
+          user_phone: string
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_verified?: boolean
+          otp_code?: string
+          pesantren_claim_id?: string | null
+          user_phone?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "otp_verifications_pesantren_claim_id_fkey"
+            columns: ["pesantren_claim_id"]
+            isOneToOne: false
+            referencedRelation: "pesantren_claims"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           base_amount: number
@@ -441,6 +485,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_expired_otps: { Args: never; Returns: undefined }
       generate_niam: {
         Args: {
           p_crew_id: string
