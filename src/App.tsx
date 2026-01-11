@@ -20,6 +20,8 @@ import CheckInstitution from "./pages/CheckInstitution";
 import InstitutionSubmission from "./pages/InstitutionSubmission";
 import NotFound from "./pages/NotFound";
 import DebugView from "./pages/DebugView";
+import PublicPesantrenProfile from "./pages/PublicPesantrenProfile";
+import PublicCrewProfile from "./pages/PublicCrewProfile";
 
 // ═══════════════════════════════════════════════════════════════
 // STATUS PAGES (Auth required, special handling in ProtectedRoute)
@@ -64,6 +66,12 @@ const App = () => (
             <Route path="/claim-success" element={<ClaimSuccess />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/payment-pending" element={<PaymentPending />} />
+            
+            {/* ══════════════════════════════════════════════════════ */}
+            {/* PUBLIC VERIFICATION PROFILES - QR Code verification   */}
+            {/* ══════════════════════════════════════════════════════ */}
+            <Route path="/pesantren/:nip" element={<PublicPesantrenProfile />} />
+            <Route path="/pesantren/:nip/crew/:niamSuffix" element={<PublicCrewProfile />} />
             
             {/* ══════════════════════════════════════════════════════ */}
             {/* DEBUG VIEW - Public audit page (dev only)             */}
