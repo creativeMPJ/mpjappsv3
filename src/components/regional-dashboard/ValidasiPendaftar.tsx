@@ -52,7 +52,8 @@ import {
   AlertTriangle,
   Loader2,
   Building2,
-  History
+  History,
+  MessageCircle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -419,6 +420,15 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
     }
   };
 
+  // Generate WhatsApp message for approval notification
+  const generateApprovalWhatsAppUrl = (claim: PesantrenClaim) => {
+    const phone = claim.no_wa_pendaftar?.replace(/^0/, '62') || '';
+    const message = encodeURIComponent(
+      `Assalamu'alaikum,\n\nBerkas klaim akun MPJ Apps untuk *${claim.pesantren_name}* telah kami verifikasi dan disetujui.\n\nSilakan login untuk mulai mengelola profil. Terima kasih.`
+    );
+    return `https://wa.me/${phone}?text=${message}`;
+  };
+
   const handleApprove = async () => {
     if (!selectedClaim) return;
 
@@ -449,6 +459,58 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
         title: "Berhasil Disetujui!",
         description: `Klaim ${selectedClaim.pesantren_name} telah disetujui wilayah.`,
       });
+
+      await fetchClaims();
+      setApproveDialogOpen(false);
+      setDialogOpen(false);
+    } catch (error: any) {
+      console.error('Approve error:', error);
+      toast({
+        title: "Gagal menyetujui",
+        description: error.message || "Terjadi kesalahan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Approve and contact via WhatsApp
+  const handleApproveAndContact = async () => {
+    if (!selectedClaim) return;
+
+    if (isDebugMode) {
+      toast({
+        title: "Mode Debug",
+        description: `Klaim ${selectedClaim.pesantren_name} akan disetujui & dihubungi (simulasi)`,
+      });
+      setApproveDialogOpen(false);
+      setDialogOpen(false);
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase
+        .from('pesantren_claims')
+        .update({ 
+          status: 'regional_approved',
+          approved_at: new Date().toISOString(),
+          approved_by: profile?.id
+        })
+        .eq('id', selectedClaim.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil Disetujui!",
+        description: `Klaim ${selectedClaim.pesantren_name} telah disetujui. Membuka WhatsApp...`,
+      });
+
+      // Open WhatsApp with pre-filled message
+      if (selectedClaim.no_wa_pendaftar) {
+        window.open(generateApprovalWhatsAppUrl(selectedClaim), '_blank');
+      }
 
       await fetchClaims();
       setApproveDialogOpen(false);
@@ -952,8 +1014,17 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
                 className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-[44px] w-full sm:w-auto"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Setujui Wilayah
+                Setujui
               </Button>
+              {selectedClaim?.no_wa_pendaftar && (
+                <Button
+                  onClick={() => setApproveDialogOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white min-h-[44px] w-full sm:w-auto gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Verifikasi & Hubungi
+                </Button>
+              )}
             </DialogFooter>
           )}
         </DialogContent>
@@ -970,7 +1041,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
               dan menunggu verifikasi dari Admin Pusat.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel disabled={isProcessing}>Batal</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleApprove}
@@ -986,6 +1057,25 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
                 "Ya, Setujui"
               )}
             </AlertDialogAction>
+            {selectedClaim?.no_wa_pendaftar && (
+              <AlertDialogAction
+                onClick={handleApproveAndContact}
+                disabled={isProcessing}
+                className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+              >
+                {isProcessing ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Memproses...
+                  </span>
+                ) : (
+                  <>
+                    <MessageCircle className="w-4 h-4" />
+                    Setujui & Hubungi WA
+                  </>
+                )}
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -12,6 +12,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ClaimAccount from "./pages/ClaimAccount";
+import ClaimSuccess from "./pages/ClaimSuccess";
 import VerifyOTP from "./pages/VerifyOTP";
 import Payment from "./pages/Payment";
 import PaymentPending from "./pages/PaymentPending";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/claim-account" element={<ClaimAccount />} />
             <Route path="/legacy-claim" element={<ClaimAccount />} />
             <Route path="/verify-otp" element={<VerifyOTP />} />
+            <Route path="/claim-success" element={<ClaimSuccess />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/payment-pending" element={<PaymentPending />} />
             
