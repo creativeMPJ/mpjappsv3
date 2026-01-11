@@ -143,17 +143,17 @@ const VerifyOTP = () => {
 
       // Navigate based on type
       if (type === "claim") {
-        navigate("/media-dashboard", {
+        navigate("/claim-success", {
           state: {
-            verified: true,
             pesantren_name: pesantren_name,
-            status: "pending",
+            nama_pengaju: (location.state as any)?.nama_pengaju || "Pengaju",
           },
+          replace: true,
         });
       } else if (type === "register") {
-        navigate("/payment", { state: { type } });
+        navigate("/payment", { state: { type }, replace: true });
       } else {
-        navigate("/verification-pending");
+        navigate("/verification-pending", { replace: true });
       }
     } catch (err: any) {
       console.error("OTP verify error:", err);

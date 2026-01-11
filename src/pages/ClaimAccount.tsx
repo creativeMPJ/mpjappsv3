@@ -173,6 +173,7 @@ const ClaimAccount = () => {
           pesantren_claim_id: foundData.id,
           otp_id: otpResponse?.otp_id,
           pesantren_name: foundData.pesantren_name,
+          nama_pengaju: foundData.nama_pengelola,
         },
       });
     } catch (err: any) {
