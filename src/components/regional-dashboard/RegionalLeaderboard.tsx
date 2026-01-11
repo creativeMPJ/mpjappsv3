@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trophy, Medal, Award, TrendingUp, Flame, Heart } from "lucide-react";
+import { Trophy, Medal, Award, TrendingUp, Flame, Heart, ArrowUp, ArrowDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 interface RegionStats {
   region_id: string;
@@ -25,11 +26,54 @@ const RegionalLeaderboard = ({ isDebugMode }: RegionalLeaderboardProps) => {
   const [timeFilter, setTimeFilter] = useState<"all" | "month">("all");
   const [leaderboardData, setLeaderboardData] = useState<RegionStats[]>([]);
   const [userRegionId, setUserRegionId] = useState<string | null>(null);
+  const [previousRank, setPreviousRank] = useState<number | null>(null);
   const { user } = useAuth();
+  const hasShownNotification = useRef(false);
+
+  // Check and show rank change notification
+  const checkRankChange = (currentRank: number, userId: string) => {
+    if (hasShownNotification.current || currentRank === 0) return;
+    
+    const storageKey = `last_rank_${userId}`;
+    const lastRankStr = localStorage.getItem(storageKey);
+    const lastRank = lastRankStr ? parseInt(lastRankStr, 10) : null;
+    
+    setPreviousRank(lastRank);
+    
+    if (lastRank !== null && lastRank !== currentRank) {
+      hasShownNotification.current = true;
+      
+      if (currentRank < lastRank) {
+        // Rank improved (lower number = better)
+        toast({
+          title: "🚀 Peringkat Naik!",
+          description: `Alhamdulillah! Regional Anda naik ke peringkat #${currentRank}. Terus tingkatkan militansi!`,
+          variant: "default",
+          className: "bg-emerald-50 border-emerald-200",
+        });
+      } else {
+        // Rank dropped
+        toast({
+          title: "📈 Peringkat Turun",
+          description: `Wah! Regional Anda turun ke peringkat #${currentRank}. Yuk, hubungi lagi pesantren yang belum aktivasi!`,
+          variant: "default",
+          className: "bg-amber-50 border-amber-200",
+        });
+      }
+    }
+    
+    // Save current rank to localStorage
+    localStorage.setItem(storageKey, currentRank.toString());
+  };
 
   useEffect(() => {
     fetchLeaderboardData();
   }, [timeFilter, user]);
+
+  // Reset notification flag when filter changes
+  useEffect(() => {
+    hasShownNotification.current = false;
+  }, [timeFilter]);
 
   const fetchLeaderboardData = async () => {
     setLoading(true);
@@ -101,7 +145,7 @@ const RegionalLeaderboard = ({ isDebugMode }: RegionalLeaderboardProps) => {
         };
       });
 
-      // Sort by conversion rate descending, then by total verified
+      // Sort by conversion rate descending, then by total verified (as tiebreaker)
       regionStats.sort((a, b) => {
         if (b.conversion_rate !== a.conversion_rate) {
           return b.conversion_rate - a.conversion_rate;
@@ -110,6 +154,14 @@ const RegionalLeaderboard = ({ isDebugMode }: RegionalLeaderboardProps) => {
       });
 
       setLeaderboardData(regionStats);
+
+      // Check for rank change notification
+      if (user && !isDebugMode) {
+        const currentUserRank = regionStats.findIndex((r) => r.region_id === userRegionId) + 1;
+        if (currentUserRank > 0) {
+          checkRankChange(currentUserRank, user.id);
+        }
+      }
     } catch (error) {
       console.error("Error fetching leaderboard data:", error);
     } finally {
@@ -160,6 +212,29 @@ const RegionalLeaderboard = ({ isDebugMode }: RegionalLeaderboardProps) => {
 
   const userRank = leaderboardData.findIndex((r) => r.region_id === userRegionId) + 1;
   const motivationalData = userRank > 0 ? getMotivationalMessage(userRank, leaderboardData.length) : null;
+  
+  // Calculate rank change indicator
+  const getRankChangeIndicator = () => {
+    if (previousRank === null || userRank === 0) return null;
+    
+    const change = previousRank - userRank;
+    if (change > 0) {
+      return (
+        <span className="inline-flex items-center gap-1 text-emerald-600 text-sm font-medium">
+          <ArrowUp className="h-4 w-4" />
+          +{change}
+        </span>
+      );
+    } else if (change < 0) {
+      return (
+        <span className="inline-flex items-center gap-1 text-red-500 text-sm font-medium">
+          <ArrowDown className="h-4 w-4" />
+          {change}
+        </span>
+      );
+    }
+    return null;
+  };
 
   if (loading) {
     return (
@@ -200,10 +275,13 @@ const RegionalLeaderboard = ({ isDebugMode }: RegionalLeaderboardProps) => {
           <CardContent className="py-4">
             <div className="flex items-center gap-3">
               {motivationalData.icon}
-              <div>
-                <p className={`font-semibold ${motivationalData.color}`}>
-                  Regional Anda berada di Peringkat #{userRank}
-                </p>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className={`font-semibold ${motivationalData.color}`}>
+                    Regional Anda berada di Peringkat #{userRank}
+                  </p>
+                  {getRankChangeIndicator()}
+                </div>
                 <p className="text-sm text-muted-foreground">{motivationalData.message}</p>
               </div>
             </div>
