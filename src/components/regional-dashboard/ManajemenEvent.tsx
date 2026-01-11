@@ -8,6 +8,7 @@ import { Plus, Search, Calendar, Upload, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EventCard, { EventData, EventStatus } from "./event/EventCard";
 import EventDetailView from "./event/EventDetailView";
+import { MAX_FILE_SIZE_BYTES } from "@/lib/file-validation";
 
 // Mock data for events
 const mockEvents: EventData[] = [
@@ -115,6 +116,14 @@ const ManajemenEvent = () => {
   const handlePosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast({
+          title: "File terlalu besar",
+          description: "Ukuran file terlalu besar. Maksimal yang diizinkan adalah 350KB.",
+          variant: "destructive",
+        });
+        return;
+      }
       setNewEventForm({
         ...newEventForm,
         poster: file,

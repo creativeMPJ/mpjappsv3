@@ -32,6 +32,7 @@ import {
   Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_KB } from "@/lib/file-validation";
 
 interface LaporanItem {
   id: string;
@@ -94,6 +95,19 @@ const LaporanDokumentasi = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
+      // Validate each file size
+      const files = Array.from(e.target.files);
+      const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE_BYTES);
+      
+      if (oversizedFiles.length > 0) {
+        toast({
+          title: "File terlalu besar",
+          description: `Ukuran file terlalu besar. Maksimal yang diizinkan adalah ${MAX_FILE_SIZE_KB}KB per file.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setUploadForm({ ...uploadForm, files: e.target.files });
     }
   };
@@ -279,8 +293,8 @@ const LaporanDokumentasi = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {uploadForm.jenis === "foto" 
-                      ? "PNG, JPG hingga 10MB per file" 
-                      : "PDF, DOC hingga 25MB"
+                      ? "PNG, JPG (Maks. 350KB per file)" 
+                      : "PDF, DOC (Maks. 350KB per file)"
                     }
                   </p>
                 </label>

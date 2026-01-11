@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import AsistenRegionalManagement from "./AsistenRegionalManagement";
+import { MAX_FILE_SIZE_BYTES } from "@/lib/file-validation";
 
 interface PengaturanProps {
   isDebugMode?: boolean;
@@ -177,6 +178,14 @@ const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast({
+          title: "File terlalu besar",
+          description: "Ukuran file terlalu besar. Maksimal yang diizinkan adalah 350KB.",
+          variant: "destructive",
+        });
+        return;
+      }
       const reader = new FileReader();
       reader.addEventListener("load", () => {
         setImgSrc(reader.result?.toString() || "");

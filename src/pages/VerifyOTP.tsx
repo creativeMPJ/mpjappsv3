@@ -171,7 +171,7 @@ const VerifyOTP = () => {
         <Button
           onClick={handleVerify}
           disabled={isLoading || otp.join("").length !== 6}
-          className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+          className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold touch-manipulation active:scale-[0.98] transition-transform"
         >
           {isLoading ? "Memverifikasi..." : "Verifikasi"}
           {!isLoading && <CheckCircle className="ml-2 h-4 w-4" />}
