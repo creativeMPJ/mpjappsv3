@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-const MAX_FILE_SIZE = 200 * 1024; // 200KB
+const MAX_FILE_SIZE = 350 * 1024; // 350KB - Global limit
 
 const Payment = () => {
   const [senderName, setSenderName] = useState("");
@@ -227,7 +227,7 @@ const Payment = () => {
       if (file.size > MAX_FILE_SIZE) {
         toast({
           title: "File terlalu besar",
-          description: "Maksimal ukuran file 200KB",
+          description: "Ukuran file terlalu besar. Maksimal yang diizinkan adalah 350KB.",
           variant: "destructive",
         });
         return;
@@ -454,7 +454,7 @@ const Payment = () => {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-sm">Upload Bukti Transfer (Max 200KB)</Label>
+            <Label className="text-sm">Upload Bukti Transfer (Maks. 350KB)</Label>
             <div className="relative">
               <input
                 type="file"
@@ -480,7 +480,7 @@ const Payment = () => {
                   <div className="py-3">
                     <Upload className="h-7 w-7 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">Klik untuk upload</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG (Max 200KB)</p>
+                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG (Maks. 350KB)</p>
                   </div>
                 )}
               </div>

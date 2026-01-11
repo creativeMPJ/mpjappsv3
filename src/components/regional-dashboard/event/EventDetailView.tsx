@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Upload, Plus, Trash2, Search, Download, UserPlus, FileText, Lock, Image, Eye, Check, X, CreditCard, Users, Clock, Building } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { EventData, EventStatus } from "./EventCard";
+import { MAX_FILE_SIZE_BYTES } from "@/lib/file-validation";
 
 interface Participant {
   id: string;
@@ -129,6 +130,14 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
   const handlePosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        toast({
+          title: "File terlalu besar",
+          description: "Ukuran file terlalu besar. Maksimal yang diizinkan adalah 350KB.",
+          variant: "destructive",
+        });
+        return;
+      }
       setProposalForm({
         ...proposalForm,
         poster: file,

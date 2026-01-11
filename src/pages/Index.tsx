@@ -1,8 +1,37 @@
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Building2, Users, Calendar, ArrowRight, Zap, Sparkles } from "lucide-react";
 
 const Index = () => {
+  // Mobile header hide on scroll
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Only apply hide behavior on mobile (screen width < 640px)
+      if (window.innerWidth < 640) {
+        if (currentScrollY > lastScrollY && currentScrollY > 60) {
+          // Scrolling down & past threshold
+          setShowHeader(false);
+        } else {
+          // Scrolling up
+          setShowHeader(true);
+        }
+      } else {
+        setShowHeader(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
   const stats = [
     { label: "Anggota Aktif", value: "1000+", icon: Users, bgColor: "bg-primary/10", iconColor: "text-primary" },
     { label: "Event Terlaksana", value: "50+", icon: Calendar, bgColor: "bg-accent/15", iconColor: "text-accent" },
@@ -11,8 +40,13 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/30 to-background">
-      {/* Navigation - Desktop shows buttons, Mobile hides them */}
-      <nav className="sticky top-0 bg-background/80 backdrop-blur-md border-b border-border/50 z-50">
+      {/* Navigation - Desktop shows buttons, Mobile hides them with smooth hide on scroll */}
+      <nav 
+        ref={headerRef}
+        className={`sticky top-0 bg-background/80 backdrop-blur-md border-b border-border/50 z-50 transition-transform duration-300 ease-in-out ${
+          showHeader ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <span className="font-bold text-primary text-lg">MPJ Apps</span>
           {/* Desktop only buttons */}

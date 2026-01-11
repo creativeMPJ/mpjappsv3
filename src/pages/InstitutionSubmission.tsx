@@ -27,7 +27,7 @@ import { CityCombobox } from "@/components/registration/CityCombobox";
 import { LocationPicker } from "@/components/registration/LocationPicker";
 import { useAuth } from "@/contexts/AuthContext";
 
-const MAX_FILE_SIZE = 100 * 1024; // 100KB
+const MAX_FILE_SIZE = 350 * 1024; // 350KB - Global limit
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
 const InstitutionSubmission = () => {
@@ -170,9 +170,9 @@ const InstitutionSubmission = () => {
       return;
     }
 
-    // Validate file size (max 100KB)
+    // Validate file size (max 350KB - Global limit)
     if (file.size > MAX_FILE_SIZE) {
-      setDocumentError(`Ukuran file terlalu besar (${(file.size / 1024).toFixed(1)}KB). Maksimal 100KB.`);
+      setDocumentError(`Ukuran file terlalu besar (${(file.size / 1024).toFixed(1)}KB). Maksimal yang diizinkan adalah 350KB.`);
       setDocumentFile(null);
       return;
     }
@@ -725,7 +725,7 @@ const InstitutionSubmission = () => {
                           Klik untuk unggah dokumen
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          PDF, JPG, PNG, WebP • Maks. 100KB
+                          PDF, JPG, PNG, WebP • Maks. 350KB
                         </p>
                       </div>
                     ) : (
