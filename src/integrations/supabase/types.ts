@@ -97,6 +97,48 @@ export type Database = {
           },
         ]
       }
+      follow_up_logs: {
+        Row: {
+          action_type: string
+          admin_id: string
+          claim_id: string
+          created_at: string
+          id: string
+          region_id: string
+        }
+        Insert: {
+          action_type?: string
+          admin_id: string
+          claim_id: string
+          created_at?: string
+          id?: string
+          region_id: string
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          claim_id?: string
+          created_at?: string
+          id?: string
+          region_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_logs_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "pesantren_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_up_logs_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jabatan_codes: {
         Row: {
           code: string

@@ -153,7 +153,7 @@ const LatePaymentFollowUp = ({ isDebugMode = false }: LatePaymentFollowUpProps) 
     return `https://wa.me/${phone}?text=${message}`;
   };
 
-  const handleFollowUp = (claim: LatePaymentClaim) => {
+  const handleFollowUp = async (claim: LatePaymentClaim) => {
     if (!claim.no_wa_pendaftar) {
       toast({
         title: "Nomor WA tidak tersedia",
@@ -162,7 +162,29 @@ const LatePaymentFollowUp = ({ isDebugMode = false }: LatePaymentFollowUpProps) 
       });
       return;
     }
+
+    // Log the follow-up action
+    if (!isDebugMode && profile?.region_id) {
+      try {
+        await supabase
+          .from('follow_up_logs')
+          .insert({
+            admin_id: profile.id,
+            claim_id: claim.id,
+            region_id: profile.region_id,
+            action_type: 'whatsapp_followup'
+          });
+      } catch (error) {
+        console.error('Error logging follow-up:', error);
+      }
+    }
+
     window.open(generateFollowUpWhatsAppUrl(claim), '_blank');
+    
+    toast({
+      title: "Follow-up tercatat",
+      description: `Follow-up ke ${claim.pesantren_name} telah dicatat`,
+    });
   };
 
   if (loading) {
