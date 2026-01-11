@@ -13,7 +13,10 @@ import {
   FileText,
   Clock,
   Building2,
-  User
+  User,
+  History,
+  ShieldCheck,
+  MessageCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,6 +90,9 @@ interface PaymentRecord {
     region_id: string;
     mpj_id_number: string | null;
   };
+  profiles?: {
+    no_wa_pendaftar: string | null;
+  };
 }
 
 interface LevelingProfile {
@@ -137,13 +143,15 @@ const PaymentCard = ({
   getStatusBadge, 
   getJenisBadge, 
   formatCurrency,
-  onViewProof 
+  onViewProof,
+  showActions = true 
 }: { 
   payment: PaymentRecord; 
   getStatusBadge: (status: string) => JSX.Element;
   getJenisBadge: (jenis: string) => JSX.Element;
   formatCurrency: (amount: number) => string;
   onViewProof: (payment: PaymentRecord) => void;
+  showActions?: boolean;
 }) => (
   <Card className="bg-white border shadow-sm">
     <CardContent className="p-4 space-y-3">
@@ -160,16 +168,27 @@ const PaymentCard = ({
           getJenisBadge(payment.pesantren_claims.jenis_pengajuan)}
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-lg font-bold font-mono">
-          Rp {formatCurrency(payment.total_amount)}
-        </span>
+        <div>
+          <span className="text-lg font-bold font-mono">
+            Rp {formatCurrency(payment.total_amount)}
+          </span>
+          <p className="text-xs text-muted-foreground">
+            Kode: {payment.unique_code}
+          </p>
+        </div>
         {getStatusBadge(payment.status)}
       </div>
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          {new Date(payment.created_at).toLocaleDateString("id-ID")}
+          {new Date(payment.created_at).toLocaleDateString("id-ID", {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
         </p>
-        {payment.status === 'pending_verification' && payment.proof_file_url && (
+        {showActions && payment.status === 'pending_verification' && payment.proof_file_url && (
           <Button size="sm" variant="outline" onClick={() => onViewProof(payment)}>
             <Eye className="h-4 w-4 mr-1" />
             Lihat Bukti
@@ -239,6 +258,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [verifikasiSubTab, setVerifikasiSubTab] = useState<"pending" | "history">("pending");
   
   // Leveling validation state
   const [levelingProfiles, setLevelingProfiles] = useState<LevelingProfile[]>([]);
@@ -364,12 +384,18 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
             jenis_pengajuan,
             region_id,
             mpj_id_number
+          ),
+          profiles:user_id (
+            no_wa_pendaftar
           )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      setPayments((data || []).map((p: any) => ({
+        ...p,
+        profiles: p.profiles || { no_wa_pendaftar: null }
+      })));
     } catch (error) {
       console.error('Error fetching payments:', error);
     } finally {
@@ -525,6 +551,17 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
         description: `NIP: ${formatNIP(generatedNIP, true)} - Akun telah diaktifkan`,
       });
 
+      // Open WhatsApp with notification
+      const phoneNumber = selectedPayment.profiles?.no_wa_pendaftar;
+      const pesantrenName = selectedPayment.pesantren_claims?.pesantren_name || 'Pesantren';
+      if (phoneNumber) {
+        const waMessage = encodeURIComponent(
+          `Assalamu'alaikum, pembayaran aktivasi Anda telah kami verifikasi. NIP & NIAM untuk ${pesantrenName} telah AKTIF. Silakan cek dashboard Anda untuk mendownload E-ID dan Piagam. Terima kasih.`
+        );
+        const cleanPhone = phoneNumber.replace(/\D/g, '').replace(/^0/, '62');
+        window.open(`https://wa.me/${cleanPhone}?text=${waMessage}`, '_blank');
+      }
+
       setConfirmDialogOpen(false);
       setProofModalOpen(false);
       fetchPayments();
@@ -553,11 +590,13 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     
     setIsProcessing(true);
     try {
+      // Update status to pending_payment so user can re-upload
       await supabase
         .from('payments')
         .update({
-          status: 'rejected',
+          status: 'pending_payment',
           rejection_reason: rejectionReason,
+          proof_file_url: null, // Clear old proof
         })
         .eq('id', selectedPayment.id);
 
@@ -818,86 +857,199 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
         {/* Tab: Verifikasi Pembayaran */}
         <TabsContent value="verifikasi">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Verifikasi Pembayaran
-              </CardTitle>
-              <Button variant="outline" size="sm" onClick={fetchPayments}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
+            <CardHeader className="flex flex-col gap-4">
+              <div className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Verifikasi Pembayaran Aktivasi
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={fetchPayments}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+              
+              {/* Sub-tabs for Verifikasi */}
+              <div className="flex gap-2">
+                <Button 
+                  variant={verifikasiSubTab === "pending" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setVerifikasiSubTab("pending")}
+                  className={verifikasiSubTab === "pending" ? "bg-amber-500 hover:bg-amber-600" : ""}
+                >
+                  <ShieldCheck className="h-4 w-4 mr-1" />
+                  Verifikasi Aktivasi
+                  {pendingPaymentsCount > 0 && (
+                    <Badge className="ml-2 bg-white text-amber-600">{pendingPaymentsCount}</Badge>
+                  )}
+                </Button>
+                <Button 
+                  variant={verifikasiSubTab === "history" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setVerifikasiSubTab("history")}
+                  className={verifikasiSubTab === "history" ? "bg-slate-600 hover:bg-slate-700" : ""}
+                >
+                  <History className="h-4 w-4 mr-1" />
+                  Log Transaksi
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoadingPayments ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin" />
                 </div>
-              ) : payments.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Belum ada data pembayaran</p>
-                </div>
-              ) : (
-                <>
-                  {/* Mobile Cards */}
-                  <div className="grid grid-cols-1 gap-4 md:hidden">
-                    {payments.map((payment) => (
-                      <PaymentCard 
-                        key={payment.id} 
-                        payment={payment} 
-                        getStatusBadge={getPaymentStatusBadge}
-                        getJenisBadge={getJenisBadge}
-                        formatCurrency={formatCurrency}
-                        onViewProof={handleViewProof}
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Desktop Table */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">Tanggal</th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">Pesantren</th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">Jenis</th>
-                          <th className="text-right py-3 px-2 font-medium text-muted-foreground">Total</th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">Status</th>
-                          <th className="text-left py-3 px-2 font-medium text-muted-foreground">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {payments.map((payment) => (
-                          <tr key={payment.id} className="border-b">
-                            <td className="py-3 px-2 whitespace-nowrap">
-                              {new Date(payment.created_at).toLocaleDateString("id-ID")}
-                            </td>
-                            <td className="py-3 px-2 font-medium">
-                              {payment.pesantren_claims?.pesantren_name || '-'}
-                            </td>
-                            <td className="py-3 px-2">
-                              {payment.pesantren_claims?.jenis_pengajuan && 
-                                getJenisBadge(payment.pesantren_claims.jenis_pengajuan)}
-                            </td>
-                            <td className="py-3 px-2 text-right font-mono">
-                              Rp {formatCurrency(payment.total_amount)}
-                            </td>
-                            <td className="py-3 px-2">{getPaymentStatusBadge(payment.status)}</td>
-                            <td className="py-3 px-2">
-                              {payment.status === 'pending_verification' && payment.proof_file_url && (
-                                <Button size="sm" variant="outline" onClick={() => handleViewProof(payment)}>
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  Lihat Bukti
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
+              ) : verifikasiSubTab === "pending" ? (
+                // Pending Verification Tab
+                (() => {
+                  const pendingPayments = payments.filter(p => p.status === 'pending_verification');
+                  return pendingPayments.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ShieldCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Tidak ada pembayaran yang menunggu verifikasi</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Mobile Cards */}
+                      <div className="grid grid-cols-1 gap-4 md:hidden">
+                        {pendingPayments.map((payment) => (
+                          <PaymentCard 
+                            key={payment.id} 
+                            payment={payment} 
+                            getStatusBadge={getPaymentStatusBadge}
+                            getJenisBadge={getJenisBadge}
+                            formatCurrency={formatCurrency}
+                            onViewProof={handleViewProof}
+                          />
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
+                      </div>
+                      
+                      {/* Desktop Table */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b bg-amber-50">
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Tanggal Upload</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Nama Pesantren</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Nama Pengirim</th>
+                              <th className="text-right py-3 px-2 font-medium text-muted-foreground">Nominal (+ Kode Unik)</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Jenis</th>
+                              <th className="text-center py-3 px-2 font-medium text-muted-foreground">Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {pendingPayments.map((payment) => (
+                              <tr key={payment.id} className="border-b hover:bg-muted/50">
+                                <td className="py-3 px-2 whitespace-nowrap">
+                                  {new Date(payment.created_at).toLocaleDateString("id-ID", {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </td>
+                                <td className="py-3 px-2 font-medium">
+                                  {payment.pesantren_claims?.pesantren_name || '-'}
+                                </td>
+                                <td className="py-3 px-2">
+                                  {payment.pesantren_claims?.nama_pengelola || '-'}
+                                </td>
+                                <td className="py-3 px-2 text-right">
+                                  <div className="font-mono font-bold">
+                                    Rp {formatCurrency(payment.total_amount)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    (Rp {formatCurrency(payment.base_amount)} + {payment.unique_code})
+                                  </div>
+                                </td>
+                                <td className="py-3 px-2">
+                                  {payment.pesantren_claims?.jenis_pengajuan && 
+                                    getJenisBadge(payment.pesantren_claims.jenis_pengajuan)}
+                                </td>
+                                <td className="py-3 px-2 text-center">
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleViewProof(payment)}
+                                    className="bg-amber-500 hover:bg-amber-600"
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    Lihat Bukti
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()
+              ) : (
+                // History Tab (All Transactions)
+                (() => {
+                  const historyPayments = payments.filter(p => p.status !== 'pending_verification');
+                  return historyPayments.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Belum ada riwayat transaksi</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Mobile Cards */}
+                      <div className="grid grid-cols-1 gap-4 md:hidden">
+                        {historyPayments.map((payment) => (
+                          <PaymentCard 
+                            key={payment.id} 
+                            payment={payment} 
+                            getStatusBadge={getPaymentStatusBadge}
+                            getJenisBadge={getJenisBadge}
+                            formatCurrency={formatCurrency}
+                            onViewProof={handleViewProof}
+                            showActions={false}
+                          />
+                        ))}
+                      </div>
+                      
+                      {/* Desktop Table */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Tanggal</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Pesantren</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Pengirim</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Jenis</th>
+                              <th className="text-right py-3 px-2 font-medium text-muted-foreground">Total</th>
+                              <th className="text-left py-3 px-2 font-medium text-muted-foreground">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {historyPayments.map((payment) => (
+                              <tr key={payment.id} className="border-b">
+                                <td className="py-3 px-2 whitespace-nowrap">
+                                  {new Date(payment.created_at).toLocaleDateString("id-ID")}
+                                </td>
+                                <td className="py-3 px-2 font-medium">
+                                  {payment.pesantren_claims?.pesantren_name || '-'}
+                                </td>
+                                <td className="py-3 px-2">
+                                  {payment.pesantren_claims?.nama_pengelola || '-'}
+                                </td>
+                                <td className="py-3 px-2">
+                                  {payment.pesantren_claims?.jenis_pengajuan && 
+                                    getJenisBadge(payment.pesantren_claims.jenis_pengajuan)}
+                                </td>
+                                <td className="py-3 px-2 text-right font-mono">
+                                  Rp {formatCurrency(payment.total_amount)}
+                                </td>
+                                <td className="py-3 px-2">{getPaymentStatusBadge(payment.status)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()
               )}
             </CardContent>
           </Card>
@@ -1036,31 +1188,61 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
       <Dialog open={proofModalOpen} onOpenChange={setProofModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Bukti Pembayaran</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Verifikasi Bukti Pembayaran
+            </DialogTitle>
             <DialogDescription>
-              {selectedPayment?.pesantren_claims?.pesantren_name}
+              Periksa keaslian bukti transfer sebelum menerbitkan NIP
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="bg-muted rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <span className="text-muted-foreground">Total Transfer:</span>
-                <span className="font-mono font-bold">
-                  Rp {formatCurrency(selectedPayment?.total_amount || 0)}
+            {/* Payment Details */}
+            <div className="bg-muted rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="font-semibold">
+                  {selectedPayment?.pesantren_claims?.pesantren_name || '-'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {selectedPayment?.pesantren_claims?.nama_pengelola || '-'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t">
+                <span className="text-muted-foreground">Nominal Dasar:</span>
+                <span className="font-mono">
+                  Rp {formatCurrency(selectedPayment?.base_amount || 0)}
                 </span>
                 <span className="text-muted-foreground">Kode Unik:</span>
-                <span className="font-mono">{selectedPayment?.unique_code}</span>
+                <span className="font-mono text-amber-600 font-bold">
+                  +{selectedPayment?.unique_code}
+                </span>
+                <span className="text-muted-foreground font-semibold">Total Transfer:</span>
+                <span className="font-mono font-bold text-emerald-600">
+                  Rp {formatCurrency(selectedPayment?.total_amount || 0)}
+                </span>
               </div>
             </div>
             
-            {selectedPayment?.proof_file_url && (
-              <img
-                src={getProofUrl(selectedPayment.proof_file_url) || ''}
-                alt="Bukti Transfer"
-                className="w-full rounded-lg border"
-              />
-            )}
+            {/* Proof Image */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Bukti Transfer:</p>
+              {selectedPayment?.proof_file_url ? (
+                <img
+                  src={getProofUrl(selectedPayment.proof_file_url) || ''}
+                  alt="Bukti Transfer"
+                  className="w-full rounded-lg border shadow-sm"
+                />
+              ) : (
+                <div className="text-center py-8 bg-muted rounded-lg text-muted-foreground">
+                  Tidak ada bukti yang diunggah
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -1078,7 +1260,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
               disabled={isProcessing}
             >
               <CheckCircle className="h-4 w-4 mr-1" />
-              Terbitkan NIP
+              Konfirmasi & Terbitkan NIP
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1088,9 +1270,19 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Penerbitan NIP</AlertDialogTitle>
-            <AlertDialogDescription>
-              NIP akan diterbitkan dan akun akan diaktifkan. Tindakan ini tidak dapat dibatalkan.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-emerald-600" />
+              Konfirmasi Penerbitan NIP
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Dengan mengkonfirmasi, sistem akan:</p>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Memperbarui status pembayaran menjadi <strong>Verified</strong></li>
+                <li>Mengaktifkan akun pesantren menjadi <strong>Active</strong></li>
+                <li>Menerbitkan <strong>NIP</strong> secara otomatis</li>
+                <li>Membuka WhatsApp untuk notifikasi ke pengaju</li>
+              </ul>
+              <p className="text-amber-600 font-medium pt-2">Tindakan ini tidak dapat dibatalkan.</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1103,9 +1295,11 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
               {isProcessing ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <CheckCircle className="h-4 w-4 mr-2" />
+                <>
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                </>
               )}
-              Ya, Terbitkan NIP
+              Konfirmasi & Kirim WA
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1115,15 +1309,18 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
       <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tolak Pembayaran</AlertDialogTitle>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-red-600" />
+              Tolak Pembayaran
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Masukkan alasan penolakan bukti pembayaran ini.
+              Masukkan alasan penolakan. User akan bisa mengirim ulang bukti pembayaran.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Textarea
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="Contoh: Nominal tidak sesuai, bukti tidak jelas..."
+            placeholder="Contoh: Nominal tidak sesuai, bukti tidak jelas, nama pengirim berbeda..."
             className="min-h-[100px]"
           />
           <AlertDialogFooter>
@@ -1138,7 +1335,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
               ) : (
                 <XCircle className="h-4 w-4 mr-2" />
               )}
-              Tolak Pembayaran
+              Tolak & Minta Upload Ulang
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
