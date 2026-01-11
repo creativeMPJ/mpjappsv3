@@ -81,6 +81,7 @@ const MediaDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>("beranda");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [koordinator, setKoordinator] = useState<KoordinatorData | undefined>();
+  const [regionalApprovedAt, setRegionalApprovedAt] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Support debug mode via location.state
@@ -95,6 +96,30 @@ const MediaDashboard = () => {
   const profileLevel = profile?.profile_level ?? 'basic';
   const levelInfo = getProfileLevelInfo(profileLevel);
   const isPlatinum = profileLevel === 'platinum';
+
+  // Fetch regional_approved_at from pesantren_claims
+  useEffect(() => {
+    const fetchApprovalDate = async () => {
+      if (isDebugMode || !user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('pesantren_claims')
+          .select('regional_approved_at')
+          .eq('user_id', user.id)
+          .eq('status', 'regional_approved')
+          .maybeSingle();
+        
+        if (!error && data?.regional_approved_at) {
+          setRegionalApprovedAt(data.regional_approved_at);
+        }
+      } catch (error) {
+        console.error('Error fetching approval date:', error);
+      }
+    };
+
+    fetchApprovalDate();
+  }, [user?.id, isDebugMode]);
 
   // Fetch Koordinator from crews table
   useEffect(() => {
@@ -175,7 +200,10 @@ const MediaDashboard = () => {
           <>
             {/* Basic Member Banner - CTA for activation */}
             {paymentStatus === 'unpaid' && (
-              <BasicMemberBanner onActivate={() => handleMenuClick("aktivasi")} />
+              <BasicMemberBanner 
+                onActivate={() => handleMenuClick("aktivasi")} 
+                regionalApprovedAt={regionalApprovedAt}
+              />
             )}
             <MediaDashboardHome 
               paymentStatus={paymentStatus} 
@@ -238,7 +266,10 @@ const MediaDashboard = () => {
         return (
           <>
             {paymentStatus === 'unpaid' && (
-              <BasicMemberBanner onActivate={() => handleMenuClick("aktivasi")} />
+              <BasicMemberBanner 
+                onActivate={() => handleMenuClick("aktivasi")} 
+                regionalApprovedAt={regionalApprovedAt}
+              />
             )}
             <MediaDashboardHome 
               paymentStatus={paymentStatus} 

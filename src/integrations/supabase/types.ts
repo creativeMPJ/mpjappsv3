@@ -237,6 +237,7 @@ export type Database = {
           notes: string | null
           pesantren_name: string
           region_id: string | null
+          regional_approved_at: string | null
           status: Database["public"]["Enums"]["claim_status"]
           updated_at: string
           user_id: string
@@ -256,6 +257,7 @@ export type Database = {
           notes?: string | null
           pesantren_name: string
           region_id?: string | null
+          regional_approved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
           updated_at?: string
           user_id: string
@@ -275,6 +277,7 @@ export type Database = {
           notes?: string | null
           pesantren_name?: string
           region_id?: string | null
+          regional_approved_at?: string | null
           status?: Database["public"]["Enums"]["claim_status"]
           updated_at?: string
           user_id?: string

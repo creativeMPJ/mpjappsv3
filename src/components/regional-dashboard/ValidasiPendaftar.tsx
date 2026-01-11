@@ -59,6 +59,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { maskPhoneNumber, maskEmail, maskName } from "@/lib/privacy-utils";
+import LatePaymentFollowUp from "./LatePaymentFollowUp";
 
 interface PesantrenClaim {
   id: string;
@@ -77,6 +78,7 @@ interface PesantrenClaim {
   nama_pengasuh?: string | null;
   alamat_singkat?: string | null;
   no_wa_pendaftar?: string | null;
+  regional_approved_at?: string | null;
 }
 
 interface ValidasiPendaftarProps {
@@ -451,12 +453,14 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
     setIsProcessing(true);
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('pesantren_claims')
         .update({ 
           status: 'regional_approved',
-          approved_at: new Date().toISOString(),
-          approved_by: profile?.id
+          approved_at: now,
+          approved_by: profile?.id,
+          regional_approved_at: now
         })
         .eq('id', selectedClaim.id);
 
@@ -498,12 +502,14 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
     setIsProcessing(true);
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('pesantren_claims')
         .update({ 
           status: 'regional_approved',
-          approved_at: new Date().toISOString(),
-          approved_by: profile?.id
+          approved_at: now,
+          approved_by: profile?.id,
+          regional_approved_at: now
         })
         .eq('id', selectedClaim.id);
 
@@ -652,6 +658,9 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Late Payment Follow-Up Section */}
+      <LatePaymentFollowUp isDebugMode={isDebugMode} />
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>

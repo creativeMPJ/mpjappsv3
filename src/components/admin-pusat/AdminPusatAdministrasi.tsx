@@ -259,6 +259,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [verifikasiSubTab, setVerifikasiSubTab] = useState<"pending" | "history">("pending");
+  const [latePaymentCount, setLatePaymentCount] = useState(0);
   
   // Leveling validation state
   const [levelingProfiles, setLevelingProfiles] = useState<LevelingProfile[]>([]);
@@ -344,7 +345,49 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     fetchPayments();
     fetchLevelingProfiles();
     fetchPriceSettings();
+    fetchLatePaymentCount();
   }, [isDebugMode, debugData]);
+
+  // Fetch late payment count (> 7 days since regional approval)
+  const fetchLatePaymentCount = async () => {
+    if (isDebugMode) {
+      setLatePaymentCount(3); // Mock data
+      return;
+    }
+
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      // Get claims that are regional_approved and older than 7 days
+      const { data: lateClaims, error: claimsError } = await supabase
+        .from('pesantren_claims')
+        .select('user_id')
+        .eq('status', 'regional_approved')
+        .not('regional_approved_at', 'is', null)
+        .lt('regional_approved_at', sevenDaysAgo);
+
+      if (claimsError) throw claimsError;
+
+      if (!lateClaims || lateClaims.length === 0) {
+        setLatePaymentCount(0);
+        return;
+      }
+
+      // Check which ones are still unpaid
+      const userIds = lateClaims.map(c => c.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('id', userIds)
+        .eq('status_payment', 'unpaid');
+
+      if (profilesError) throw profilesError;
+      
+      setLatePaymentCount(profiles?.length || 0);
+    } catch (error) {
+      console.error('Error fetching late payment count:', error);
+    }
+  };
 
   const fetchClaims = async () => {
     setIsLoadingClaims(true);
@@ -740,6 +783,11 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
           {pendingPaymentsCount > 0 && (
             <Badge className="bg-amber-500 text-white px-3 py-1">
               {pendingPaymentsCount} Pembayaran Pending
+            </Badge>
+          )}
+          {latePaymentCount > 0 && (
+            <Badge className="bg-red-500 text-white px-3 py-1">
+              {latePaymentCount} Terlambat &gt;7 Hari
             </Badge>
           )}
           {pendingLevelingCount > 0 && (
