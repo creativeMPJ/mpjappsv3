@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ import {
   BadgeCheck
 } from 'lucide-react';
 import { XPLevelBadge } from '@/components/shared/LevelBadge';
-import { formatNIAM } from '@/lib/id-utils';
+import { formatNIAM, formatNIP } from '@/lib/id-utils';
 import logoMPJ from '@/assets/logo-mpj.png';
 
 interface CrewData {
@@ -139,18 +140,35 @@ const PublicCrewProfile = () => {
     );
   }
 
+  const ogTitle = `${crew?.nama || 'Kru'} - Personel ${crew?.profile.nama_pesantren || 'Pesantren'} | MPJ Jawa Timur`;
+  const ogDescription = `${crew?.nama} adalah ${crew?.jabatan || 'Kru Media'} resmi dari ${crew?.profile.nama_pesantren} dengan NIAM ${formatNIAM(crew?.niam, false)}.`;
+  const cleanNip = crew?.profile.nip?.replace(/\./g, '') || '';
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-amber-50/30">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white py-4 px-4 shadow-lg">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <img src={logoMPJ} alt="MPJ" className="h-10 w-10 object-contain" />
-          <div>
-            <h1 className="font-bold text-lg">Media Pesantren Jawa Timur</h1>
-            <p className="text-xs text-emerald-100">Verifikasi Personel Resmi</p>
+    <>
+      <Helmet>
+        <title>{ogTitle}</title>
+        <meta name="description" content={ogDescription} />
+        <meta property="og:title" content={ogTitle} />
+        <meta property="og:description" content={ogDescription} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:url" content={`${window.location.origin}/pesantren/${cleanNip}/crew/${niamSuffix}`} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={ogTitle} />
+        <meta name="twitter:description" content={ogDescription} />
+      </Helmet>
+
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-amber-50/30">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white py-4 px-4 shadow-lg">
+          <div className="max-w-lg mx-auto flex items-center gap-3">
+            <img src={logoMPJ} alt="MPJ" className="h-10 w-10 object-contain" />
+            <div>
+              <h1 className="font-bold text-lg">Media Pesantren Jawa Timur</h1>
+              <p className="text-xs text-emerald-100">Verifikasi Personel Resmi</p>
+            </div>
           </div>
         </div>
-      </div>
 
       <div className="max-w-lg mx-auto p-4 space-y-4">
         {/* Back to Pesantren */}
@@ -267,6 +285,7 @@ const PublicCrewProfile = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

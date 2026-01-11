@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { XPLevelBadge } from "./LevelBadge";
 import { cn } from "@/lib/utils";
-import { RotateCcw, Facebook, Instagram, Twitter, Youtube, QrCode } from "lucide-react";
+import { RotateCcw, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import mpjVerticalWhite from "@/assets/mpj-vertical-white.png";
 import mpjVerticalColor from "@/assets/mpj-vertical-color.png";
 import mpjHorizontalColor from "@/assets/mpj-horizontal-color.png";
@@ -19,6 +20,7 @@ interface MemberCardProps {
   role?: string;
   xp?: number;
   photoUrl?: string;
+  lembagaNip?: string; // NIP of the institution for QR code URL
   socialMedia?: {
     facebook?: string;
     instagram?: string;
@@ -200,11 +202,18 @@ export const PhysicalMemberCard = ({
   role = "Kru Media",
   xp = 0,
   photoUrl,
+  lembagaNip,
   socialMedia,
   className,
 }: MemberCardProps) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  
+  // Generate QR code URL for crew profile
+  const cleanNip = lembagaNip?.replace(/\./g, '') || '';
+  const cleanNoId = noId.replace(/\./g, '');
+  const niamSuffix = cleanNoId.slice(-2);
+  const qrUrl = cleanNip ? `${window.location.origin}/pesantren/${cleanNip}/crew/${niamSuffix}` : '';
 
   return (
     <div className={cn("perspective-1000", className)}>
@@ -264,7 +273,13 @@ export const PhysicalMemberCard = ({
                 <div className="flex items-center justify-between gap-3">
                   {/* QR Code */}
                   <div className="bg-gray-100 p-2 rounded-lg shadow-inner">
-                    <QrCode className="h-14 w-14 text-emerald-800" />
+                    {qrUrl ? (
+                      <QRCodeSVG value={qrUrl} size={56} level="M" includeMargin={false} />
+                    ) : (
+                      <div className="h-14 w-14 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">
+                        No QR
+                      </div>
+                    )}
                   </div>
                   {/* ID Info */}
                   <div className="flex-1 text-right">

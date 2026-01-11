@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +19,8 @@ import {
   ShieldCheck,
   Instagram,
   Youtube,
-  ExternalLink
+  ExternalLink,
+  Search
 } from 'lucide-react';
 import { ProfileLevelBadge, VerifiedBadge } from '@/components/shared/LevelBadge';
 import { formatNIP, formatNIAM, type ProfileLevel } from '@/lib/id-utils';
@@ -164,22 +166,48 @@ const PublicPesantrenProfile = () => {
   }
 
   const isVerified = pesantren?.profile_level === 'platinum' || pesantren?.profile_level === 'gold';
+  const ogTitle = `${pesantren?.nama_pesantren || 'Pesantren'} - Anggota Resmi Media Pondok Jawa Timur`;
+  const ogDescription = `Terverifikasi dengan NIP ${formatNIP(pesantren?.nip, false)}. Lihat profil resmi media pesantren ini di MPJ Apps.`;
+  const ogImage = pesantren?.logo_url || `${window.location.origin}/favicon.ico`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-amber-50/30">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white py-4 px-4 shadow-lg">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
-          <img src={logoMPJ} alt="MPJ" className="h-10 w-10 object-contain" />
-          <div>
-            <h1 className="font-bold text-lg">Media Pesantren Jawa Timur</h1>
-            <p className="text-xs text-emerald-100">Sistem Verifikasi Anggota Resmi</p>
+    <>
+      <Helmet>
+        <title>{ogTitle}</title>
+        <meta name="description" content={ogDescription} />
+        <meta property="og:title" content={ogTitle} />
+        <meta property="og:description" content={ogDescription} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:type" content="profile" />
+        <meta property="og:url" content={`${window.location.origin}/pesantren/${nip}`} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={ogTitle} />
+        <meta name="twitter:description" content={ogDescription} />
+        <meta name="twitter:image" content={ogImage} />
+      </Helmet>
+
+      <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-amber-50/30">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 text-white py-4 px-4 shadow-lg">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <img src={logoMPJ} alt="MPJ" className="h-10 w-10 object-contain" />
+              <div>
+                <h1 className="font-bold text-lg">Media Pesantren Jawa Timur</h1>
+                <p className="text-xs text-emerald-100">Sistem Verifikasi Anggota Resmi</p>
+              </div>
+            </div>
+            <Link to="/direktori">
+              <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                <Search className="w-4 h-4 mr-1.5" />
+                Direktori
+              </Button>
+            </Link>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        {/* Profile Header Card */}
+        <div className="max-w-lg mx-auto p-4 space-y-4">
+          {/* Profile Header Card */}
         <Card className="border-emerald-200 shadow-xl overflow-hidden">
           <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-6 text-center text-white">
             <div className="relative inline-block">
@@ -351,6 +379,7 @@ const PublicPesantrenProfile = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

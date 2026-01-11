@@ -13,6 +13,7 @@ interface EIDCardGeneratorProps {
   nama: string; // Nama Pesantren or Nama Personil
   jabatan?: string; // Role/Jabatan for kru
   lembagaInduk?: string; // Parent institution name for kru
+  lembagaNip?: string; // Parent institution NIP for crew QR code
   profileLevel?: "basic" | "silver" | "gold" | "platinum";
 }
 
@@ -22,6 +23,7 @@ const EIDCardGenerator = ({
   nama,
   jabatan,
   lembagaInduk,
+  lembagaNip,
   profileLevel = "basic",
 }: EIDCardGeneratorProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,16 @@ const EIDCardGenerator = ({
   };
 
   const styles = getLevelStyles();
-  const qrValue = `${window.location.origin}/verify/${type}/${nomorId}`;
+  
+  // Generate QR code URL pointing to public profile
+  // For lembaga: /pesantren/[NIP] (clean format without dots)
+  // For kru: /pesantren/[NIP]/crew/[NIAM_SUFFIX] (last 2 digits of NIAM)
+  const cleanNomorId = nomorId.replace(/\./g, '');
+  const qrValue = type === "lembaga" 
+    ? `${window.location.origin}/pesantren/${cleanNomorId}`
+    : lembagaNip 
+      ? `${window.location.origin}/pesantren/${lembagaNip.replace(/\./g, '')}/crew/${cleanNomorId.slice(-2)}`
+      : `${window.location.origin}/pesantren/unknown/crew/${cleanNomorId.slice(-2)}`;
 
   return (
     <div className="space-y-4">

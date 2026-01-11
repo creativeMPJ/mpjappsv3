@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import DebugView from "./pages/DebugView";
 import PublicPesantrenProfile from "./pages/PublicPesantrenProfile";
 import PublicCrewProfile from "./pages/PublicCrewProfile";
+import PublicDirektori from "./pages/PublicDirektori";
 
 // ═══════════════════════════════════════════════════════════════
 // STATUS PAGES (Auth required, special handling in ProtectedRoute)
@@ -70,6 +71,7 @@ const App = () => (
             {/* ══════════════════════════════════════════════════════ */}
             {/* PUBLIC VERIFICATION PROFILES - QR Code verification   */}
             {/* ══════════════════════════════════════════════════════ */}
+            <Route path="/direktori" element={<PublicDirektori />} />
             <Route path="/pesantren/:nip" element={<PublicPesantrenProfile />} />
             <Route path="/pesantren/:nip/crew/:niamSuffix" element={<PublicCrewProfile />} />
             
