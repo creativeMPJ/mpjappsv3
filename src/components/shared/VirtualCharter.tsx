@@ -1,6 +1,8 @@
+import { useRef, forwardRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatNIP } from "@/lib/id-utils";
+import { QRCodeSVG } from "qrcode.react";
 import mpjVerticalColor from "@/assets/mpj-vertical-color.png";
 import mpjVerticalWhite from "@/assets/mpj-vertical-white.png";
 
@@ -12,6 +14,8 @@ interface VirtualCharterProps {
   namaPesantren: string;
   namaKoordinator?: string;
   alamat: string;
+  tanggalTerbit?: string;
+  profileUrl?: string;
   className?: string;
 }
 
@@ -20,15 +24,22 @@ interface VirtualCharterProps {
  * Silver: Embossed silver logo
  * Gold: Embossed gold logo
  * Platinum/Diamond: Pure white logo for exclusivity
+ * 
+ * Now includes:
+ * - QR Code linking to public profile
+ * - Issue date (tanggal terbit)
+ * - forwardRef for html2canvas capture
  */
-export const VirtualCharter = ({
+export const VirtualCharter = forwardRef<HTMLDivElement, VirtualCharterProps>(({
   level,
   noId,
   namaPesantren,
   namaKoordinator,
   alamat,
+  tanggalTerbit,
+  profileUrl,
   className,
-}: VirtualCharterProps) => {
+}, ref) => {
   const getLevelStyles = () => {
     switch (level) {
       case "platinum":
@@ -67,13 +78,30 @@ export const VirtualCharter = ({
 
   const styles = getLevelStyles();
   const koordinatorDisplay = namaKoordinator || "Belum Ditunjuk";
+  const formattedNIP = formatNIP(noId, true);
+  const displayNIP = formatNIP(noId, false); // With dots for display
+  
+  // Format tanggal terbit
+  const formattedDate = tanggalTerbit 
+    ? new Date(tanggalTerbit).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
+    : null;
+  
+  // Generate profile URL for QR code
+  const qrUrl = profileUrl || `${window.location.origin}/pesantren/${formattedNIP}`;
 
   return (
-    <Card className={cn(
-      "overflow-hidden border-2 shadow-2xl",
-      styles.border,
-      className
-    )}>
+    <Card 
+      ref={ref}
+      className={cn(
+        "overflow-hidden border-2 shadow-2xl",
+        styles.border,
+        className
+      )}
+    >
       <CardContent className="p-0">
         <div className={cn(
           "aspect-[3/4] relative overflow-hidden bg-gradient-to-br p-6 flex flex-col items-center justify-center",
@@ -92,7 +120,7 @@ export const VirtualCharter = ({
           )}
 
           {/* Header Text */}
-          <div className="relative z-10 text-center mb-6">
+          <div className="relative z-10 text-center mb-4">
             <p className={cn("text-xs tracking-[0.3em] uppercase mb-1", styles.textSecondary)}>
               {styles.badgeText}
             </p>
@@ -102,10 +130,10 @@ export const VirtualCharter = ({
           </div>
 
           {/* Embossed Logo - YouTube Play Button Style */}
-          <div className="relative z-10 mb-6">
+          <div className="relative z-10 mb-4">
             {/* Shadow/3D Effect Container */}
             <div className={cn(
-              "relative rounded-2xl p-8",
+              "relative rounded-2xl p-6",
               level === "platinum" ? "bg-gradient-to-br from-slate-700/50 to-slate-800/50" : "bg-white/80",
               "shadow-[inset_0_2px_20px_rgba(0,0,0,0.1),_0_10px_40px_rgba(0,0,0,0.2)]"
             )}>
@@ -118,7 +146,7 @@ export const VirtualCharter = ({
                 src={styles.useLightLogo ? mpjVerticalWhite : mpjVerticalColor}
                 alt="MPJ Logo"
                 className={cn(
-                  "h-32 w-auto relative z-10",
+                  "h-24 w-auto relative z-10",
                   styles.logoShadow
                 )}
               />
@@ -126,40 +154,67 @@ export const VirtualCharter = ({
           </div>
 
           {/* Recipient Info */}
-          <div className="relative z-10 text-center space-y-2">
+          <div className="relative z-10 text-center space-y-1.5">
             <p className={cn("text-xs uppercase tracking-wider", styles.textSecondary)}>
               Diberikan Kepada
             </p>
-            <h3 className={cn("text-xl font-bold", styles.textGlow)}>
+            <h3 className={cn("text-lg font-bold", styles.textGlow)}>
               {namaPesantren}
             </h3>
-            <p className={cn("text-sm max-w-xs", styles.textSecondary)}>
+            <p className={cn("text-xs max-w-xs", styles.textSecondary)}>
               {alamat}
             </p>
-            <div className="pt-3">
-              <p className={cn("text-xs uppercase tracking-wider", styles.textSecondary)}>
+            <div className="pt-2">
+              <p className={cn("text-[10px] uppercase tracking-wider", styles.textSecondary)}>
                 Koordinator
               </p>
-              <p className={cn("text-base font-semibold", styles.textGlow)}>
+              <p className={cn("text-sm font-semibold", styles.textGlow)}>
                 {koordinatorDisplay}
               </p>
             </div>
-            <div className="pt-3">
-              <p className={cn("text-xs uppercase tracking-wider", styles.textSecondary)}>
+            <div className="pt-2">
+              <p className={cn("text-[10px] uppercase tracking-wider", styles.textSecondary)}>
                 Nomor Induk Pesantren
               </p>
-              <p className={cn("text-lg font-mono font-bold tracking-wider", styles.textGlow)}>
-                {formatNIP(noId, true)}
+              <p className={cn("text-base font-mono font-bold tracking-wider", styles.textGlow)}>
+                {displayNIP}
               </p>
             </div>
           </div>
 
+          {/* QR Code */}
+          <div className="relative z-10 mt-3">
+            <div className={cn(
+              "p-2 rounded-lg",
+              level === "platinum" ? "bg-white/90" : "bg-white"
+            )}>
+              <QRCodeSVG 
+                value={qrUrl} 
+                size={60}
+                level="M"
+                includeMargin={false}
+              />
+            </div>
+          </div>
+
+          {/* Issue Date */}
+          {formattedDate && (
+            <div className={cn(
+              "relative z-10 mt-2 text-center",
+              styles.textSecondary
+            )}>
+              <p className="text-[9px] uppercase tracking-wider">
+                Diterbitkan: {formattedDate}
+              </p>
+            </div>
+          )}
+
           {/* Footer */}
           <div className={cn(
-            "absolute bottom-4 left-0 right-0 text-center",
+            "absolute bottom-3 left-0 right-0 text-center",
             styles.textSecondary
           )}>
-            <p className="text-[10px] uppercase tracking-wider">
+            <p className="text-[9px] uppercase tracking-wider">
               Media Pondok Jawa Timur
             </p>
           </div>
@@ -167,6 +222,8 @@ export const VirtualCharter = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+VirtualCharter.displayName = "VirtualCharter";
 
 export default VirtualCharter;
