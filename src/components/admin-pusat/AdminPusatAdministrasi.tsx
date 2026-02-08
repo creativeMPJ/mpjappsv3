@@ -504,15 +504,26 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   };
 
   // Payment handlers
-  const handleViewProof = (payment: PaymentRecord) => {
+  const [proofSignedUrl, setProofSignedUrl] = useState<string | null>(null);
+
+  const handleViewProof = async (payment: PaymentRecord) => {
     setSelectedPayment(payment);
+    setProofSignedUrl(null);
     setProofModalOpen(true);
+
+    if (payment.proof_file_url) {
+      const { data, error } = await supabase.storage
+        .from('payment-proofs')
+        .createSignedUrl(payment.proof_file_url, 3600);
+      if (!error && data?.signedUrl) {
+        setProofSignedUrl(data.signedUrl);
+      }
+    }
   };
 
-  const getProofUrl = (path: string | null) => {
-    if (!path) return null;
-    const { data } = supabase.storage.from('payment-proofs').getPublicUrl(path);
-    return data?.publicUrl;
+  const getProofUrl = (path: string | null): string | null => {
+    // Use pre-resolved signed URL
+    return proofSignedUrl;
   };
 
   const handleApprovePayment = async () => {
