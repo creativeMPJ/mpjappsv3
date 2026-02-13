@@ -2,7 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026-02-13] - Supabase to Local PostgreSQL + Prisma Migration
+The format follows Keep a Changelog and this project uses Semantic Versioning.
+
+## [Unreleased]
+
+### Added
+- Placeholder for upcoming features.
+
+### Changed
+- Placeholder for upcoming changes.
+
+### Fixed
+- Placeholder for upcoming fixes.
+
+## [0.2.0] - 2026-02-13
 
 ### Added
 - Prisma data model and migrations in `prisma/`.
@@ -15,11 +28,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Frontend data access migrated from direct Supabase usage to local API endpoints.
-- Dashboard and management flows updated for:
-  - Admin Pusat
-  - Admin Regional
-  - Media/User
-  - Public views
+- Dashboard and management flows updated for Admin Pusat, Admin Regional, Media/User, and public views.
 - Payment and activation flow integrated with new backend.
 - Regional settings and assistant pages aligned with API-based flow.
 - Project scripts updated in `package.json` for Prisma migration/generate/seed and API dev server.
