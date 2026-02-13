@@ -126,3 +126,55 @@ npm run dev:api
 - `GET /api/payments/current` (Bearer token required)
 - `POST /api/payments/submit-proof` (Bearer token required)
 - `GET /api/admin/*` and `POST /api/admin/*` (admin pusat only)
+
+## Release Checklist
+
+Use this checklist before every release.
+
+### 1) Prepare
+
+```sh
+npm i
+npm run db:generate
+npm run build
+```
+
+### 2) Database
+
+```sh
+# Run migrations on target environment
+npm run db:migrate
+
+# Optional (first setup only)
+npm run db:seed-base
+npm run db:seed-admin
+```
+
+### 3) Validate core flows
+
+- Login as `admin_pusat`.
+- Create/register user and verify claim flow.
+- Regional approve/reject flow.
+- Payment submit + admin approval/rejection flow.
+- Public directory search and profile pages.
+
+### 4) Changelog and versioning
+
+- Move release notes from `Unreleased` to a new version in `CHANGELOG.md` (example: `0.2.1`).
+- Add release date.
+- Ensure notes include `Added/Changed/Fixed/Removed` as needed.
+
+### 5) Git release
+
+```sh
+git add -A
+git commit -m "release: vX.Y.Z"
+git push origin main
+```
+
+Optional tag:
+
+```sh
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
