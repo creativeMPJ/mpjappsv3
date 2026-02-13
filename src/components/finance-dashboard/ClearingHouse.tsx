@@ -39,7 +39,7 @@ import {
   Inbox
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -56,12 +56,6 @@ interface PendingProfile {
 }
 
 // Generate NIP: MPJ-YYYY-XXXX
-const generateNIP = () => {
-  const year = new Date().getFullYear();
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `MPJ-${year}-${random}`;
-};
-
 const ClearingHouse = () => {
   const [selectedProfile, setSelectedProfile] = useState<PendingProfile | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -74,44 +68,18 @@ const ClearingHouse = () => {
   const { data: pendingProfiles, isLoading, refetch } = useQuery({
     queryKey: ['pending-profiles'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          nama_pesantren,
-          nama_pengasuh,
-          city_id,
-          created_at,
-          city:cities(name)
-        `)
-        .eq('status_account', 'pending')
-        .order('created_at', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching pending profiles:', error);
-        throw error;
-      }
-
-      return (data || []) as PendingProfile[];
+      const data = await apiRequest<{ profiles: PendingProfile[] }>("/api/admin/clearing-house/pending");
+      return data.profiles || [];
     },
   });
 
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      const nip = generateNIP();
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          status_account: 'active',
-          status_payment: 'paid',
-          nip: nip,
-        })
-        .eq('id', profileId);
-
-      if (error) throw error;
-      return { nip };
+      return apiRequest<{ nip: string }>(`/api/admin/clearing-house/${profileId}/approve`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
     },
     onSuccess: (data) => {
       toast({
@@ -134,14 +102,10 @@ const ClearingHouse = () => {
   // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          status_account: 'rejected',
-        })
-        .eq('id', profileId);
-
-      if (error) throw error;
+      await apiRequest(`/api/admin/clearing-house/${profileId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ reason: rejectReason }),
+      });
     },
     onSuccess: () => {
       toast({

@@ -15,7 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 
 interface City {
   id: string;
@@ -37,15 +37,11 @@ export function CityCombobox({ value, onSelect, disabled }: CityComboboxProps) {
   useEffect(() => {
     const fetchCities = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("cities")
-        .select("id, name")
-        .order("name");
-
-      if (error) {
+      try {
+        const data = await apiRequest<{ cities: City[] }>("/api/public/cities");
+        setCities(data.cities || []);
+      } catch (error) {
         console.error("Error fetching cities:", error);
-      } else {
-        setCities(data || []);
       }
       setIsLoading(false);
     };

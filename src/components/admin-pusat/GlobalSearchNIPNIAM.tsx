@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 
 interface SearchResult {
   type: "pesantren" | "crew";
@@ -37,71 +37,10 @@ const GlobalSearchNIPNIAM = () => {
     setResults([]);
 
     try {
-      const searchResults: SearchResult[] = [];
-
-      // Search for NIP in pesantren_claims
-      const { data: pesantrenData } = await supabase
-        .from("pesantren_claims")
-        .select(`
-          id,
-          mpj_id_number,
-          pesantren_name,
-          status,
-          region_id,
-          regions:region_id (name)
-        `)
-        .ilike("mpj_id_number", `%${query}%`)
-        .limit(10);
-
-      if (pesantrenData) {
-        pesantrenData.forEach((item: any) => {
-          if (item.mpj_id_number) {
-            searchResults.push({
-              type: "pesantren",
-              id: item.id,
-              nomorId: item.mpj_id_number,
-              nama: item.pesantren_name,
-              status: item.status,
-              region: item.regions?.name,
-            });
-          }
-        });
-      }
-
-      // Search for NIAM in crews
-      const { data: crewData } = await supabase
-        .from("crews")
-        .select(`
-          id,
-          niam,
-          nama,
-          jabatan,
-          profile_id,
-          profiles:profile_id (
-            nama_pesantren,
-            status_account
-          )
-        `)
-        .ilike("niam", `%${query}%`)
-        .limit(10);
-
-      if (crewData) {
-        crewData.forEach((item: any) => {
-          if (item.niam) {
-            searchResults.push({
-              type: "crew",
-              id: item.id,
-              nomorId: item.niam,
-              nama: item.nama,
-              jabatan: item.jabatan,
-              lembagaInduk: item.profiles?.nama_pesantren,
-              status: item.profiles?.status_account,
-            });
-          }
-        });
-      }
-
-      setResults(searchResults);
+      const data = await apiRequest<{ results: SearchResult[] }>(
+        `/api/admin/global-search?query=${encodeURIComponent(query)}`
+      );
+      setResults(data.results || []);
     } catch (error) {
       console.error("Search error:", error);
     } finally {

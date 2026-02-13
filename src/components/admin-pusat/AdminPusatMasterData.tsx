@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { formatNIP, formatNIAM } from "@/lib/id-utils";
 
@@ -103,42 +103,12 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
 
   const fetchData = async () => {
     try {
-      // Fetch all pesantren with region info
-      const { data: pesantrenData } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          nama_pesantren,
-          nip,
-          region_id,
-          status_account,
-          profile_level,
-          alamat_singkat,
-          nama_pengasuh,
-          regions!profiles_region_id_fkey (name),
-          cities!profiles_city_id_fkey (name)
-        `)
-        .order("nama_pesantren", { ascending: true });
-
-      // Fetch all crews with pesantren info
-      const { data: crewData } = await supabase
-        .from("crews")
-        .select(`
-          id,
-          nama,
-          niam,
-          jabatan,
-          xp_level,
-          profile_id,
-          profiles!crews_profile_id_fkey (nama_pesantren, region_id, regions!profiles_region_id_fkey (name))
-        `)
-        .order("nama", { ascending: true });
-
-      // Fetch all regions
-      const { data: regionsData } = await supabase
-        .from("regions")
-        .select("id, name, code")
-        .order("code", { ascending: true });
+      const data = await apiRequest<{ profiles: any[]; crews: Crew[]; regions: Region[] }>(
+        "/api/admin/master-data"
+      );
+      const pesantrenData = data.profiles || [];
+      const crewData = data.crews || [];
+      const regionsData = data.regions || [];
 
       if (pesantrenData) {
         const mapped = pesantrenData.map((item: any) => ({
@@ -169,19 +139,7 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
       }
 
       if (crewData) {
-        setCrewList(
-          crewData.map((item: any) => ({
-            id: item.id,
-            nama: item.nama,
-            niam: item.niam,
-            jabatan: item.jabatan,
-            xp_level: item.xp_level,
-            profile_id: item.profile_id,
-            pesantren_name: item.profiles?.nama_pesantren || null,
-            region_id: item.profiles?.region_id || null,
-            region_name: item.profiles?.regions?.name || null,
-          }))
-        );
+        setCrewList(crewData);
       }
 
       if (regionsData) {
@@ -352,17 +310,14 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     if (!editingPesantren) return;
     setIsSaving(true);
     try {
-      // NIP is immutable - do not include in update
-      const { error } = await supabase
-        .from("profiles")
-        .update({
+      await apiRequest(`/api/admin/master-data/pesantren/${editingPesantren.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
           nama_pesantren: editFormData.nama_pesantren,
           nama_pengasuh: editFormData.nama_pengasuh,
           alamat_singkat: editFormData.alamat_singkat,
-        })
-        .eq("id", editingPesantren.id);
-
-      if (error) throw error;
+        }),
+      });
 
       toast({ title: "Berhasil", description: "Data pesantren berhasil diperbarui" });
       setIsEditPesantrenOpen(false);
@@ -378,17 +333,14 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     if (!editingMedia) return;
     setIsSaving(true);
     try {
-      // NIP is immutable - do not include in update
-      const { error } = await supabase
-        .from("profiles")
-        .update({
+      await apiRequest(`/api/admin/master-data/media/${editingMedia.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
           nama_pesantren: editFormData.nama_pesantren,
           nama_media: editFormData.nama_media,
           no_wa_pendaftar: editFormData.no_wa_pendaftar,
-        })
-        .eq("id", editingMedia.id);
-
-      if (error) throw error;
+        }),
+      });
 
       toast({ title: "Berhasil", description: "Data media berhasil diperbarui" });
       setIsEditMediaOpen(false);
@@ -404,16 +356,13 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     if (!editingCrew) return;
     setIsSaving(true);
     try {
-      // NIAM is immutable - do not include in update
-      const { error } = await supabase
-        .from("crews")
-        .update({
+      await apiRequest(`/api/admin/master-data/crew/${editingCrew.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
           nama: editFormData.nama,
           jabatan: editFormData.jabatan,
-        })
-        .eq("id", editingCrew.id);
-
-      if (error) throw error;
+        }),
+      });
 
       toast({ title: "Berhasil", description: "Data kru berhasil diperbarui" });
       setIsEditCrewOpen(false);
@@ -430,8 +379,9 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
     setIsSaving(true);
     try {
       if (deleteTarget.type === "crew") {
-        const { error } = await supabase.from("crews").delete().eq("id", deleteTarget.id);
-        if (error) throw error;
+        await apiRequest(`/api/admin/master-data/crew/${deleteTarget.id}`, {
+          method: "DELETE",
+        });
       } else {
         // For pesantren/media, we cannot delete profiles due to RLS
         toast({ 

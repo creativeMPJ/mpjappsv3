@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, RefreshCw, CheckCircle, Smartphone, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 
 const VerifyOTP = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -95,18 +95,14 @@ const VerifyOTP = () => {
     setIsLoading(true);
 
     try {
-      // Call OTP verify edge function
-      const { data, error } = await supabase.functions.invoke("otp-verify", {
-        body: {
-          phone: phone,
-          otp_code: otpCode,
-          otp_id: otp_id,
-        },
+      const data = await apiRequest<any>("/api/claims/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({
+          otpCode,
+          otpId: otp_id,
+          claimId: pesantren_claim_id,
+        }),
       });
-
-      if (error) {
-        throw error;
-      }
 
       if (data?.error) {
         if (data.expired) {
@@ -147,6 +143,7 @@ const VerifyOTP = () => {
           state: {
             pesantren_name: pesantren_name,
             nama_pengaju: (location.state as any)?.nama_pengaju || "Pengaju",
+            pesantren_claim_id: data?.pesantren_claim_id || pesantren_claim_id,
           },
           replace: true,
         });
@@ -168,26 +165,29 @@ const VerifyOTP = () => {
   };
 
   const handleResend = async () => {
-    if (!canResend || !phone) return;
+    if (!canResend || !phone || !pesantren_claim_id) return;
 
     setIsResending(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("otp-send", {
-        body: {
-          phone: phone,
-          pesantren_claim_id: pesantren_claim_id,
-        },
+      const data = await apiRequest<{ message?: string; debug_otp?: string }>("/api/claims/send-otp", {
+        method: "POST",
+        body: JSON.stringify({
+          claimId: pesantren_claim_id,
+        }),
       });
-
-      if (error) {
-        throw error;
-      }
 
       toast({
         title: "OTP Terkirim Ulang",
         description: data?.message || "Kode baru telah dikirim ke nomor WhatsApp Anda",
       });
+
+      if (data?.debug_otp) {
+        toast({
+          title: "Debug OTP (Local)",
+          description: `Kode OTP: ${data.debug_otp}`,
+        });
+      }
 
       setCanResend(false);
       setResendTimer(60);

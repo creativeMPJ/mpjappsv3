@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, ArrowRight, Phone, Lock, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import logoMpj from "@/assets/logo-mpj.png";
 import { z } from "zod";
@@ -34,11 +33,7 @@ const loginSchema = z.object({
 /**
  * LOGIN PAGE
  * 
- * Authenticates user via Supabase Auth.
- * After successful login, checks pesantren_claims table to determine redirect:
- * - approved/pusat_approved -> dashboard
- * - pending/regional_approved -> verification-pending
- * - no claim -> check-institution
+ * Authenticates user via local API (/api/auth/login).
  */
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -48,85 +43,15 @@ const Login = () => {
   });
   const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingClaim, setIsCheckingClaim] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, profile, isLoading: authLoading } = useAuth();
-
-  /**
-   * Check pesantren_claims and redirect based on claim status
-   * This is the core logic for "1 User = 1 Pesantren" workflow
-   */
-  const checkClaimAndRedirect = async (userId: string, userRole: string) => {
-    setIsCheckingClaim(true);
-    
-    try {
-      // Admin roles bypass claim check - go directly to their dashboards
-      if (userRole === 'admin_pusat' || userRole === 'admin_regional' || userRole === 'admin_finance') {
-        redirectToDashboard(userRole);
-        return;
-      }
-
-      // For regular users, check pesantren_claims
-      const { data: claim, error } = await supabase
-        .from('pesantren_claims')
-        .select('status, jenis_pengajuan')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error checking claim:', error);
-        // On error, default to check-institution
-        navigate('/check-institution', { replace: true });
-        return;
-      }
-
-      if (!claim) {
-        // No claim exists - user needs to register pesantren
-        navigate('/check-institution', { replace: true });
-        return;
-      }
-
-      // Route based on claim status
-      switch (claim.status) {
-        case 'approved':
-        case 'pusat_approved':
-          // Full access - go to dashboard
-          navigate('/user', { replace: true });
-          break;
-        case 'regional_approved':
-          // Regional approved - different behavior based on jenis_pengajuan
-          if (claim.jenis_pengajuan === 'klaim') {
-            // Klaim: Auto-activate and go to dashboard
-            navigate('/user', { replace: true });
-          } else {
-            // Pesantren Baru: Go to payment page
-            navigate('/payment', { replace: true });
-          }
-          break;
-        case 'pending':
-          // Still in verification - go to pending page
-          navigate('/verification-pending', { replace: true });
-          break;
-        case 'rejected':
-          // Claim rejected - redirect to account-rejected page
-          navigate('/account-rejected', { replace: true });
-          break;
-        default:
-          navigate('/check-institution', { replace: true });
-      }
-    } catch (error) {
-      console.error('Error in claim check:', error);
-      navigate('/check-institution', { replace: true });
-    } finally {
-      setIsCheckingClaim(false);
-    }
-  };
+  const { user, profile, isLoading: authLoading, setAuthToken, refreshAuth } = useAuth();
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001";
 
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && user && profile) {
-      checkClaimAndRedirect(user.id, profile.role);
+      redirectToDashboard(profile.role);
     }
   }, [user, profile, authLoading]);
 
@@ -143,7 +68,7 @@ const Login = () => {
         break;
       case 'user':
       default:
-        navigate('/user', { replace: true });
+        navigate('/check-institution', { replace: true });
         break;
     }
   };
@@ -181,39 +106,32 @@ const Login = () => {
     
     try {
       const email = formatIdentifier(formData.identifier);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: formData.password,
+
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password: formData.password,
+        }),
       });
 
-      if (error) {
-        let errorMessage = "Terjadi kesalahan";
-        
-        if (error.message === "Invalid login credentials") {
-          errorMessage = "Email/No WA atau password salah";
-        } else if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Email belum dikonfirmasi";
-        } else {
-          errorMessage = error.message;
-        }
-        
+      if (!response.ok) {
         toast({
           title: "Login Gagal",
-          description: errorMessage,
+          description: "Email/No WA atau password salah",
           variant: "destructive",
         });
         setIsLoading(false);
         return;
       }
 
-      if (data.user) {
-        toast({
-          title: "Login Berhasil!",
-          description: "Memeriksa status akun...",
-        });
-        // Auth context will update and useEffect will trigger checkClaimAndRedirect
-      }
+      const data = await response.json();
+      setAuthToken(data.token);
+      await refreshAuth();
+      redirectToDashboard(data.user.role);
     } catch (error) {
       toast({
         title: "Terjadi Kesalahan",
@@ -226,14 +144,12 @@ const Login = () => {
   };
 
   // Show loading if auth is initializing or checking claim
-  if (authLoading || isCheckingClaim) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">
-            {isCheckingClaim ? "Memeriksa status kepemilikan..." : "Memuat..."}
-          </p>
+          <p className="text-muted-foreground">Memuat...</p>
         </div>
       </div>
     );

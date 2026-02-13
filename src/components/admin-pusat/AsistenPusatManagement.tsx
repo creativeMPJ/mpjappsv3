@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { logAuditEntry } from "@/lib/audit-log";
 import { cn } from "@/lib/utils";
 import { MOCK_CREWS } from "@/lib/debug-mock-data";
@@ -135,76 +135,11 @@ const AsistenPusatManagement = ({ isDebugMode = false }: AsistenPusatManagementP
       }
 
       try {
-        // Fetch all crews (no region filter for Pusat)
-        const { data: crewsData, error: crewsError } = await supabase
-          .from('crews')
-          .select(`
-            id,
-            nama,
-            niam,
-            profile_id,
-            profiles!inner(
-              region_id,
-              nama_pesantren,
-              regions(name)
-            )
-          `);
-
-        if (crewsError) {
-          console.error('Error fetching crews:', crewsError);
-        } else if (crewsData) {
-          // Transform to crew options
-          const crewOptions: CrewOption[] = crewsData.map((c: any) => ({
-            id: c.id,
-            nama: c.nama,
-            niam: c.niam,
-            pesantren_name: c.profiles?.nama_pesantren || '-',
-            region_name: c.profiles?.regions?.name || '-',
-            profile_id: c.profile_id,
-          }));
-          setAvailableCrews(crewOptions);
-        }
-
-        // Fetch existing pusat assistants from user_roles
-        const { data: rolesData } = await supabase
-          .from("user_roles")
-          .select("user_id, role, created_at")
-          .eq("role", "admin_pusat");
-
-        if (rolesData && rolesData.length > 0) {
-          const assistantPromises = rolesData.map(async (roleData) => {
-            const { data: crewData } = await supabase
-              .from("crews")
-              .select(`
-                id,
-                nama,
-                niam,
-                profile_id,
-                profiles!crews_profile_id_fkey (nama_pesantren, regions!profiles_region_id_fkey (name))
-              `)
-              .eq("profile_id", roleData.user_id)
-              .limit(1)
-              .single();
-
-            if (crewData) {
-              return {
-                id: crewData.id,
-                crew_id: crewData.id,
-                nama: crewData.nama,
-                email: '',
-                niam: crewData.niam,
-                pesantren_name: (crewData.profiles as any)?.nama_pesantren || '-',
-                region_name: (crewData.profiles as any)?.regions?.name || '-',
-                appointed_at: roleData.created_at || new Date().toISOString(),
-                appointed_by: 'Admin Pusat',
-              };
-            }
-            return null;
-          });
-
-          const fetchedAssistants = (await Promise.all(assistantPromises)).filter(Boolean) as PusatAssistant[];
-          setAssistants(fetchedAssistants);
-        }
+        const data = await apiRequest<{ assistants: PusatAssistant[]; available_crews: CrewOption[] }>(
+          "/api/admin/pusat-assistants"
+        );
+        setAssistants(data.assistants || []);
+        setAvailableCrews(data.available_crews || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -230,17 +165,12 @@ const AsistenPusatManagement = ({ isDebugMode = false }: AsistenPusatManagementP
 
     try {
       if (!isDebugMode) {
-        // Real database operation
-        const { error } = await supabase
-          .from("user_roles")
-          .upsert({
-            user_id: selectedCrew.profile_id,
-            role: "admin_pusat",
-          }, {
-            onConflict: "user_id"
-          });
-
-        if (error) throw error;
+        await apiRequest("/api/admin/pusat-assistants", {
+          method: "POST",
+          body: JSON.stringify({
+            crewId: selectedCrew.id,
+          }),
+        });
       }
 
       const newAssistant: PusatAssistant = {
@@ -297,22 +227,9 @@ const AsistenPusatManagement = ({ isDebugMode = false }: AsistenPusatManagementP
 
     try {
       if (!isDebugMode) {
-        // Find profile_id from crew
-        const { data: crewData } = await supabase
-          .from("crews")
-          .select("profile_id")
-          .eq("id", selectedAssistant.crew_id)
-          .single();
-
-        if (crewData) {
-          // Demote to regular user
-          const { error } = await supabase
-            .from("user_roles")
-            .update({ role: "user" })
-            .eq("user_id", crewData.profile_id);
-
-          if (error) throw error;
-        }
+        await apiRequest(`/api/admin/pusat-assistants/${selectedAssistant.crew_id}`, {
+          method: "DELETE",
+        });
       }
 
       // Return crew to available list

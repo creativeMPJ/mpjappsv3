@@ -17,15 +17,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import RegionalDashboardHome from "@/components/regional-dashboard/RegionalDashboardHome";
 import ValidasiPendaftar from "@/components/regional-dashboard/ValidasiPendaftar";
 import ManajemenEvent from "@/components/regional-dashboard/ManajemenEvent";
 import DataMasterRegional from "@/components/regional-dashboard/DataMasterRegional";
 import RegionalHub from "@/components/regional-dashboard/RegionalHub";
 import Pengaturan from "@/components/regional-dashboard/Pengaturan";
+import AsistenRegionalManagement from "@/components/regional-dashboard/AsistenRegionalManagement";
 
-type ViewType = "beranda" | "verifikasi" | "data-regional" | "event" | "regional-hub" | "militansi" | "pengaturan";
+type ViewType = "beranda" | "verifikasi" | "data-regional" | "event" | "regional-hub" | "asisten" | "pengaturan";
 
 interface MenuItem {
   id: ViewType;
@@ -54,21 +55,20 @@ const RegionalDashboard = () => {
   // Fetch pending claims count
   useEffect(() => {
     const fetchPendingCount = async () => {
-      if (!profile?.region_id) return;
-      
-      const { count, error } = await supabase
-        .from('pesantren_claims')
-        .select('*', { count: 'exact', head: true })
-        .eq('region_id', profile.region_id)
-        .eq('status', 'pending');
-      
-      if (!error && count !== null) {
-        setPendingCount(count);
+      if (!profile?.region_id || isDebugMode) return;
+
+      try {
+        const data = await apiRequest<{ count?: number }>("/api/claims/pending-count");
+        if (typeof data?.count === "number") {
+          setPendingCount(data.count);
+        }
+      } catch (error) {
+        console.error("Failed to fetch pending count:", error);
       }
     };
 
     fetchPendingCount();
-  }, [profile?.region_id]);
+  }, [profile?.region_id, isDebugMode]);
 
   // Dynamic menu items with real pending count - Strict Order
   const menuItems: MenuItem[] = [
@@ -77,7 +77,7 @@ const RegionalDashboard = () => {
     { id: "data-regional", label: "DATA REGIONAL", icon: Database },
     { id: "event", label: "EVENT", icon: Calendar, comingSoon: true },
     { id: "regional-hub", label: "REGIONAL HUB", icon: Share2, comingSoon: true },
-    { id: "militansi", label: "MILITANSI", icon: Trophy, comingSoon: true },
+    { id: "asisten", label: "ASISTEN", icon: Trophy },
     { id: "pengaturan", label: "PENGATURAN", icon: Settings },
   ];
 
@@ -124,8 +124,8 @@ const RegionalDashboard = () => {
         return <ComingSoonPlaceholder title="Event" />;
       case "regional-hub":
         return <ComingSoonPlaceholder title="Regional Hub" />;
-      case "militansi":
-        return <ComingSoonPlaceholder title="Militansi & Leaderboard" />;
+      case "asisten":
+        return <AsistenRegionalManagement isDebugMode={isDebugMode} />;
       case "pengaturan":
         return <Pengaturan isDebugMode={isDebugMode} />;
       default:

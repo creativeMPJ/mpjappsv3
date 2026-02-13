@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import logoMpj from "@/assets/logo-mpj.png";
 import UserManagement from "@/components/super-admin/UserManagement";
 import MajelisOverview from "@/components/majelis-dashboard/MajelisOverview";
@@ -72,30 +72,21 @@ const SuperAdminDashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
-      // Fetch total users
-      const { count: totalUsers } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
+      try {
+        const data = await apiRequest<{
+          total_users: number;
+          total_pesantren: number;
+          estimated_revenue: number;
+        }>("/api/admin/super-stats");
 
-      // Fetch total pesantren (users with nama_pesantren)
-      const { count: totalPesantren } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .not("nama_pesantren", "is", null);
-
-      // Fetch paid users for revenue estimate (dummy calc)
-      const { count: paidUsers } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("status_payment", "paid");
-
-      const revenue = (paidUsers || 0) * 350000; // Rp 350k per user
-
-      setStats([
-        { title: 'Total Users', value: String(totalUsers || 0), icon: Users, color: 'text-blue-500' },
-        { title: 'Total Pesantren', value: String(totalPesantren || 0), icon: Building2, color: 'text-emerald-500' },
-        { title: 'Total Revenue', value: `Rp ${(revenue / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-amber-500' },
-      ]);
+        setStats([
+          { title: 'Total Users', value: String(data.total_users || 0), icon: Users, color: 'text-blue-500' },
+          { title: 'Total Pesantren', value: String(data.total_pesantren || 0), icon: Building2, color: 'text-emerald-500' },
+          { title: 'Total Revenue', value: `Rp ${((data.estimated_revenue || 0) / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-amber-500' },
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch super admin stats:", error);
+      }
     };
 
     fetchStats();

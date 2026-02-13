@@ -20,11 +20,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = "user" | "admin_regional" | "admin_pusat" | "admin_finance";
 
 interface DebugData {
   pesantren?: unknown[];
@@ -94,31 +93,14 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
 
   const fetchData = async () => {
     try {
-      // Fetch regions
-      const { data: regionsData } = await supabase
-        .from("regions")
-        .select("id, name, code")
-        .order("name", { ascending: true });
-
-      // Fetch cities
-      const { data: citiesData } = await supabase
-        .from("cities")
-        .select("id, name, region_id")
-        .order("name", { ascending: true });
-
-      // Fetch users with roles
-      const { data: userData } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          nama_pesantren,
-          nama_pengasuh,
-          region_id,
-          role,
-          status_account,
-          regions!profiles_region_id_fkey (name)
-        `)
-        .order("nama_pesantren", { ascending: true });
+      const data = await apiRequest<{
+        regions: Region[];
+        cities: City[];
+        users: UserData[];
+      }>("/api/admin/regional-management/data");
+      const regionsData = data.regions || [];
+      const citiesData = data.cities || [];
+      const userData = data.users || [];
 
       if (regionsData) {
         setRegions(regionsData);
@@ -130,7 +112,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
         });
 
         const adminCountMap: Record<string, number> = {};
-        userData?.forEach((user: any) => {
+        userData?.forEach((user) => {
           if (user.role === "admin_regional" && user.region_id) {
             adminCountMap[user.region_id] = (adminCountMap[user.region_id] || 0) + 1;
           }
@@ -150,17 +132,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       }
 
       if (userData) {
-        setUserList(
-          userData.map((item: any) => ({
-            id: item.id,
-            nama_pesantren: item.nama_pesantren,
-            nama_pengasuh: item.nama_pengasuh,
-            region_id: item.region_id,
-            region_name: item.regions?.name || null,
-            role: item.role,
-            status_account: item.status_account,
-          }))
-        );
+        setUserList(userData);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -292,13 +264,14 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("regions")
-        .insert({ name: newRegionName.trim(), code: newRegionCode.trim() })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const result = await apiRequest<{ region: Region }>("/api/admin/regional-management/regions", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newRegionName.trim(),
+          code: newRegionCode.trim(),
+        }),
+      });
+      const data = result.region;
 
       setRegions(prev => [...prev, data]);
       setRegionsWithStats(prev => [...prev, { ...data, city_count: 0, admin_count: 0 }]);
@@ -347,12 +320,9 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
     }
 
     try {
-      const { error } = await supabase
-        .from("regions")
-        .delete()
-        .eq("id", region.id);
-
-      if (error) throw error;
+      await apiRequest(`/api/admin/regional-management/regions/${region.id}`, {
+        method: "DELETE",
+      });
 
       setRegions(prev => prev.filter(r => r.id !== region.id));
       setRegionsWithStats(prev => prev.filter(r => r.id !== region.id));
@@ -421,13 +391,14 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("cities")
-        .insert({ name: newCityName.trim(), region_id: selectedRegion.id })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const result = await apiRequest<{ city: City }>("/api/admin/regional-management/cities", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newCityName.trim(),
+          regionId: selectedRegion.id,
+        }),
+      });
+      const data = result.city;
 
       setCities(prev => [...prev, data]);
       setRegionsWithStats(prev => prev.map(r => 
@@ -500,12 +471,9 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
     }
 
     try {
-      const { error } = await supabase
-        .from("cities")
-        .delete()
-        .eq("id", city.id);
-
-      if (error) throw error;
+      await apiRequest(`/api/admin/regional-management/cities/${city.id}`, {
+        method: "DELETE",
+      });
 
       setCities(prev => prev.filter(c => c.id !== city.id));
       setRegionsWithStats(prev => prev.map(r => 
@@ -593,31 +561,13 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
 
     setIsSaving(true);
     try {
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .upsert({
-          user_id: selectedUser.id,
-          role: "admin_regional" as AppRole,
-        }, {
-          onConflict: "user_id"
-        });
-
-      if (roleError) throw roleError;
-
-      const { error: profileError } = await supabase.rpc("migrate_legacy_account", {
-        p_user_id: selectedUser.id,
-        p_city_id: null as any,
-        p_region_id: selectedRegionForAssign,
-        p_nama_pesantren: selectedUser.nama_pesantren || "",
-        p_nama_pengasuh: selectedUser.nama_pengasuh || "",
-        p_alamat_singkat: "",
-        p_no_wa_pendaftar: "",
-        p_status_account: selectedUser.status_account as any,
+      await apiRequest<{ success: boolean }>("/api/admin/regional-management/assign-admin", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          regionId: selectedRegionForAssign,
+        }),
       });
-
-      if (profileError) {
-        console.error("Profile update error:", profileError);
-      }
 
       setUserList(prev => prev.map(u => 
         u.id === selectedUser.id 

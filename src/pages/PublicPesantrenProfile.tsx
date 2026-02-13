@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,57 +65,16 @@ const PublicPesantrenProfile = () => {
       }
 
       try {
-        // Clean NIP format (remove dots if any)
         const cleanNip = nip.replace(/\./g, '');
+        const data = await apiRequest<{ pesantren: PesantrenData; crews: CrewData[] }>(
+          `/api/public/pesantren/${cleanNip}/profile`
+        );
 
-        // Fetch pesantren profile by NIP
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            nama_pesantren,
-            nama_pengasuh,
-            nama_media,
-            logo_url,
-            nip,
-            profile_level,
-            region_id,
-            status_account,
-            social_links,
-            regions:region_id (name)
-          `)
-          .eq('nip', cleanNip)
-          .eq('status_account', 'active')
-          .single();
-
-        if (profileError || !profileData) {
-          setNotFound(true);
-          setLoading(false);
-          return;
-        }
-
-        // Transform data - handle nested region object
-        const transformedData: PesantrenData = {
-          ...profileData,
-          social_links: profileData.social_links as Record<string, string> | null,
-          region: Array.isArray(profileData.regions) 
-            ? profileData.regions[0] 
-            : profileData.regions as { name: string } | undefined
-        };
-
-        setPesantren(transformedData);
-
-        // Fetch crews with NIAM for this pesantren
-        const { data: crewsData, error: crewsError } = await supabase
-          .from('crews')
-          .select('id, nama, niam, jabatan')
-          .eq('profile_id', profileData.id)
-          .not('niam', 'is', null)
-          .order('niam', { ascending: true });
-
-        if (!crewsError && crewsData) {
-          setCrews(crewsData);
-        }
+        setPesantren({
+          ...data.pesantren,
+          social_links: data.pesantren.social_links as Record<string, string> | null,
+        });
+        setCrews(data.crews || []);
 
         setLoading(false);
       } catch (error) {

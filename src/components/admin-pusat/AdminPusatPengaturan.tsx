@@ -12,12 +12,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import { apiRequest } from "@/lib/api-client";
 import { formatNIAM } from "@/lib/id-utils";
 import AsistenPusatManagement from "./AsistenPusatManagement";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type AppRole = "user" | "admin_regional" | "admin_pusat" | "admin_finance";
 
 interface AdminUser {
   id: string;
@@ -82,57 +81,9 @@ const AdminPusatPengaturan = ({ isDebugMode = false }: AdminPusatPengaturanProps
 
   const fetchData = async () => {
     try {
-      // Fetch all admins by joining user_roles with crews
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("role", ["admin_pusat", "admin_regional", "admin_finance"]);
-
-      if (rolesData && rolesData.length > 0) {
-        // Get crew info for each admin
-        const adminPromises = rolesData.map(async (roleData) => {
-          const { data: crewData } = await supabase
-            .from("crews")
-            .select(`
-              id,
-              nama,
-              niam,
-              jabatan,
-              profile_id,
-              profiles!crews_profile_id_fkey (region_id, regions!profiles_region_id_fkey (name))
-            `)
-            .eq("profile_id", roleData.user_id)
-            .limit(1)
-            .single();
-
-          if (crewData) {
-            return {
-              id: crewData.id,
-              user_id: roleData.user_id,
-              nama: crewData.nama,
-              niam: crewData.niam,
-              jabatan: crewData.jabatan,
-              region_id: (crewData.profiles as any)?.region_id || null,
-              region_name: (crewData.profiles as any)?.regions?.name || null,
-              role: roleData.role,
-            };
-          }
-          return null;
-        });
-
-        const admins = (await Promise.all(adminPromises)).filter(Boolean) as AdminUser[];
-        setAdminList(admins);
-      }
-
-      // Fetch all regions
-      const { data: regionsData } = await supabase
-        .from("regions")
-        .select("id, name")
-        .order("name", { ascending: true });
-
-      if (regionsData) {
-        setRegions(regionsData);
-      }
+      const data = await apiRequest<{ admins: AdminUser[]; regions: Region[] }>("/api/admin/admin-settings/data");
+      setAdminList(data.admins || []);
+      setRegions(data.regions || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -181,38 +132,12 @@ const AdminPusatPengaturan = ({ isDebugMode = false }: AdminPusatPengaturanProps
 
     setIsSearchingCrew(true);
     try {
-      const { data } = await supabase
-        .from("crews")
-        .select(`
-          id,
-          profile_id,
-          nama,
-          niam,
-          jabatan,
-          profiles!crews_profile_id_fkey (nama_pesantren, region_id, regions!profiles_region_id_fkey (name))
-        `)
-        .ilike("nama", `%${query}%`)
-        .limit(10);
-
-      if (data) {
-        // Filter out already assigned admins
-        const existingAdminUserIds = adminList.map(a => a.user_id);
-        const filtered = data.filter(c => !existingAdminUserIds.includes(c.profile_id));
-        
-        // Get emails from profiles (we can't access auth.users directly via client)
-        // For now, we'll show profile_id as reference, email will be shown as "Terhubung"
-        setCrewOptions(filtered.map((item: any) => ({
-          id: item.id,
-          profile_id: item.profile_id,
-          nama: item.nama,
-          niam: item.niam,
-          jabatan: item.jabatan,
-          pesantren_name: item.profiles?.nama_pesantren || null,
-          region_id: item.profiles?.region_id || null,
-          region_name: item.profiles?.regions?.name || null,
-          email: null, // Will be populated on selection if needed
-        })));
-      }
+      const data = await apiRequest<{ crews: CrewOption[] }>(
+        `/api/admin/admin-settings/search-crew?query=${encodeURIComponent(query)}`
+      );
+      const existingAdminUserIds = adminList.map((a) => a.user_id);
+      const filtered = (data.crews || []).filter((c) => !existingAdminUserIds.includes(c.profile_id));
+      setCrewOptions(filtered);
     } catch (error) {
       console.error("Error searching crew:", error);
     } finally {
@@ -238,37 +163,14 @@ const AdminPusatPengaturan = ({ isDebugMode = false }: AdminPusatPengaturanProps
 
     setIsSaving(true);
     try {
-      // For admin_regional, check and replace existing admin in the region
-      if (selectedRole === "admin_regional") {
-        const existingAdmin = getExistingRegionalAdmin(selectedRegion);
-        if (existingAdmin && existingAdmin.user_id !== selectedCrew.profile_id) {
-          // Demote existing admin to user
-          await supabase
-            .from("user_roles")
-            .update({ role: "user" })
-            .eq("user_id", existingAdmin.user_id);
-        }
-      }
-
-      // Upsert to user_roles table
-      const { error } = await supabase
-        .from("user_roles")
-        .upsert({
-          user_id: selectedCrew.profile_id,
+      await apiRequest("/api/admin/admin-settings/assign", {
+        method: "POST",
+        body: JSON.stringify({
+          profileId: selectedCrew.profile_id,
           role: selectedRole,
-        }, {
-          onConflict: "user_id"
-        });
-
-      if (error) throw error;
-
-      // Update profile region if admin_regional
-      if (selectedRole === "admin_regional") {
-        await supabase
-          .from("profiles")
-          .update({ region_id: selectedRegion })
-          .eq("id", selectedCrew.profile_id);
-      }
+          regionId: selectedRole === "admin_regional" ? selectedRegion : null,
+        }),
+      });
 
       const roleName = selectedRole === 'admin_pusat' 
         ? 'Admin Pusat' 
@@ -299,13 +201,7 @@ const AdminPusatPengaturan = ({ isDebugMode = false }: AdminPusatPengaturanProps
 
     setIsSaving(true);
     try {
-      // Demote to regular user
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ role: "user" })
-        .eq("user_id", deleteTarget.user_id);
-
-      if (error) throw error;
+      await apiRequest(`/api/admin/admin-settings/${deleteTarget.user_id}`, { method: "DELETE" });
 
       toast({
         title: "Berhasil",

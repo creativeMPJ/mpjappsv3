@@ -43,13 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-interface PriceSetting {
-  key: string;
-  value: string;
-  description: string;
-}
+import { apiRequest } from "@/lib/api-client";
 
 interface PaymentRecord {
   id: string;
@@ -100,20 +94,9 @@ const AdminPusatKeuangan = () => {
   const fetchPriceSettings = async () => {
     setIsLoadingPrices(true);
     try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('key, value, description')
-        .in('key', ['registration_base_price', 'claim_base_price']);
-
-      if (error) throw error;
-
-      data?.forEach((setting: PriceSetting) => {
-        if (setting.key === 'registration_base_price') {
-          setRegistrationPrice(setting.value.toString());
-        } else if (setting.key === 'claim_base_price') {
-          setClaimPrice(setting.value.toString());
-        }
-      });
+      const data = await apiRequest<{ registrationPrice: number; claimPrice: number }>('/api/admin/price-settings');
+      setRegistrationPrice(String(data.registrationPrice ?? 50000));
+      setClaimPrice(String(data.claimPrice ?? 20000));
     } catch (error) {
       console.error('Error fetching prices:', error);
       toast({
@@ -129,22 +112,8 @@ const AdminPusatKeuangan = () => {
   const fetchPayments = async () => {
     setIsLoadingPayments(true);
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          pesantren_claims (
-            pesantren_name,
-            nama_pengelola,
-            jenis_pengajuan,
-            region_id,
-            mpj_id_number
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPayments(data || []);
+      const data = await apiRequest<{ payments: PaymentRecord[] }>('/api/admin/payments');
+      setPayments(data.payments || []);
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast({
@@ -160,21 +129,13 @@ const AdminPusatKeuangan = () => {
   const handleSavePrices = async () => {
     setIsSavingPrices(true);
     try {
-      // Update registration price
-      const { error: regError } = await supabase
-        .from('system_settings')
-        .update({ value: registrationPrice })
-        .eq('key', 'registration_base_price');
-
-      if (regError) throw regError;
-
-      // Update claim price
-      const { error: claimError } = await supabase
-        .from('system_settings')
-        .update({ value: claimPrice })
-        .eq('key', 'claim_base_price');
-
-      if (claimError) throw claimError;
+      await apiRequest('/api/admin/price-settings', {
+        method: 'POST',
+        body: JSON.stringify({
+          registrationPrice: parseInt(registrationPrice, 10),
+          claimPrice: parseInt(claimPrice, 10),
+        }),
+      });
 
       toast({
         title: "Berhasil",
@@ -198,15 +159,7 @@ const AdminPusatKeuangan = () => {
     setSelectedPayment(payment);
     setProofSignedUrl(null);
     setProofModalOpen(true);
-
-    if (payment.proof_file_url) {
-      const { data, error } = await supabase.storage
-        .from('payment-proofs')
-        .createSignedUrl(payment.proof_file_url, 3600);
-      if (!error && data?.signedUrl) {
-        setProofSignedUrl(data.signedUrl);
-      }
-    }
+    setProofSignedUrl(payment.proof_file_url || null);
   };
 
   const getProofUrl = (path: string | null): string | null => {
@@ -218,83 +171,11 @@ const AdminPusatKeuangan = () => {
     
     setIsProcessing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const regionId = selectedPayment.pesantren_claims?.region_id;
-
-      if (!regionId) {
-        throw new Error('Region ID tidak ditemukan pada claim ini');
-      }
-
-      // Check if region has valid 2-digit code
-      const { data: regionData, error: regionError } = await supabase
-        .from('regions')
-        .select('code, name')
-        .eq('id', regionId)
-        .single();
-
-      if (regionError || !regionData) {
-        throw new Error('Region tidak ditemukan');
-      }
-
-      if (!/^[0-9]{2}$/.test(regionData.code)) {
-        toast({
-          title: "Kode RR Belum Valid",
-          description: `Regional "${regionData.name}" belum memiliki kode RR 2 digit. Silakan set kode terlebih dahulu di menu Master Data > Wilayah.`,
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      // Generate NIP using the database function
-      const { data: nipData, error: nipError } = await supabase
-        .rpc('generate_nip', {
-          p_claim_id: selectedPayment.pesantren_claim_id,
-          p_region_id: regionId
-        });
-
-      if (nipError) {
-        console.error('NIP generation error:', nipError);
-        throw new Error(nipError.message || 'Gagal generate NIP');
-      }
-
-      const generatedNIP = nipData;
-      
-      // Update payment status
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .update({
-          status: 'verified',
-          verified_by: user?.id,
-          verified_at: new Date().toISOString(),
-        })
-        .eq('id', selectedPayment.id);
-
-      if (paymentError) throw paymentError;
-
-      // Update pesantren_claims status to approved (NIP already set by function)
-      const { error: claimError } = await supabase
-        .from('pesantren_claims')
-        .update({ 
-          status: 'approved',
-          approved_by: user?.id,
-          approved_at: new Date().toISOString()
-        })
-        .eq('id', selectedPayment.pesantren_claim_id);
-
-      if (claimError) throw claimError;
-
-      // Update profile status
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          status_account: 'active',
-          status_payment: 'paid',
-          nip: generatedNIP, // Also store NIP in profile for quick access
-        })
-        .eq('id', selectedPayment.user_id);
-
-      if (profileError) throw profileError;
+      const result = await apiRequest<{ nip: string }>(
+        `/api/admin/payments/${selectedPayment.id}/approve`,
+        { method: 'POST' }
+      );
+      const generatedNIP = result.nip;
 
       toast({
         title: "Pembayaran Diverifikasi",
@@ -328,15 +209,10 @@ const AdminPusatKeuangan = () => {
     
     setIsProcessing(true);
     try {
-      const { error } = await supabase
-        .from('payments')
-        .update({
-          status: 'rejected',
-          rejection_reason: rejectionReason,
-        })
-        .eq('id', selectedPayment.id);
-
-      if (error) throw error;
+      await apiRequest(`/api/admin/payments/${selectedPayment.id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
 
       toast({
         title: "Pembayaran Ditolak",

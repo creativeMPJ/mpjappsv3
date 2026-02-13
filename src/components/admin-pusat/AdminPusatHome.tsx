@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Building2, Users, MapPin, Clock, DollarSign, Percent, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { formatNIP } from "@/lib/id-utils";
 
 type ViewType = 
@@ -115,87 +115,21 @@ const AdminPusatHome = ({ onNavigate, isDebugMode, debugData }: Props) => {
 
     const fetchData = async () => {
       try {
-        // Fetch total pesantren (active users)
-        const { count: pesantrenCount } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact", head: true })
-          .eq("status_account", "active");
+        const data = await apiRequest<{
+          stats: {
+            totalPesantren: number;
+            totalKru: number;
+            totalWilayah: number;
+            pendingPayments: number;
+            totalIncome: number;
+          };
+          levelStats: LevelStats;
+          recentUsers: RecentUser[];
+        }>("/api/admin/home-summary");
 
-        // Fetch total crews
-        const { count: crewCount } = await supabase
-          .from("crews")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch total regions
-        const { count: regionCount } = await supabase
-          .from("regions")
-          .select("*", { count: "exact", head: true });
-
-        // Fetch pending payments
-        const { count: pendingPaymentCount } = await supabase
-          .from("payments")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "pending_verification");
-
-        // Fetch total verified payments for income
-        const { data: verifiedPayments } = await supabase
-          .from("payments")
-          .select("total_amount")
-          .eq("status", "verified");
-
-        const totalIncome = verifiedPayments?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
-
-        // Fetch level distribution
-        const { data: levelData } = await supabase
-          .from("profiles")
-          .select("profile_level")
-          .eq("status_account", "active");
-
-        const levels: LevelStats = { basic: 0, silver: 0, gold: 0, platinum: 0 };
-        levelData?.forEach((p: any) => {
-          if (p.profile_level in levels) {
-            levels[p.profile_level as keyof LevelStats]++;
-          }
-        });
-
-        // Fetch recent registrations with more data
-        const { data: recentData } = await supabase
-          .from("profiles")
-          .select(`
-            id,
-            nama_pesantren,
-            nip,
-            status_account,
-            profile_level,
-            created_at,
-            regions!profiles_region_id_fkey (name)
-          `)
-          .order("created_at", { ascending: false })
-          .limit(8);
-
-        setStats({
-          totalPesantren: pesantrenCount || 0,
-          totalKru: crewCount || 0,
-          totalWilayah: regionCount || 0,
-          pendingPayments: pendingPaymentCount || 0,
-          totalIncome,
-        });
-
-        setLevelStats(levels);
-
-        if (recentData) {
-          setRecentUsers(
-            recentData.map((item: any) => ({
-              id: item.id,
-              nama_pesantren: item.nama_pesantren,
-              nip: item.nip,
-              region_name: item.regions?.name || "-",
-              status_account: item.status_account,
-              profile_level: item.profile_level,
-              created_at: item.created_at,
-            }))
-          );
-        }
+        setStats(data.stats);
+        setLevelStats(data.levelStats);
+        setRecentUsers(data.recentUsers || []);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {

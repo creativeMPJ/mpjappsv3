@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Save, Loader2, Building2, CreditCard, DollarSign } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 
 const SuperAdminSettings = () => {
@@ -29,42 +29,19 @@ const SuperAdminSettings = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('key, value')
-        .in('key', [
-          'bank_name', 
-          'bank_account_number', 
-          'bank_account_name',
-          'registration_base_price',
-          'claim_base_price'
-        ]);
 
-      if (error) throw error;
+      const [bankSettings, priceSettings] = await Promise.all([
+        apiRequest<{ bankName: string; bankAccountNumber: string; bankAccountName: string }>(
+          "/api/admin/bank-settings"
+        ),
+        apiRequest<{ registrationPrice: number; claimPrice: number }>("/api/admin/price-settings"),
+      ]);
 
-      if (data) {
-        data.forEach(setting => {
-          const value = String(setting.value).replace(/"/g, '');
-          switch (setting.key) {
-            case 'bank_name':
-              setBankName(value);
-              break;
-            case 'bank_account_number':
-              setBankAccountNumber(value);
-              break;
-            case 'bank_account_name':
-              setBankAccountName(value);
-              break;
-            case 'registration_base_price':
-              setRegistrationPrice(value);
-              break;
-            case 'claim_base_price':
-              setClaimPrice(value);
-              break;
-          }
-        });
-      }
+      setBankName(bankSettings.bankName || "");
+      setBankAccountNumber(bankSettings.bankAccountNumber || "");
+      setBankAccountName(bankSettings.bankAccountName || "");
+      setRegistrationPrice(String(priceSettings.registrationPrice ?? ""));
+      setClaimPrice(String(priceSettings.claimPrice ?? ""));
     } catch (error: any) {
       console.error('Error fetching settings:', error);
       toast({
@@ -80,24 +57,14 @@ const SuperAdminSettings = () => {
   const handleSaveBankSettings = async () => {
     setSaving(true);
     try {
-      const updates = [
-        { key: 'bank_name', value: JSON.stringify(bankName), description: 'Nama bank untuk pembayaran' },
-        { key: 'bank_account_number', value: JSON.stringify(bankAccountNumber), description: 'Nomor rekening bank untuk pembayaran' },
-        { key: 'bank_account_name', value: JSON.stringify(bankAccountName), description: 'Nama pemilik rekening bank' },
-      ];
-
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('system_settings')
-          .upsert({ 
-            key: update.key, 
-            value: update.value,
-            description: update.description,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
-
-        if (error) throw error;
-      }
+      await apiRequest("/api/admin/bank-settings", {
+        method: "POST",
+        body: JSON.stringify({
+          bankName,
+          bankAccountNumber,
+          bankAccountName,
+        }),
+      });
 
       toast({
         title: "Berhasil",
@@ -118,23 +85,13 @@ const SuperAdminSettings = () => {
   const handleSavePriceSettings = async () => {
     setSaving(true);
     try {
-      const updates = [
-        { key: 'registration_base_price', value: registrationPrice, description: 'Harga dasar pendaftaran pesantren baru' },
-        { key: 'claim_base_price', value: claimPrice, description: 'Harga dasar klaim akun legacy' },
-      ];
-
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('system_settings')
-          .upsert({ 
-            key: update.key, 
-            value: update.value,
-            description: update.description,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'key' });
-
-        if (error) throw error;
-      }
+      await apiRequest("/api/admin/price-settings", {
+        method: "POST",
+        body: JSON.stringify({
+          registrationPrice: Number(registrationPrice || 0),
+          claimPrice: Number(claimPrice || 0),
+        }),
+      });
 
       toast({
         title: "Berhasil",

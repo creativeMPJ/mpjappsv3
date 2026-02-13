@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Copy, Check, ArrowRight, ArrowLeft, Building2, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const MAX_FILE_SIZE = 350 * 1024; // 350KB - Global limit
@@ -56,136 +56,32 @@ const Payment = () => {
       setIsCheckingAccess(true);
       
       try {
-        // 1. Check pesantren_claims status
-        const { data: claim, error: claimError } = await supabase
-          .from('pesantren_claims')
-          .select('id, pesantren_name, jenis_pengajuan, status')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const data = await apiRequest<any>('/api/payments/current');
 
-        if (claimError) throw claimError;
-
-        if (!claim) {
-          setAccessDeniedReason("Anda belum mendaftarkan pesantren.");
-          setIsCheckingAccess(false);
+        if (data.redirectTo) {
+          navigate(data.redirectTo, { replace: true });
           return;
         }
 
-        // Check claim status
-        if (claim.status === 'pending') {
-          setAccessDeniedReason("Menunggu verifikasi dari Admin Wilayah. Silakan tunggu proses validasi dokumen Anda.");
-          setIsCheckingAccess(false);
+        if (data.accessDeniedReason) {
+          setAccessDeniedReason(data.accessDeniedReason);
           return;
         }
 
-        if (claim.status === 'rejected') {
-          setAccessDeniedReason("Pengajuan Anda ditolak oleh Admin Wilayah. Silakan hubungi admin untuk informasi lebih lanjut.");
-          setIsCheckingAccess(false);
-          return;
+        if (data.claim) setClaimData(data.claim);
+        if (data.payment) {
+          setPaymentId(data.payment.id);
+          setBaseAmount(data.payment.baseAmount);
+          setUniqueCode(data.payment.uniqueCode);
+          setTotalAmount(data.payment.totalAmount);
         }
-
-        if (claim.status === 'approved' || claim.status === 'pusat_approved') {
-          // Already activated, redirect to dashboard
-          navigate('/user', { replace: true });
-          return;
-        }
-
-        // Only regional_approved can access payment
-        if (claim.status !== 'regional_approved') {
-          setAccessDeniedReason("Status pengajuan tidak valid untuk pembayaran.");
-          setIsCheckingAccess(false);
-          return;
-        }
-
-        setClaimData(claim);
-
-        // 2. Get base price from system_settings based on jenis_pengajuan
-        const priceKey = claim.jenis_pengajuan === 'klaim' 
-          ? 'claim_base_price' 
-          : 'registration_base_price';
-
-        const { data: priceSetting, error: priceError } = await supabase
-          .from('system_settings')
-          .select('value')
-          .eq('key', priceKey)
-          .single();
-
-        if (priceError) throw priceError;
-
-        const fetchedBaseAmount = parseInt(String(priceSetting.value).replace(/"/g, '')) || 50000;
-        setBaseAmount(fetchedBaseAmount);
-
-        // Fetch bank info from system_settings
-        const { data: bankSettings } = await supabase
-          .from('system_settings')
-          .select('key, value')
-          .in('key', ['bank_name', 'bank_account_number', 'bank_account_name']);
-
-        if (bankSettings && bankSettings.length > 0) {
-          const bankData: Record<string, string> = {};
-          bankSettings.forEach(setting => {
-            bankData[setting.key] = String(setting.value).replace(/"/g, '');
-          });
-          
+        if (data.bankInfo) {
           setBankInfo({
-            bank: bankData.bank_name || "Bank Syariah Indonesia (BSI)",
-            accountNumber: bankData.bank_account_number || "7171234567890",
-            accountName: bankData.bank_account_name || "MEDIA PONDOK JAWA TIMUR",
+            bank: data.bankInfo.bank || "Bank Syariah Indonesia (BSI)",
+            accountNumber: data.bankInfo.accountNumber || "7171234567890",
+            accountName: data.bankInfo.accountName || "MEDIA PONDOK JAWA TIMUR",
           });
         }
-
-        // 3. Check if payment record already exists (for persisted unique code)
-        const { data: existingPayment, error: paymentError } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('pesantren_claim_id', claim.id)
-          .maybeSingle();
-
-        if (paymentError && paymentError.code !== 'PGRST116') throw paymentError;
-
-        if (existingPayment) {
-          // Use existing payment data (persisted unique code)
-          setPaymentId(existingPayment.id);
-          setUniqueCode(existingPayment.unique_code);
-          setTotalAmount(existingPayment.total_amount);
-          
-          // If already pending verification, redirect
-          if (existingPayment.status === 'pending_verification') {
-            navigate('/payment-pending', { replace: true });
-            return;
-          }
-          
-          // If verified, redirect to dashboard
-          if (existingPayment.status === 'verified') {
-            navigate('/user', { replace: true });
-            return;
-          }
-        } else {
-          // Generate new unique code and create payment record
-          const newUniqueCode = Math.floor(Math.random() * 900) + 100;
-          const newTotalAmount = fetchedBaseAmount + newUniqueCode;
-          
-          const { data: newPayment, error: insertError } = await supabase
-            .from('payments')
-            .insert({
-              user_id: user.id,
-              pesantren_claim_id: claim.id,
-              base_amount: fetchedBaseAmount,
-              unique_code: newUniqueCode,
-              total_amount: newTotalAmount,
-              status: 'pending_payment',
-            })
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-
-          setPaymentId(newPayment.id);
-          setUniqueCode(newUniqueCode);
-          setTotalAmount(newTotalAmount);
-        }
-
       } catch (error: any) {
         console.error('Error initializing payment:', error);
         toast({
@@ -273,26 +169,15 @@ const Payment = () => {
     setIsLoading(true);
 
     try {
-      // Upload proof file to storage
-      const fileExt = proofFile.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('payment-proofs')
-        .upload(fileName, proofFile);
+      const form = new FormData();
+      form.append('paymentId', paymentId);
+      form.append('senderName', senderName.trim());
+      form.append('file', proofFile);
 
-      if (uploadError) throw uploadError;
-
-      // Update payment record
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          proof_file_url: fileName,
-          status: 'pending_verification',
-        })
-        .eq('id', paymentId);
-
-      if (updateError) throw updateError;
+      await apiRequest('/api/payments/submit-proof', {
+        method: 'POST',
+        body: form,
+      });
 
       toast({
         title: "Pembayaran Terkirim!",

@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { formatNIP } from "@/lib/id-utils";
 import JabatanCodesManagement from "./JabatanCodesManagement";
 interface DebugData {
@@ -356,34 +356,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     }
 
     try {
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      
-      // Get claims that are regional_approved and older than 7 days
-      const { data: lateClaims, error: claimsError } = await supabase
-        .from('pesantren_claims')
-        .select('user_id')
-        .eq('status', 'regional_approved')
-        .not('regional_approved_at', 'is', null)
-        .lt('regional_approved_at', sevenDaysAgo);
-
-      if (claimsError) throw claimsError;
-
-      if (!lateClaims || lateClaims.length === 0) {
-        setLatePaymentCount(0);
-        return;
-      }
-
-      // Check which ones are still unpaid
-      const userIds = lateClaims.map(c => c.user_id);
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id')
-        .in('id', userIds)
-        .eq('status_payment', 'unpaid');
-
-      if (profilesError) throw profilesError;
-      
-      setLatePaymentCount(profiles?.length || 0);
+      const data = await apiRequest<{ count: number }>('/api/admin/late-payment-count');
+      setLatePaymentCount(data.count || 0);
     } catch (error) {
       console.error('Error fetching late payment count:', error);
     }
@@ -392,21 +366,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const fetchClaims = async () => {
     setIsLoadingClaims(true);
     try {
-      const { data, error } = await supabase
-        .from('pesantren_claims')
-        .select(`
-          *,
-          regions!pesantren_claims_region_id_fkey (name)
-        `)
-        .in('status', ['regional_approved', 'pusat_approved'])
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      setClaims((data || []).map((item: any) => ({
-        ...item,
-        region_name: item.regions?.name || '-'
-      })));
+      const data = await apiRequest<{ claims: ClaimRecord[] }>('/api/admin/claims');
+      setClaims(data.claims || []);
     } catch (error) {
       console.error('Error fetching claims:', error);
     } finally {
@@ -417,25 +378,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const fetchPayments = async () => {
     setIsLoadingPayments(true);
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          pesantren_claims (
-            pesantren_name,
-            nama_pengelola,
-            jenis_pengajuan,
-            region_id,
-            mpj_id_number
-          ),
-          profiles:user_id (
-            no_wa_pendaftar
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPayments((data || []).map((p: any) => ({
+      const data = await apiRequest<{ payments: PaymentRecord[] }>('/api/admin/payments');
+      setPayments((data.payments || []).map((p: any) => ({
         ...p,
         profiles: p.profiles || { no_wa_pendaftar: null }
       })));
@@ -449,29 +393,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const fetchLevelingProfiles = async () => {
     setIsLoadingLeveling(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          nama_pesantren,
-          nip,
-          profile_level,
-          sejarah,
-          visi_misi,
-          logo_url,
-          foto_pengasuh_url,
-          regions!profiles_region_id_fkey (name)
-        `)
-        .eq('status_account', 'active')
-        .in('profile_level', ['silver', 'gold'])
-        .order('nama_pesantren', { ascending: true });
-
-      if (error) throw error;
-      
-      setLevelingProfiles((data || []).map((item: any) => ({
-        ...item,
-        region_name: item.regions?.name || '-'
-      })));
+      const data = await apiRequest<{ profiles: LevelingProfile[] }>('/api/admin/leveling-profiles');
+      setLevelingProfiles(data.profiles || []);
     } catch (error) {
       console.error('Error fetching leveling profiles:', error);
     } finally {
@@ -482,20 +405,9 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const fetchPriceSettings = async () => {
     setIsLoadingPrices(true);
     try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('key, value')
-        .in('key', ['registration_base_price', 'claim_base_price']);
-
-      if (error) throw error;
-
-      data?.forEach((setting: any) => {
-        if (setting.key === 'registration_base_price') {
-          setRegistrationPrice(setting.value?.toString() || "50000");
-        } else if (setting.key === 'claim_base_price') {
-          setClaimPrice(setting.value?.toString() || "20000");
-        }
-      });
+      const data = await apiRequest<{ registrationPrice: number; claimPrice: number }>('/api/admin/price-settings');
+      setRegistrationPrice(String(data.registrationPrice ?? 50000));
+      setClaimPrice(String(data.claimPrice ?? 20000));
     } catch (error) {
       console.error('Error fetching prices:', error);
     } finally {
@@ -510,15 +422,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     setSelectedPayment(payment);
     setProofSignedUrl(null);
     setProofModalOpen(true);
-
-    if (payment.proof_file_url) {
-      const { data, error } = await supabase.storage
-        .from('payment-proofs')
-        .createSignedUrl(payment.proof_file_url, 3600);
-      if (!error && data?.signedUrl) {
-        setProofSignedUrl(data.signedUrl);
-      }
-    }
+    setProofSignedUrl(payment.proof_file_url || null);
   };
 
   const getProofUrl = (path: string | null): string | null => {
@@ -531,74 +435,11 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     
     setIsProcessing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const regionId = selectedPayment.pesantren_claims?.region_id;
-
-      if (!regionId) {
-        throw new Error('Region ID tidak ditemukan');
-      }
-
-      // Check region code
-      const { data: regionData, error: regionError } = await supabase
-        .from('regions')
-        .select('code, name')
-        .eq('id', regionId)
-        .single();
-
-      if (regionError || !regionData) {
-        throw new Error('Region tidak ditemukan');
-      }
-
-      if (!/^[0-9]{2}$/.test(regionData.code)) {
-        toast({
-          title: "Kode RR Belum Valid",
-          description: `Regional "${regionData.name}" belum memiliki kode RR 2 digit.`,
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      // Generate NIP
-      const { data: nipData, error: nipError } = await supabase
-        .rpc('generate_nip', {
-          p_claim_id: selectedPayment.pesantren_claim_id,
-          p_region_id: regionId
-        });
-
-      if (nipError) throw nipError;
-
-      const generatedNIP = nipData;
-      
-      // Update payment
-      await supabase
-        .from('payments')
-        .update({
-          status: 'verified',
-          verified_by: user?.id,
-          verified_at: new Date().toISOString(),
-        })
-        .eq('id', selectedPayment.id);
-
-      // Update claim
-      await supabase
-        .from('pesantren_claims')
-        .update({ 
-          status: 'approved',
-          approved_by: user?.id,
-          approved_at: new Date().toISOString()
-        })
-        .eq('id', selectedPayment.pesantren_claim_id);
-
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({
-          status_account: 'active',
-          status_payment: 'paid',
-          nip: generatedNIP,
-        })
-        .eq('id', selectedPayment.user_id);
+      const result = await apiRequest<{ nip: string; phoneNumber: string | null; pesantrenName: string | null }>(
+        `/api/admin/payments/${selectedPayment.id}/approve`,
+        { method: 'POST' }
+      );
+      const generatedNIP = result.nip;
 
       toast({
         title: "NIP Diterbitkan",
@@ -606,8 +447,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
       });
 
       // Open WhatsApp with notification
-      const phoneNumber = selectedPayment.profiles?.no_wa_pendaftar;
-      const pesantrenName = selectedPayment.pesantren_claims?.pesantren_name || 'Pesantren';
+      const phoneNumber = result.phoneNumber;
+      const pesantrenName = result.pesantrenName || 'Pesantren';
       if (phoneNumber) {
         const waMessage = encodeURIComponent(
           `Assalamu'alaikum, pembayaran aktivasi Anda telah kami verifikasi. NIP & NIAM untuk ${pesantrenName} telah AKTIF. Silakan cek dashboard Anda untuk mendownload E-ID dan Piagam. Terima kasih.`
@@ -644,15 +485,10 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     
     setIsProcessing(true);
     try {
-      // Update status to pending_payment so user can re-upload
-      await supabase
-        .from('payments')
-        .update({
-          status: 'pending_payment',
-          rejection_reason: rejectionReason,
-          proof_file_url: null, // Clear old proof
-        })
-        .eq('id', selectedPayment.id);
+      await apiRequest(`/api/admin/payments/${selectedPayment.id}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
 
       toast({
         title: "Pembayaran Ditolak",
@@ -678,12 +514,9 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   // Leveling handlers
   const handleValidatePlatinum = async (profile: LevelingProfile) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ profile_level: 'platinum' })
-        .eq('id', profile.id);
-
-      if (error) throw error;
+      await apiRequest(`/api/admin/leveling/${profile.id}/promote-platinum`, {
+        method: 'POST',
+      });
 
       toast({
         title: "Berhasil",
@@ -705,12 +538,13 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const handleSavePrices = async () => {
     setIsSavingPrices(true);
     try {
-      await supabase
-        .from('system_settings')
-        .upsert([
-          { key: 'registration_base_price', value: parseInt(registrationPrice) },
-          { key: 'claim_base_price', value: parseInt(claimPrice) }
-        ], { onConflict: 'key' });
+      await apiRequest('/api/admin/price-settings', {
+        method: 'POST',
+        body: JSON.stringify({
+          registrationPrice: parseInt(registrationPrice, 10),
+          claimPrice: parseInt(claimPrice, 10),
+        }),
+      });
 
       toast({
         title: "Berhasil",

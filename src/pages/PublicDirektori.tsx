@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/lib/api-client';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ interface PesantrenItem {
   region?: {
     name: string;
     code: string;
-  };
+  } | null;
 }
 
 interface Region {
@@ -57,39 +57,13 @@ const PublicDirektori = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch regions
-        const { data: regionsData } = await supabase
-          .from('regions')
-          .select('id, name, code')
-          .order('name');
+        const [regionsData, directoryData] = await Promise.all([
+          apiRequest<{ regions: Region[] }>('/api/public/regions'),
+          apiRequest<{ pesantren: PesantrenItem[] }>('/api/public/directory'),
+        ]);
 
-        if (regionsData) {
-          setRegions(regionsData);
-        }
-
-        // Fetch active pesantren with NIP
-        const { data: pesantrenData, error } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            nama_pesantren,
-            logo_url,
-            nip,
-            profile_level,
-            region_id,
-            regions:region_id (name, code)
-          `)
-          .eq('status_account', 'active')
-          .not('nip', 'is', null)
-          .order('nama_pesantren');
-
-        if (!error && pesantrenData) {
-          const transformed = pesantrenData.map((p) => ({
-            ...p,
-            region: Array.isArray(p.regions) ? p.regions[0] : p.regions as { name: string; code: string } | undefined
-          }));
-          setPesantrenList(transformed);
-        }
+        setRegions(regionsData.regions || []);
+        setPesantrenList(directoryData.pesantren || []);
 
         setLoading(false);
       } catch (error) {

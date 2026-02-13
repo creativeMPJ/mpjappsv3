@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Region {
+  id           String           @id @default(uuid()) @db.Uuid
+  name         String
+  code         String
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  cities       City[]
+  followUpLogs FollowUpLog[]
+  claims       PesantrenClaim[]
+  profiles     Profile[]
+
+  @@map("regions")
+}
+
+model City {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  regionId  String    @map("region_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  region    Region    @relation(fields: [regionId], references: [id])
+  profiles  Profile[]
+
+  @@map("cities")
+}
+
+model Profile {
+  id              String           @id @db.Uuid
+  role            AppRole          @default(user)
+  statusAccount   AccountStatus    @default(pending) @map("status_account")
+  statusPayment   PaymentStatus    @default(unpaid) @map("status_payment")
+  profileLevel    ProfileLevel     @default(basic) @map("profile_level")
+  namaPesantren   String?          @map("nama_pesantren")
+  namaPengasuh    String?          @map("nama_pengasuh")
+  namaMedia       String?          @map("nama_media")
+  alamatSingkat   String?          @map("alamat_singkat")
+  noWaPendaftar   String?          @map("no_wa_pendaftar")
+  nip             String?
+  cityId          String?          @map("city_id") @db.Uuid
+  regionId        String?          @map("region_id") @db.Uuid
+  logoUrl         String?          @map("logo_url")
+  fotoPengasuhUrl String?          @map("foto_pengasuh_url")
+  skPesantrenUrl  String?          @map("sk_pesantren_url")
+  latitude        Decimal?         @db.Decimal
+  longitude       Decimal?         @db.Decimal
+  jumlahSantri    Int?             @map("jumlah_santri")
+  tipePesantren   String?          @map("tipe_pesantren")
+  programUnggulan String[]         @map("program_unggulan")
+  sejarah         String?
+  visiMisi        String?          @map("visi_misi")
+  socialLinks     Json?            @map("social_links")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user            User             @relation(fields: [id], references: [id], onDelete: Cascade)
+  crews           Crew[]
+  payments        Payment[]
+  claims          PesantrenClaim[] @relation("claims_user")
+  city            City?            @relation(fields: [cityId], references: [id])
+  region          Region?          @relation(fields: [regionId], references: [id])
+
+  @@map("profiles")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  profile      Profile?
+
+  @@map("users")
+}
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      AppRole  @default(user)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@map("user_roles")
+}
+
+model PesantrenClaim {
+  id                 String            @id @default(uuid()) @db.Uuid
+  userId             String            @map("user_id") @db.Uuid
+  pesantrenName      String            @map("pesantren_name")
+  jenisPengajuan     RegistrationType  @default(pesantren_baru) @map("jenis_pengajuan")
+  status             ClaimStatus       @default(pending)
+  regionId           String?           @map("region_id") @db.Uuid
+  kecamatan          String?
+  namaPengelola      String?           @map("nama_pengelola")
+  emailPengelola     String?           @map("email_pengelola")
+  dokumenBuktiUrl    String?           @map("dokumen_bukti_url")
+  mpjIdNumber        String?           @map("mpj_id_number")
+  notes              String?
+  approvedBy         String?           @map("approved_by") @db.Uuid
+  approvedAt         DateTime?         @map("approved_at") @db.Timestamptz(6)
+  regionalApprovedAt DateTime?         @map("regional_approved_at") @db.Timestamptz(6)
+  claimedAt          DateTime          @default(now()) @map("claimed_at") @db.Timestamptz(6)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  followUpLogs       FollowUpLog[]
+  otpVerifications   OtpVerification[]
+  payments           Payment[]
+  region             Region?           @relation(fields: [regionId], references: [id])
+  user               Profile           @relation("claims_user", fields: [userId], references: [id])
+
+  @@map("pesantren_claims")
+}
+
+model Payment {
+  id               String                    @id @default(uuid()) @db.Uuid
+  userId           String                    @map("user_id") @db.Uuid
+  pesantrenClaimId String                    @map("pesantren_claim_id") @db.Uuid
+  baseAmount       Int                       @map("base_amount")
+  uniqueCode       Int                       @map("unique_code")
+  totalAmount      Int                       @map("total_amount")
+  status           PaymentVerificationStatus @default(pending_payment)
+  proofFileUrl     String?                   @map("proof_file_url")
+  rejectionReason  String?                   @map("rejection_reason")
+  verifiedBy       String?                   @map("verified_by") @db.Uuid
+  verifiedAt       DateTime?                 @map("verified_at") @db.Timestamptz(6)
+  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  claim            PesantrenClaim            @relation(fields: [pesantrenClaimId], references: [id])
+  user             Profile                   @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+model JabatanCode {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  code        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  crews       Crew[]
+
+  @@map("jabatan_codes")
+}
+
+model Crew {
+  id            String       @id @default(uuid()) @db.Uuid
+  profileId     String       @map("profile_id") @db.Uuid
+  nama          String
+  jabatan       String?
+  jabatanCodeId String?      @map("jabatan_code_id") @db.Uuid
+  niam          String?
+  skill         String[]
+  xpLevel       Int          @default(0) @map("xp_level")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  jabatanCode   JabatanCode? @relation(fields: [jabatanCodeId], references: [id])
+  profile       Profile      @relation(fields: [profileId], references: [id])
+
+  @@map("crews")
+}
+
+model OtpVerification {
+  id               String          @id @default(uuid()) @db.Uuid
+  userPhone        String          @map("user_phone")
+  otpCode          String          @map("otp_code")
+  pesantrenClaimId String?         @map("pesantren_claim_id") @db.Uuid
+  isVerified       Boolean         @default(false) @map("is_verified")
+  attempts         Int             @default(0)
+  expiresAt        DateTime        @map("expires_at") @db.Timestamptz(6)
+  verifiedAt       DateTime?       @map("verified_at") @db.Timestamptz(6)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  claim            PesantrenClaim? @relation(fields: [pesantrenClaimId], references: [id])
+
+  @@map("otp_verifications")
+}
+
+model FollowUpLog {
+  id         String         @id @default(uuid()) @db.Uuid
+  adminId    String         @map("admin_id") @db.Uuid
+  claimId    String         @map("claim_id") @db.Uuid
+  regionId   String         @map("region_id") @db.Uuid
+  actionType String         @default("whatsapp_followup") @map("action_type")
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  claim      PesantrenClaim @relation(fields: [claimId], references: [id])
+  region     Region         @relation(fields: [regionId], references: [id])
+
+  @@map("follow_up_logs")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String
+  value       Json
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_settings")
+}
+
+enum AccountStatus {
+  pending
+  active
+  rejected
+}
+
+enum AppRole {
+  user
+  admin_regional
+  admin_pusat
+  admin_finance
+}
+
+enum ClaimStatus {
+  pending
+  regional_approved
+  pusat_approved
+  approved
+  rejected
+}
+
+enum PaymentStatus {
+  paid
+  unpaid
+}
+
+enum PaymentVerificationStatus {
+  pending_payment
+  pending_verification
+  verified
+  rejected
+}
+
+enum ProfileLevel {
+  basic
+  silver
+  gold
+  platinum
+}
+
+enum RegistrationType {
+  klaim
+  pesantren_baru
+}

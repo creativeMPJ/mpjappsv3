@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Check, ArrowLeft, MapPin, Building2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 
 // Mask name function for privacy
 const maskName = (name: string) => {
@@ -57,29 +57,15 @@ const ClaimAccount = () => {
   const searchPesantren = async (query: string) => {
     setIsLoading(true);
     try {
-      // Search pesantren_claims for unclaimed/pending institutions
-      // Only show pesantren that are NOT yet approved (can be claimed)
-      const { data, error } = await supabase
-        .from("pesantren_claims")
-        .select("*")
-        .or(`pesantren_name.ilike.%${query}%,email_pengelola.ilike.%${query}%`)
-        .not("status", "in", "(approved,pusat_approved)")
-        .limit(10);
+      const data = await apiRequest<{ results: PesantrenData[] }>(
+        `/api/claims/search?query=${encodeURIComponent(query)}`
+      );
+      const results = data.results || [];
 
-      if (error) {
-        console.error("Search error:", error);
-        toast({
-          title: "Error Pencarian",
-          description: "Terjadi kesalahan saat mencari data",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data && data.length > 0) {
-        setSearchResults(data);
-        if (data.length === 1) {
-          setFoundData(data[0]);
+      if (results.length > 0) {
+        setSearchResults(results);
+        if (results.length === 1) {
+          setFoundData(results[0]);
           setStep("preview");
           toast({
             title: "Data Ditemukan!",
@@ -129,47 +115,35 @@ const ClaimAccount = () => {
     setIsLoading(true);
 
     try {
-      // Get phone number from profiles table if available
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("no_wa_pendaftar")
-        .eq("id", foundData.user_id)
-        .single();
-
-      const phone = profileData?.no_wa_pendaftar || "";
-
-      if (!phone) {
-        toast({
-          title: "Nomor Tidak Ditemukan",
-          description: "Nomor WhatsApp tidak tersedia untuk akun ini",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Call OTP send edge function
-      const { data: otpResponse, error: otpError } = await supabase.functions.invoke("otp-send", {
-        body: {
-          phone: phone,
-          pesantren_claim_id: foundData.id,
-        },
+      const otpResponse = await apiRequest<{
+        otp_id: string;
+        phone_masked?: string;
+        message?: string;
+        debug_otp?: string;
+      }>("/api/claims/send-otp", {
+        method: "POST",
+        body: JSON.stringify({
+          claimId: foundData.id,
+        }),
       });
-
-      if (otpError) {
-        throw otpError;
-      }
 
       toast({
         title: "OTP Terkirim!",
         description: otpResponse?.message || "Kode OTP telah dikirim ke nomor WhatsApp yang terdaftar",
       });
 
+      if (otpResponse?.debug_otp) {
+        toast({
+          title: "Debug OTP (Local)",
+          description: `Kode OTP: ${otpResponse.debug_otp}`,
+        });
+      }
+
       // Navigate to OTP verification
       navigate("/verify-otp", {
         state: {
           type: "claim",
-          phone: phone,
+          phone: otpResponse.phone_masked || "Nomor terdaftar",
           pesantren_claim_id: foundData.id,
           otp_id: otpResponse?.otp_id,
           pesantren_name: foundData.pesantren_name,

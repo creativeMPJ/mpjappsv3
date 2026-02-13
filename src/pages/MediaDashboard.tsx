@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatNIP, getProfileLevelInfo } from "@/lib/id-utils";
 import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import MediaDashboardHome from "@/components/media-dashboard/MediaDashboardHome";
 import IdentitasPesantren from "@/components/media-dashboard/IdentitasPesantren";
 import ManajemenKru from "@/components/media-dashboard/ManajemenKru";
@@ -104,21 +104,16 @@ const MediaDashboard = () => {
       if (isDebugMode || !user?.id) return;
       
       try {
-        // Fetch both regional_approved_at and approved_at (pusat approval / NIP issue date)
-        const { data, error } = await supabase
-          .from('pesantren_claims')
-          .select('regional_approved_at, approved_at, status')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (!error && data) {
-          if (data.regional_approved_at) {
-            setRegionalApprovedAt(data.regional_approved_at);
-          }
-          // approved_at is set when Admin Pusat verifies payment (NIP issuance date)
-          if (data.approved_at) {
-            setPusatApprovedAt(data.approved_at);
-          }
+        const data = await apiRequest<{
+          regionalApprovedAt: string | null;
+          pusatApprovedAt: string | null;
+        }>("/api/media/dashboard-context");
+
+        if (data.regionalApprovedAt) {
+          setRegionalApprovedAt(data.regionalApprovedAt);
+        }
+        if (data.pusatApprovedAt) {
+          setPusatApprovedAt(data.pusatApprovedAt);
         }
       } catch (error) {
         console.error('Error fetching approval dates:', error);
@@ -139,22 +134,15 @@ const MediaDashboard = () => {
       if (!user?.id) return;
 
       try {
-        const { data, error } = await supabase
-          .from('crews')
-          .select('nama, niam, jabatan, xp_level')
-          .eq('profile_id', user.id)
-          .eq('jabatan', 'Koordinator')
-          .limit(1)
-          .maybeSingle();
-
-        if (error) throw error;
-        
-        if (data) {
+        const data = await apiRequest<{
+          koordinator: { nama: string; niam: string | null; jabatan: string; xp_level: number } | null;
+        }>("/api/media/dashboard-context");
+        if (data.koordinator) {
           setKoordinator({
-            nama: data.nama,
-            niam: data.niam,
-            jabatan: data.jabatan || 'Koordinator',
-            xp_level: data.xp_level || 0,
+            nama: data.koordinator.nama,
+            niam: data.koordinator.niam,
+            jabatan: data.koordinator.jabatan || 'Koordinator',
+            xp_level: data.koordinator.xp_level || 0,
           });
         }
       } catch (error) {

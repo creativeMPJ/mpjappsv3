@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 
 interface RegionDetail {
   id: string;
@@ -44,52 +44,23 @@ const AdminRegionalDetail = () => {
   const fetchRegionData = async () => {
     try {
       setLoading(true);
+      const data = await apiRequest<{
+        region: RegionDetail;
+        stats: {
+          member_count: number;
+          pesantren_count: number;
+          admin_count: number;
+        };
+        recent_pesantren: RecentPesantren[];
+      }>(`/api/admin/regions/${id}/detail`);
 
-      // 1. Ambil Info Regional & Kota
-      const { data: regionData, error: regionError } = await supabase
-        .from("regions")
-        .select(`id, name, code, cities (name)`)
-        .eq("id", id)
-        .single();
-
-      if (regionError) throw regionError;
-      setRegion(regionData as RegionDetail);
-
-      // 2. Hitung Statistik (Realtime Count)
-      const { count: memberCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("region_id", id)
-        .eq("role", "user");
-
-      const { count: pesantrenCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("region_id", id)
-        .not("nama_pesantren", "is", null);
-
-      const { count: adminCount } = await supabase
-        .from("profiles")
-        .select("*", { count: "exact", head: true })
-        .eq("region_id", id)
-        .eq("role", "admin_regional");
-
+      setRegion(data.region);
       setStats({
-        memberCount: memberCount || 0,
-        pesantrenCount: pesantrenCount || 0,
-        adminCount: adminCount || 0
+        memberCount: data.stats.member_count || 0,
+        pesantrenCount: data.stats.pesantren_count || 0,
+        adminCount: data.stats.admin_count || 0,
       });
-
-      // 3. Ambil List Pesantren Terbaru (5 Terakhir)
-      const { data: latestPesantren } = await supabase
-        .from("profiles")
-        .select("id, nama_pesantren, nama_pengasuh, status_account, created_at")
-        .eq("region_id", id)
-        .not("nama_pesantren", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      setRecentPesantren((latestPesantren as RecentPesantren[]) || []);
+      setRecentPesantren(data.recent_pesantren || []);
 
     } catch (error) {
       console.error("Error fetching detail:", error);

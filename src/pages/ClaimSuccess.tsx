@@ -4,8 +4,7 @@ import { CheckCircle, MessageCircle, Home, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import logoMpj from "@/assets/logo-mpj.png";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/api-client";
 
 /**
  * CLAIM SUCCESS PAGE
@@ -16,36 +15,30 @@ import { useAuth } from "@/contexts/AuthContext";
 const ClaimSuccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
   const [adminPhone, setAdminPhone] = useState<string | null>(null);
   const [loadingAdmin, setLoadingAdmin] = useState(true);
 
-  const { pesantren_name, nama_pengaju } = (location.state as {
+  const { pesantren_name, nama_pengaju, pesantren_claim_id } = (location.state as {
     pesantren_name?: string;
     nama_pengaju?: string;
+    pesantren_claim_id?: string;
   }) || {};
 
-  // Fetch admin regional phone number based on user's region
+  // Fetch admin regional contact based on claim id
   useEffect(() => {
     const fetchAdminPhone = async () => {
-      if (!profile?.region_id) {
+      if (!pesantren_claim_id) {
         setLoadingAdmin(false);
         return;
       }
 
       try {
-        // Get admin regional for the user's region
-        const { data: adminData } = await supabase
-          .from('profiles')
-          .select('no_wa_pendaftar')
-          .eq('region_id', profile.region_id)
-          .eq('role', 'admin_regional')
-          .not('no_wa_pendaftar', 'is', null)
-          .limit(1)
-          .single();
+        const data = await apiRequest<{ region?: { admin_phone?: string } }>(
+          `/api/claims/contact/${pesantren_claim_id}`
+        );
 
-        if (adminData?.no_wa_pendaftar) {
-          setAdminPhone(adminData.no_wa_pendaftar);
+        if (data?.region?.admin_phone) {
+          setAdminPhone(data.region.admin_phone);
         }
       } catch (error) {
         console.error('Error fetching admin phone:', error);
@@ -55,7 +48,7 @@ const ClaimSuccess = () => {
     };
 
     fetchAdminPhone();
-  }, [profile?.region_id]);
+  }, [pesantren_claim_id]);
 
   const handleContactAdmin = () => {
     const phone = adminPhone?.replace(/^0/, '62') || '6281234567890';

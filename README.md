@@ -71,3 +71,58 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Local PostgreSQL + Prisma + API
+
+This repository now includes a local backend API with Fastify and Prisma.
+
+### Required environment variables
+
+Add these values in `.env`:
+
+```env
+DATABASE_URL="postgresql://mpjappsv3_user:<password>@localhost:5432/mpjappsv3_local?schema=public"
+JWT_SECRET="change-this-jwt-secret-please"
+API_PORT="3001"
+```
+
+### Backend commands
+
+```sh
+# Generate Prisma client
+npm run db:generate
+
+# Run DB migrations
+npm run db:migrate
+
+# Seed admin pusat account (default: admin@gmail.com / bismillah)
+npm run db:seed-admin
+
+# Seed base reference data (region/city/settings)
+npm run db:seed-base
+
+# Start API server
+npm run dev:api
+```
+
+### API endpoints
+
+- `GET /api/health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me` (Bearer token required)
+- `POST /api/auth/change-password` (Bearer token required)
+- `GET /api/public/cities`
+- `GET /api/public/cities/:id/region`
+- `GET /api/public/pesantren?search=...`
+- `GET /api/claims/search?query=...`
+- `POST /api/claims/send-otp`
+- `POST /api/claims/verify-otp`
+- `GET /api/institutions/ownership` (Bearer token required)
+- `GET /api/institutions/pending-status` (Bearer token required)
+- `POST /api/institutions/upload-registration-document` (Bearer token required)
+- `POST /api/institutions/initial-data` (Bearer token required)
+- `POST /api/institutions/location` (Bearer token required)
+- `GET /api/payments/current` (Bearer token required)
+- `POST /api/payments/submit-proof` (Bearer token required)
+- `GET /api/admin/*` and `POST /api/admin/*` (admin pusat only)

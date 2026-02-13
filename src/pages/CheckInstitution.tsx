@@ -5,27 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
-
-// Mock data pesantren terdaftar (will be replaced with real data later)
-const registeredPesantren = [
-  { id: 1, name: "Darul Ulum Jombang", region: "Jombang", alamat: "Jl. Raya Peterongan, Jombang" },
-  { id: 2, name: "Darul Ulum Peterongan", region: "Jombang", alamat: "Jl. Peterongan No. 10, Jombang" },
-  { id: 3, name: "Tebuireng Jombang", region: "Jombang", alamat: "Jl. Irian Jaya No. 10, Jombang" },
-  { id: 4, name: "Lirboyo Kediri", region: "Kediri", alamat: "Jl. KH. Abdul Karim, Kediri" },
-  { id: 5, name: "Sidogiri Pasuruan", region: "Pasuruan", alamat: "Jl. Sidogiri, Pasuruan" },
-  { id: 6, name: "PeTIK Jombang", region: "Jombang", alamat: "Jl. Raya Diwek, Jombang" },
-];
 
 const CheckInstitution = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPesantren, setSelectedPesantren] = useState<typeof registeredPesantren[0] | null>(null);
+  const [selectedPesantren, setSelectedPesantren] = useState<{ id: string; name: string; region: string; alamat: string } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isCheckingOwnership, setIsCheckingOwnership] = useState(true);
+  const [registeredPesantren, setRegisteredPesantren] = useState<Array<{ id: string; name: string; region: string; alamat: string }>>([]);
 
   /**
    * GLOBAL GUARD: Check if user already has an approved pesantren claim
@@ -38,17 +29,8 @@ const CheckInstitution = () => {
       // If user is logged in, check their claim status
       if (user) {
         try {
-          const { data: claim, error } = await supabase
-            .from('pesantren_claims')
-            .select('status, pesantren_name')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error checking ownership:', error);
-            setIsCheckingOwnership(false);
-            return;
-          }
+          const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institutions/ownership");
+          const claim = data.claim;
 
           if (claim && (claim.status === 'approved' || claim.status === 'pusat_approved')) {
             // LOCK: User already has an approved pesantren
@@ -77,11 +59,30 @@ const CheckInstitution = () => {
     checkPesantrenOwnership();
   }, [user, authLoading, navigate, toast]);
 
-  const filteredPesantren = registeredPesantren.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setRegisteredPesantren([]);
+      return;
+    }
 
-  const handleSelectPesantren = (pesantren: typeof registeredPesantren[0]) => {
+    const t = setTimeout(async () => {
+      try {
+        const data = await apiRequest<{ pesantren: Array<{ id: string; name: string; region: string; alamat: string }> }>(
+          `/api/public/pesantren?search=${encodeURIComponent(q)}`
+        );
+        setRegisteredPesantren(data.pesantren || []);
+      } catch (error) {
+        console.error("Error searching pesantren:", error);
+      }
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const filteredPesantren = registeredPesantren;
+
+  const handleSelectPesantren = (pesantren: { id: string; name: string; region: string; alamat: string }) => {
     setSelectedPesantren(pesantren);
     setSearchQuery(pesantren.name);
     setShowDropdown(false);

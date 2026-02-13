@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { CityCombobox } from "@/components/registration/CityCombobox";
 import { LocationPicker } from "@/components/registration/LocationPicker";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,7 +34,7 @@ const InstitutionSubmission = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, setAuthToken, refreshAuth } = useAuth();
   const searchedName = location.state?.searchedName || "";
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,17 +89,8 @@ const InstitutionSubmission = () => {
       
       if (user) {
         try {
-          const { data: claim, error } = await supabase
-            .from('pesantren_claims')
-            .select('status, pesantren_name')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error checking ownership:', error);
-            setIsCheckingOwnership(false);
-            return;
-          }
+          const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institutions/ownership");
+          const claim = data.claim;
 
           if (claim && (claim.status === 'approved' || claim.status === 'pusat_approved')) {
             toast({
@@ -136,16 +127,17 @@ const InstitutionSubmission = () => {
     
     // Auto-fetch region for this city
     if (cityId) {
-      const { data: cityData, error } = await supabase
-        .from('cities')
-        .select('region_id, regions(id, name, code)')
-        .eq('id', cityId)
-        .single();
-      
-      if (!error && cityData?.regions) {
-        const region = cityData.regions as { id: string; name: string; code: string };
+      try {
+        const data = await apiRequest<{ region: { id: string; name: string; code: string } }>(
+          `/api/public/cities/${cityId}/region`
+        );
+        const region = data.region;
         setRegionId(region.id);
         setRegionName(`${region.code} - ${region.name}`);
+      } catch (error) {
+        console.error("Error fetching city region:", error);
+        setRegionId(null);
+        setRegionName("");
       }
     } else {
       setRegionId(null);
@@ -249,69 +241,62 @@ const InstitutionSubmission = () => {
       // Format phone number as email for auth
       const phoneEmail = `${formData.noWhatsapp}@mpj.local`;
 
-      // Sign up user with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: phoneEmail,
-        password: formData.password,
+      // Sign up user with local API
+      const apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001";
+      const registerResponse = await fetch(`${apiBase}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: phoneEmail,
+          password: formData.password,
+          namaPesantren: formData.namaPesantren,
+          namaPengasuh: formData.namaPengasuh,
+        }),
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Gagal membuat akun");
+      if (!registerResponse.ok) throw new Error("Gagal membuat akun");
+      const registerData = await registerResponse.json();
+      const newUserId: string | undefined = registerData?.user?.id;
+      const token: string | undefined = registerData?.token;
 
-      // Upload document to storage
+      if (!newUserId || !token) {
+        throw new Error("Data akun tidak valid");
+      }
+
+      setAuthToken(token);
+      await refreshAuth();
+
+      // Upload document to local storage endpoint
       setIsUploadingDoc(true);
       let documentUrl: string | null = null;
 
       if (documentFile) {
-        const fileExt = documentFile.name.split('.').pop();
-        const fileName = `${authData.user.id}/${Date.now()}.${fileExt}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('registration-documents')
-          .upload(fileName, documentFile);
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          // Don't throw - continue with registration
-        } else {
-          documentUrl = uploadData?.path || null;
-        }
+        const form = new FormData();
+        form.append("file", documentFile);
+        const uploadData = await apiRequest<{ path: string }>("/api/institutions/upload-registration-document", {
+          method: "POST",
+          body: form,
+        });
+        documentUrl = uploadData.path || null;
       }
       setIsUploadingDoc(false);
 
-      // Update profile with pesantren data (including region_id from city)
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          nama_pesantren: formData.namaPesantren,
-          nama_pengasuh: formData.namaPengasuh,
-          alamat_singkat: formData.alamatLengkap,
-          city_id: formData.cityId,
-          region_id: regionId, // Explicitly set region_id for Admin Regional visibility
-          no_wa_pendaftar: formData.noWhatsapp,
-        })
-        .eq("id", authData.user.id);
-
-      if (profileError) throw profileError;
-
-      // Create pesantren_claim entry with all new fields
-      const { error: claimError } = await supabase
-        .from("pesantren_claims")
-        .insert({
-          user_id: authData.user.id,
-          pesantren_name: formData.namaPesantren,
-          status: 'pending',
-          region_id: regionId,
+      await apiRequest("/api/institutions/initial-data", {
+        method: "POST",
+        body: JSON.stringify({
+          namaPesantren: formData.namaPesantren,
+          namaPengasuh: formData.namaPengasuh,
+          alamatLengkap: formData.alamatLengkap,
+          cityId: formData.cityId,
           kecamatan: formData.kecamatan,
-          nama_pengelola: formData.namaPengelola,
-          email_pengelola: formData.emailPengelola,
-          dokumen_bukti_url: documentUrl,
-          jenis_pengajuan: 'pesantren_baru',
-        });
-
-      if (claimError) {
-        console.error('Claim error:', claimError);
-      }
+          namaPengelola: formData.namaPengelola,
+          emailPengelola: formData.emailPengelola,
+          noWhatsapp: formData.noWhatsapp,
+          dokumenBuktiUrl: documentUrl,
+        }),
+      });
 
       // Move to Step 2
       setCurrentStep(2);
@@ -338,21 +323,17 @@ const InstitutionSubmission = () => {
     setIsSubmitting(true);
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session?.user) {
+      if (!user?.id) {
         throw new Error("Sesi tidak ditemukan");
       }
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
+      await apiRequest("/api/institutions/location", {
+        method: "POST",
+        body: JSON.stringify({
           latitude: latitude,
           longitude: longitude,
-        })
-        .eq("id", sessionData.session.user.id);
-
-      if (updateError) throw updateError;
+        }),
+      });
 
       toast({
         title: "Pendaftaran Berhasil!",

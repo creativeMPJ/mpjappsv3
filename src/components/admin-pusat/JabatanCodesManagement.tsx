@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { toast } from "@/hooks/use-toast";
 
 interface JabatanCode {
@@ -45,19 +45,15 @@ const JabatanCodesManagement = () => {
 
   const fetchJabatanCodes = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("jabatan_codes")
-      .select("*")
-      .order("code", { ascending: true });
-
-    if (error) {
+    try {
+      const data = await apiRequest<{ jabatan_codes: JabatanCode[] }>("/api/admin/jabatan-codes");
+      setJabatanCodes(data.jabatan_codes || []);
+    } catch {
       toast({
         title: "Error",
         description: "Gagal memuat data kode jabatan.",
         variant: "destructive",
       });
-    } else {
-      setJabatanCodes(data || []);
     }
     setIsLoading(false);
   };
@@ -109,33 +105,28 @@ const JabatanCodesManagement = () => {
 
     try {
       if (editingId) {
-        // Update existing
-        const { error } = await supabase
-          .from("jabatan_codes")
-          .update({
+        await apiRequest(`/api/admin/jabatan-codes/${editingId}`, {
+          method: "PUT",
+          body: JSON.stringify({
             code: formData.code.toUpperCase(),
             name: formData.name,
             description: formData.description || null,
-          })
-          .eq("id", editingId);
-
-        if (error) throw error;
+          }),
+        });
 
         toast({
           title: "Berhasil",
           description: "Kode jabatan berhasil diperbarui.",
         });
       } else {
-        // Insert new
-        const { error } = await supabase
-          .from("jabatan_codes")
-          .insert({
+        await apiRequest("/api/admin/jabatan-codes", {
+          method: "POST",
+          body: JSON.stringify({
             code: formData.code.toUpperCase(),
             name: formData.name,
             description: formData.description || null,
-          });
-
-        if (error) throw error;
+          }),
+        });
 
         toast({
           title: "Berhasil",
@@ -160,23 +151,19 @@ const JabatanCodesManagement = () => {
   const handleDelete = async (id: string, code: string) => {
     if (!confirm(`Hapus kode jabatan "${code}"?`)) return;
 
-    const { error } = await supabase
-      .from("jabatan_codes")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Gagal menghapus kode jabatan. Pastikan tidak ada kru yang menggunakan kode ini.",
-        variant: "destructive",
-      });
-    } else {
+    try {
+      await apiRequest(`/api/admin/jabatan-codes/${id}`, { method: "DELETE" });
       toast({
         title: "Berhasil",
         description: "Kode jabatan berhasil dihapus.",
       });
       fetchJabatanCodes();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Gagal menghapus kode jabatan. Pastikan tidak ada kru yang menggunakan kode ini.",
+        variant: "destructive",
+      });
     }
   };
 

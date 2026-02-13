@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { supabase } from '@/integrations/supabase/client';
+import { apiRequest } from '@/lib/api-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -49,50 +49,10 @@ const PublicCrewProfile = () => {
 
       try {
         const cleanNip = nip.replace(/\./g, '');
-
-        // First get the profile by NIP
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, nama_pesantren, nip, logo_url')
-          .eq('nip', cleanNip)
-          .eq('status_account', 'active')
-          .single();
-
-        if (profileError || !profileData) {
-          setNotFound(true);
-          setLoading(false);
-          return;
-        }
-
-        // Then find crew by NIAM suffix (last 2 digits)
-        const { data: crewsData, error: crewsError } = await supabase
-          .from('crews')
-          .select('id, nama, niam, jabatan, xp_level')
-          .eq('profile_id', profileData.id)
-          .not('niam', 'is', null);
-
-        if (crewsError || !crewsData) {
-          setNotFound(true);
-          setLoading(false);
-          return;
-        }
-
-        // Find crew matching the suffix
-        const matchingCrew = crewsData.find(c => 
-          c.niam?.endsWith(niamSuffix.padStart(2, '0')) ||
-          c.niam === niamSuffix
+        const data = await apiRequest<{ crew: CrewData }>(
+          `/api/public/pesantren/${cleanNip}/crew/${niamSuffix}`
         );
-
-        if (!matchingCrew) {
-          setNotFound(true);
-          setLoading(false);
-          return;
-        }
-
-        setCrew({
-          ...matchingCrew,
-          profile: profileData
-        });
+        setCrew(data.crew);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching crew:', error);

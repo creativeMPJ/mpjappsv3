@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +28,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Search, Edit, Users, RefreshCw } from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
-type AccountStatus = Database["public"]["Enums"]["account_status"];
-type PaymentStatus = Database["public"]["Enums"]["payment_status"];
+type AppRole = "user" | "admin_regional" | "admin_pusat" | "admin_finance";
+type AccountStatus = "pending" | "active" | "rejected";
+type PaymentStatus = "paid" | "unpaid";
 
 interface UserProfile {
   id: string;
@@ -49,7 +48,6 @@ interface UserProfile {
 const UserManagement = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
-  const [regions, setRegions] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
@@ -65,32 +63,8 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          nama_pesantren,
-          nama_pengasuh,
-          role,
-          status_account,
-          status_payment,
-          region_id,
-          regions (name)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      const usersWithRegion = (profilesData || []).map((p: any) => ({
-        id: p.id,
-        nama_pesantren: p.nama_pesantren,
-        nama_pengasuh: p.nama_pengasuh,
-        role: p.role,
-        status_account: p.status_account,
-        status_payment: p.status_payment,
-        region_id: p.region_id,
-        region_name: p.regions?.name || "-",
-      }));
+      const data = await apiRequest<{ users: UserProfile[] }>("/api/admin/users-management");
+      const usersWithRegion = data.users || [];
 
       setUsers(usersWithRegion);
       setFilteredUsers(usersWithRegion);
@@ -106,14 +80,8 @@ const UserManagement = () => {
     }
   };
 
-  const fetchRegions = async () => {
-    const { data } = await supabase.from("regions").select("id, name");
-    setRegions(data || []);
-  };
-
   useEffect(() => {
     fetchUsers();
-    fetchRegions();
   }, []);
 
   useEffect(() => {
@@ -141,27 +109,14 @@ const UserManagement = () => {
 
     setIsSaving(true);
     try {
-      // Update profiles table
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
+      await apiRequest(`/api/admin/users/${editingUser.id}`, {
+        method: "POST",
+        body: JSON.stringify({
           role: editRole,
-          status_account: editStatus,
-          status_payment: editPayment,
-        })
-        .eq("id", editingUser.id);
-
-      if (profileError) throw profileError;
-
-      // Also update user_roles table for role sync
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .update({ role: editRole })
-        .eq("user_id", editingUser.id);
-
-      if (roleError) {
-        console.warn("Could not update user_roles:", roleError);
-      }
+          statusAccount: editStatus,
+          statusPayment: editPayment,
+        }),
+      });
 
       toast({
         title: "Berhasil",

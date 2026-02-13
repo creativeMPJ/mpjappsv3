@@ -9,13 +9,11 @@
  * All dashboards share this same data to simulate real-world data flow.
  */
 
-import { Database } from "@/integrations/supabase/types";
-
-type ClaimStatus = Database['public']['Enums']['claim_status'];
-type PaymentStatus = Database['public']['Enums']['payment_verification_status'];
-type ProfileLevel = Database['public']['Enums']['profile_level'];
-type AccountStatus = Database['public']['Enums']['account_status'];
-type AppRole = Database['public']['Enums']['app_role'];
+type ClaimStatus = "pending" | "regional_approved" | "pusat_approved" | "approved" | "rejected";
+type PaymentStatus = "pending_payment" | "pending_verification" | "verified" | "rejected";
+type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+type AccountStatus = "pending" | "active" | "rejected";
+type AppRole = "user" | "admin_regional" | "admin_pusat" | "admin_finance";
 
 // Region definitions
 export interface MockRegion {

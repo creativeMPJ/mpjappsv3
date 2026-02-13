@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Clock, LogOut, Home, MessageCircle, CheckCircle, Lock, RefreshCw, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import logoMpj from "@/assets/logo-mpj.png";
 
@@ -45,17 +45,8 @@ const VerificationPending = () => {
     if (!user) return;
 
     try {
-      // Fetch user's claim data
-      const { data: claim, error: claimError } = await supabase
-        .from('pesantren_claims')
-        .select('pesantren_name, nama_pengelola, region_id, status, jenis_pengajuan')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (claimError) {
-        console.error('Error fetching claim:', claimError);
-        return;
-      }
+      const data = await apiRequest<{ claim: ClaimData | null; region: RegionData | null }>('/api/institutions/pending-status');
+      const claim = data.claim;
 
       if (claim) {
         setClaimData(claim);
@@ -91,22 +82,7 @@ const VerificationPending = () => {
           return;
         }
 
-        // Fetch region data for admin contact
-        if (claim.region_id) {
-          const { data: region, error: regionError } = await supabase
-            .from('regions')
-            .select('name')
-            .eq('id', claim.region_id)
-            .maybeSingle();
-
-          if (!regionError && region) {
-            // Default admin contact - in production, fetch from admin_access table
-            setRegionData({
-              name: region.name,
-              admin_phone: '6281234567890' // Default admin phone
-            });
-          }
-        }
+        if (data.region) setRegionData(data.region);
       }
     } catch (error) {
       console.error('Error in fetchClaimData:', error);

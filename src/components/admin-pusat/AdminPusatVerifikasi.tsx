@@ -3,7 +3,7 @@ import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { apiRequest } from "@/lib/api-client";
 
 interface PendingProfile {
   id: string;
@@ -21,31 +21,8 @@ const AdminPusatVerifikasi = () => {
   useEffect(() => {
     const fetchPendingProfiles = async () => {
       try {
-        const { data } = await supabase
-          .from("profiles")
-          .select(`
-            id,
-            nama_pesantren,
-            no_wa_pendaftar,
-            status_account,
-            created_at,
-            regions!profiles_region_id_fkey (name)
-          `)
-          .eq("status_account", "pending")
-          .order("created_at", { ascending: false });
-
-        if (data) {
-          setPendingProfiles(
-            data.map((item: any) => ({
-              id: item.id,
-              nama_pesantren: item.nama_pesantren,
-              region_name: item.regions?.name || "Unknown",
-              no_wa_pendaftar: item.no_wa_pendaftar,
-              created_at: item.created_at,
-              status_account: item.status_account,
-            }))
-          );
-        }
+        const data = await apiRequest<{ pending_profiles: PendingProfile[] }>("/api/admin/pending-profiles");
+        setPendingProfiles(data.pending_profiles || []);
       } catch (error) {
         console.error("Error fetching pending profiles:", error);
       } finally {
