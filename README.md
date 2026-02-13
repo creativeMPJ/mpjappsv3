@@ -1,84 +1,41 @@
-# Welcome to your Lovable project
+# MPJ Apps v3
 
-## Project info
+Platform manajemen registrasi, verifikasi, pembayaran aktivasi, dan pengelolaan data pesantren/media MPJ.
 
-**URL**: https://lovable.dev/projects/711e2be5-b7ef-4a32-94fa-faceb8d1ef14
+## Stack
 
-## How can I edit this code?
+- Frontend: Vite + React + TypeScript + Tailwind + shadcn/ui
+- Backend API: Fastify + TypeScript
+- Database: PostgreSQL (local)
+- ORM: Prisma
+- Auth: JWT (Bearer Token)
 
-There are several ways of editing your application.
+## Role Utama
 
-**Use Lovable**
+- `user`
+- `admin_regional`
+- `admin_pusat`
+- `admin_finance`
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/711e2be5-b7ef-4a32-94fa-faceb8d1ef14) and start prompting.
+## Alur Inti
 
-Changes made via Lovable will be committed automatically to this repo.
+1. User daftar/login.
+2. User ajukan klaim/pendaftaran pesantren.
+3. Admin Regional verifikasi (`approve/reject`).
+4. Jika lolos regional, user masuk tahap pembayaran.
+5. User upload bukti transfer.
+6. Admin Pusat/Finance verifikasi pembayaran.
+7. Jika valid, akun aktif dan NIP/NIAM diproses.
 
-**Use your preferred IDE**
+## Prasyarat
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js 20+
+- PostgreSQL lokal
+- npm
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Konfigurasi Environment
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/711e2be5-b7ef-4a32-94fa-faceb8d1ef14) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-
-## Local PostgreSQL + Prisma + API
-
-This repository now includes a local backend API with Fastify and Prisma.
-
-### Required environment variables
-
-Add these values in `.env`:
+Buat file `.env`:
 
 ```env
 DATABASE_URL="postgresql://mpjappsv3_user:<password>@localhost:5432/mpjappsv3_local?schema=public"
@@ -86,50 +43,69 @@ JWT_SECRET="change-this-jwt-secret-please"
 API_PORT="3001"
 ```
 
-### Backend commands
+## Instalasi dan Menjalankan
 
 ```sh
-# Generate Prisma client
+npm i
 npm run db:generate
-
-# Run DB migrations
 npm run db:migrate
-
-# Seed admin pusat account (default: admin@gmail.com / bismillah)
-npm run db:seed-admin
-
-# Seed base reference data (region/city/settings)
 npm run db:seed-base
+npm run db:seed-admin
+```
 
-# Start API server
+Jalankan API:
+
+```sh
 npm run dev:api
 ```
 
-### API endpoints
+Jalankan Frontend:
+
+```sh
+npm run dev
+```
+
+## Akun Admin Default
+
+- Email: `admin@gmail.com`
+- Password: `bismillah`
+
+Jika perlu ubah default:
+- `ADMIN_EMAIL` dan `ADMIN_PASSWORD` saat menjalankan `npm run db:seed-admin`.
+
+## Script Penting
+
+- `npm run dev` -> frontend
+- `npm run dev:api` -> backend API
+- `npm run build` -> build frontend
+- `npm run db:generate` -> generate Prisma client
+- `npm run db:migrate` -> apply migration
+- `npm run db:seed-base` -> seed data referensi
+- `npm run db:seed-admin` -> seed admin pusat
+
+## Struktur Folder
+
+- `src/` -> frontend
+- `server/` -> API Fastify
+- `prisma/` -> schema + migrations
+- `uploads/` -> file upload bukti pembayaran (runtime)
+
+## Endpoint Ringkas
 
 - `GET /api/health`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
-- `GET /api/auth/me` (Bearer token required)
-- `POST /api/auth/change-password` (Bearer token required)
-- `GET /api/public/cities`
-- `GET /api/public/cities/:id/region`
-- `GET /api/public/pesantren?search=...`
-- `GET /api/claims/search?query=...`
-- `POST /api/claims/send-otp`
-- `POST /api/claims/verify-otp`
-- `GET /api/institutions/ownership` (Bearer token required)
-- `GET /api/institutions/pending-status` (Bearer token required)
-- `POST /api/institutions/upload-registration-document` (Bearer token required)
-- `POST /api/institutions/initial-data` (Bearer token required)
-- `POST /api/institutions/location` (Bearer token required)
-- `GET /api/payments/current` (Bearer token required)
-- `POST /api/payments/submit-proof` (Bearer token required)
-- `GET /api/admin/*` and `POST /api/admin/*` (admin pusat only)
+- `GET /api/auth/me`
+- `POST /api/auth/change-password`
+- `GET /api/public/*`
+- `GET/POST /api/claims/*`
+- `GET/POST /api/institutions/*`
+- `GET/POST /api/payments/*`
+- `GET/POST /api/regional/*`
+- `GET/POST /api/media/*`
+- `GET/POST /api/admin/*`
 
 ## Release Checklist
-
-Use this checklist before every release.
 
 ### 1) Prepare
 
@@ -142,39 +118,26 @@ npm run build
 ### 2) Database
 
 ```sh
-# Run migrations on target environment
 npm run db:migrate
-
-# Optional (first setup only)
 npm run db:seed-base
 npm run db:seed-admin
 ```
 
-### 3) Validate core flows
+### 3) Validate Core Flow
 
-- Login as `admin_pusat`.
-- Create/register user and verify claim flow.
-- Regional approve/reject flow.
-- Payment submit + admin approval/rejection flow.
-- Public directory search and profile pages.
+- Login admin pusat.
+- Uji registrasi/klaim user.
+- Uji approve/reject regional.
+- Uji submit bukti pembayaran.
+- Uji approve/reject pembayaran.
 
-### 4) Changelog and versioning
+### 4) Changelog & Release
 
-- Move release notes from `Unreleased` to a new version in `CHANGELOG.md` (example: `0.2.1`).
-- Add release date.
-- Ensure notes include `Added/Changed/Fixed/Removed` as needed.
-
-### 5) Git release
+- Update `CHANGELOG.md`.
+- Commit dan push:
 
 ```sh
 git add -A
 git commit -m "release: vX.Y.Z"
 git push origin main
-```
-
-Optional tag:
-
-```sh
-git tag vX.Y.Z
-git push origin vX.Y.Z
 ```
