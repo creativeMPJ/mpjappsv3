@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { 
-  User, 
-  Bell, 
-  Lock, 
+import {
+  User,
+  Bell,
+  Lock,
   Mail,
   Phone,
   Save,
@@ -16,9 +16,13 @@ import {
   EyeOff
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/api-client";
 
 const Pengaturan = () => {
+  const { user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState({
     email: true,
     whatsapp: true,
@@ -27,10 +31,44 @@ const Pengaturan = () => {
   });
 
   const [profile, setProfile] = useState({
-    name: "Ahmad Fauzi",
-    email: "ahmad.fauzi@example.com",
-    phone: "081234567890",
+    name: "",
+    email: "",
+    phone: "",
   });
+
+  // Fetch real profile data from API
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      try {
+        const data = await apiRequest<{
+          namaPengelola: string | null;
+          email: string | null;
+          noWaPendaftar: string | null;
+        }>("/api/media/profile-settings");
+        setProfile({
+          name: data.namaPengelola || "",
+          email: data.email || user.email || "",
+          phone: data.noWaPendaftar || "",
+        });
+      } catch {
+        // Fallback to auth user data
+        setProfile({
+          name: "",
+          email: user.email || "",
+          phone: "",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user?.id]);
+
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   const handleSaveProfile = () => {
     toast({
@@ -64,7 +102,7 @@ const Pengaturan = () => {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-6">
             <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center text-[#166534] text-2xl font-bold">
-              AF
+              {loading ? "..." : getInitials(profile.name)}
             </div>
             <div>
               <Button variant="outline" size="sm">
@@ -73,9 +111,9 @@ const Pengaturan = () => {
               <p className="text-xs text-slate-500 mt-1">JPG, PNG max 2MB</p>
             </div>
           </div>
-          
+
           <Separator />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nama Lengkap</Label>
@@ -111,7 +149,7 @@ const Pengaturan = () => {
               </div>
             </div>
           </div>
-          
+
           <Button className="bg-[#166534] hover:bg-[#14532d]" onClick={handleSaveProfile}>
             <Save className="h-4 w-4 mr-2" />
             Simpan Perubahan
@@ -165,7 +203,7 @@ const Pengaturan = () => {
               />
             </div>
           </div>
-          
+
           <Button className="bg-[#166534] hover:bg-[#14532d]" onClick={handleChangePassword}>
             <Lock className="h-4 w-4 mr-2" />
             Ubah Password
@@ -193,9 +231,9 @@ const Pengaturan = () => {
                 onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-slate-800">Notifikasi WhatsApp</p>
@@ -206,9 +244,9 @@ const Pengaturan = () => {
                 onCheckedChange={(checked) => setNotifications({ ...notifications, whatsapp: checked })}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-slate-800">Reminder Event</p>
@@ -219,9 +257,9 @@ const Pengaturan = () => {
                 onCheckedChange={(checked) => setNotifications({ ...notifications, event: checked })}
               />
             </div>
-            
+
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-slate-800">Reminder Pembayaran</p>

@@ -6,7 +6,6 @@ import {
   Building2,
   User,
   MapPin,
-  CheckCircle,
   Phone,
   Lock,
   Eye,
@@ -24,10 +23,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api-client";
 import { CityCombobox } from "@/components/registration/CityCombobox";
-import { LocationPicker } from "@/components/registration/LocationPicker";
+
 import { useAuth } from "@/contexts/AuthContext";
 
-const MAX_FILE_SIZE = 350 * 1024; // 350KB - Global limit
+const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
 const InstitutionSubmission = () => {
@@ -41,8 +40,7 @@ const InstitutionSubmission = () => {
   // Guard state
   const [isCheckingOwnership, setIsCheckingOwnership] = useState(true);
 
-  // Wizard step
-  const [currentStep, setCurrentStep] = useState(1);
+
 
   // Step 1: Data Pokok - ALL REQUIRED FIELDS
   const [formData, setFormData] = useState({
@@ -67,10 +65,6 @@ const InstitutionSubmission = () => {
   const [documentError, setDocumentError] = useState<string | null>(null);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
-  // Step 2: Location
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
-
   // Region auto-lock (derived from city)
   const [regionId, setRegionId] = useState<string | null>(null);
   const [regionName, setRegionName] = useState<string>("");
@@ -86,7 +80,7 @@ const InstitutionSubmission = () => {
   useEffect(() => {
     const checkPesantrenOwnership = async () => {
       if (authLoading) return;
-      
+
       if (user) {
         try {
           const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institutions/ownership");
@@ -110,7 +104,7 @@ const InstitutionSubmission = () => {
           console.error('Error in ownership check:', error);
         }
       }
-      
+
       setIsCheckingOwnership(false);
     };
 
@@ -124,7 +118,7 @@ const InstitutionSubmission = () => {
   // Handle city selection and auto-lock region
   const handleCitySelect = async (cityId: string, cityName: string) => {
     setFormData((prev) => ({ ...prev, cityId, cityName }));
-    
+
     // Auto-fetch region for this city
     if (cityId) {
       try {
@@ -149,7 +143,7 @@ const InstitutionSubmission = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     setDocumentError(null);
-    
+
     if (!file) {
       setDocumentFile(null);
       return;
@@ -162,9 +156,9 @@ const InstitutionSubmission = () => {
       return;
     }
 
-    // Validate file size (max 350KB - Global limit)
+    // Validate file size (max 1MB)
     if (file.size > MAX_FILE_SIZE) {
-      setDocumentError(`Ukuran file terlalu besar (${(file.size / 1024).toFixed(1)}KB). Maksimal yang diizinkan adalah 350KB.`);
+      setDocumentError(`Ukuran file terlalu besar (${(file.size / 1024).toFixed(1)}KB). Maksimal yang diizinkan adalah 1MB.`);
       setDocumentFile(null);
       return;
     }
@@ -180,10 +174,7 @@ const InstitutionSubmission = () => {
     }
   };
 
-  const handleLocationChange = (lat: number, lng: number) => {
-    setLatitude(lat);
-    setLongitude(lng);
-  };
+
 
   // Strict validation for Step 1 - ALL fields required
   const isStep1Valid = () => {
@@ -207,7 +198,7 @@ const InstitutionSubmission = () => {
   const getFieldStatus = (field: string): 'empty' | 'valid' | 'invalid' => {
     const value = formData[field as keyof typeof formData];
     if (!value || (typeof value === 'string' && value.trim().length === 0)) return 'empty';
-    
+
     if (field === 'emailPengelola') {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'valid' : 'invalid';
     }
@@ -220,7 +211,7 @@ const InstitutionSubmission = () => {
     if (field === 'konfirmasiPassword') {
       return value === formData.password ? 'valid' : 'invalid';
     }
-    
+
     return 'valid';
   };
 
@@ -256,8 +247,31 @@ const InstitutionSubmission = () => {
         }),
       });
 
-      if (!registerResponse.ok) throw new Error("Gagal membuat akun");
-      const registerData = await registerResponse.json();
+      let registerData: any;
+
+      if (registerResponse.status === 409) {
+        // Account already exists — try to login instead
+        const loginResponse = await fetch(`${apiBase}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: phoneEmail,
+            password: formData.password,
+          }),
+        });
+
+        if (!loginResponse.ok) {
+          throw new Error("Nomor WA sudah terdaftar. Pastikan password sama dengan yang pernah digunakan.");
+        }
+
+        registerData = await loginResponse.json();
+      } else if (!registerResponse.ok) {
+        const errBody = await registerResponse.json().catch(() => null);
+        throw new Error(errBody?.message || "Gagal membuat akun");
+      } else {
+        registerData = await registerResponse.json();
+      }
+
       const newUserId: string | undefined = registerData?.user?.id;
       const token: string | undefined = registerData?.token;
 
@@ -298,13 +312,12 @@ const InstitutionSubmission = () => {
         }),
       });
 
-      // Move to Step 2
-      setCurrentStep(2);
-
       toast({
-        title: "Data tersimpan",
-        description: "Lanjutkan ke langkah berikutnya",
+        title: "Pendaftaran Berhasil!",
+        description: "Menunggu verifikasi admin wilayah.",
       });
+
+      navigate('/verification-pending', { replace: true });
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
@@ -318,58 +331,6 @@ const InstitutionSubmission = () => {
     }
   };
 
-  // Handle Step 2 completion
-  const handleStep2Complete = async () => {
-    setIsSubmitting(true);
-
-    try {
-      if (!user?.id) {
-        throw new Error("Sesi tidak ditemukan");
-      }
-
-      await apiRequest("/api/institutions/location", {
-        method: "POST",
-        body: JSON.stringify({
-          latitude: latitude,
-          longitude: longitude,
-        }),
-      });
-
-      toast({
-        title: "Pendaftaran Berhasil!",
-        description: "Menunggu verifikasi admin wilayah.",
-      });
-      
-      // Redirect to verification-pending instead of logout
-      navigate('/verification-pending', { replace: true });
-    } catch (error: any) {
-      console.error("Location update error:", error);
-      toast({
-        title: "Gagal menyimpan lokasi",
-        description: error.message || "Terjadi kesalahan",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSkipStep2 = async () => {
-    setIsSubmitting(true);
-    try {
-      toast({
-        title: "Pendaftaran Berhasil!",
-        description: "Menunggu verifikasi admin wilayah.",
-      });
-      
-      // Redirect to verification-pending instead of logout
-      navigate('/verification-pending', { replace: true });
-    } catch (error: any) {
-      console.error("Skip error:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Loading state
   if (authLoading || isCheckingOwnership) {
@@ -394,25 +355,18 @@ const InstitutionSubmission = () => {
       <div className="w-full max-w-md mx-auto">
         {/* Back Button */}
         <button
-          onClick={() => currentStep === 1 ? navigate("/check-institution") : setCurrentStep(1)}
+          onClick={() => navigate("/check-institution")}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Kembali</span>
         </button>
 
-        {/* Progress Indicator */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className={`flex-1 h-1.5 rounded-full ${currentStep >= 1 ? "bg-primary" : "bg-muted"}`} />
-          <div className={`flex-1 h-1.5 rounded-full ${currentStep >= 2 ? "bg-primary" : "bg-muted"}`} />
-        </div>
-
-        {/* Step 1: Data Pokok */}
-        {currentStep === 1 && (
+        {
           <>
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold text-foreground mb-1">Daftar Pesantren Baru</h1>
-              <p className="text-muted-foreground text-sm">Langkah 1: Data Pokok (Semua Wajib Diisi)</p>
+              <p className="text-muted-foreground text-sm">Isi Data Pokok (Semua Wajib Diisi)</p>
             </div>
 
             <div className="space-y-6">
@@ -650,13 +604,13 @@ const InstitutionSubmission = () => {
                       <FileText className="w-4 h-4" />
                       SK Pesantren / Surat Tugas <span className="text-destructive">*</span>
                     </label>
-                    
+
                     {!documentFile ? (
                       <div
                         onClick={() => fileInputRef.current?.click()}
                         className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
-                          ${documentError 
-                            ? 'border-destructive bg-destructive/5' 
+                          ${documentError
+                            ? 'border-destructive bg-destructive/5'
                             : 'border-border hover:border-primary hover:bg-primary/5'
                           }`}
                       >
@@ -672,7 +626,7 @@ const InstitutionSubmission = () => {
                           Klik untuk unggah dokumen
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          PDF, JPG, PNG, WebP • Maks. 350KB
+                          PDF, JPG, PNG, WebP • Maks. 1MB
                         </p>
                       </div>
                     ) : (
@@ -738,65 +692,18 @@ const InstitutionSubmission = () => {
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    {isUploadingDoc ? "Mengunggah dokumen..." : "Menyimpan..."}
+                    {isUploadingDoc ? "Mengunggah dokumen..." : "Mendaftarkan..."}
                   </span>
                 ) : (
                   <span className="flex items-center gap-2">
-                    Lanjutkan
+                    Daftar Sekarang
                     <ArrowRight className="w-4 h-4" />
                   </span>
                 )}
               </Button>
             </div>
           </>
-        )}
-
-        {/* Step 2: Lokasi */}
-        {currentStep === 2 && (
-          <>
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-foreground mb-1">Lokasi Pesantren</h1>
-              <p className="text-muted-foreground text-sm">Langkah 2: Tandai Lokasi (Opsional)</p>
-            </div>
-
-            <div className="space-y-4">
-              <LocationPicker
-                latitude={latitude}
-                longitude={longitude}
-                onLocationChange={handleLocationChange}
-              />
-
-              <div className="space-y-3 pt-4">
-                <Button
-                  onClick={handleStep2Complete}
-                  disabled={isSubmitting}
-                  className="w-full h-12 rounded-xl"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Menyimpan...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      Simpan & Selesai
-                      <CheckCircle className="w-4 h-4" />
-                    </span>
-                  )}
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  onClick={handleSkipStep2}
-                  disabled={isSubmitting}
-                  className="w-full h-12 text-muted-foreground"
-                >
-                  Lewati, isi nanti
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
+        }
       </div>
     </div>
   );

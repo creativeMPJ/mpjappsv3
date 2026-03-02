@@ -1,79 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Calendar, Upload, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Search, Calendar, Upload, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api-client";
 import EventCard, { EventData, EventStatus } from "./event/EventCard";
 import EventDetailView from "./event/EventDetailView";
 import { MAX_FILE_SIZE_BYTES } from "@/lib/file-validation";
 
-// Mock data for events
-const mockEvents: EventData[] = [
-  {
-    id: "1",
-    judul: "Pelatihan Jurnalistik Dasar",
-    waktu: "2024-12-20T09:00",
-    lokasi: "PP Nurul Huda",
-    status: "UPCOMING",
-    poster: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=500&fit=crop",
-    pesertaCount: 45,
-  },
-  {
-    id: "2",
-    judul: "Workshop Fotografi & Videografi",
-    waktu: "2024-11-15T08:00",
-    lokasi: "PP Al-Hikam",
-    status: "COMPLETED",
-    poster: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=500&fit=crop",
-    pesertaCount: 78,
-  },
-  {
-    id: "3",
-    judul: "Seminar Media Sosial Islami",
-    waktu: "2025-01-10T13:00",
-    lokasi: "Hotel Tugu Malang",
-    status: "UPCOMING",
-    pesertaCount: 120,
-  },
-  {
-    id: "4",
-    judul: "Kopdar Kru Regional Malang Raya",
-    waktu: "2024-10-05T09:00",
-    lokasi: "PP Darul Ulum",
-    status: "COMPLETED",
-    poster: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=500&fit=crop",
-    pesertaCount: 32,
-  },
-  {
-    id: "5",
-    judul: "Training Content Creator",
-    waktu: "2025-02-20T10:00",
-    lokasi: "PP Salafiyah",
-    status: "UPCOMING",
-    poster: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400&h=500&fit=crop",
-    pesertaCount: 0,
-  },
-];
-
-// Mock pesantren data for location combobox
-const pesantrenList = [
-  "Pondok Pesantren Nurul Huda",
-  "Pondok Pesantren Al-Hikam",
-  "Pondok Pesantren Darul Ulum",
-  "Pondok Pesantren Salafiyah",
-  "Pondok Pesantren Al-Amin",
-];
+interface ApiEvent {
+  id: string;
+  name: string;
+  description: string | null;
+  date: string;
+  location: string | null;
+  status: string;
+  created_at: string;
+  report_count: number;
+  my_report: {
+    id: string;
+    participationCount: number;
+    notes: string | null;
+    submittedAt: string;
+  } | null;
+}
 
 const ManajemenEvent = () => {
   const { toast } = useToast();
-  const [events, setEvents] = useState<EventData[]>(mockEvents);
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<EventData | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   // Create event form state
   const [newEventForm, setNewEventForm] = useState({
@@ -82,21 +46,41 @@ const ManajemenEvent = () => {
     judul: "",
     waktu: "",
     lokasi: "",
-    lokasiManual: "",
+    deskripsi: "",
   });
 
-  const [lokasiSearch, setLokasiSearch] = useState("");
-  const [showLokasiDropdown, setShowLokasiDropdown] = useState(false);
+  // Map API response → EventData format
+  const mapApiToEventData = (e: ApiEvent): EventData => ({
+    id: e.id,
+    judul: e.name,
+    waktu: e.date,
+    lokasi: e.location || "",
+    status: (e.status === "completed" ? "COMPLETED" : "UPCOMING") as EventStatus,
+    pesertaCount: e.my_report?.participationCount ?? 0,
+  });
 
-  const filteredPesantren = pesantrenList.filter((p) =>
-    p.toLowerCase().includes(lokasiSearch.toLowerCase())
-  );
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const data = await apiRequest<{ events: ApiEvent[] }>("/api/events/regional");
+      setEvents((data.events || []).map(mapApiToEventData));
+    } catch (error: any) {
+      toast({ title: "Gagal memuat event", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Filter events based on status and search
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  // Filter events
   const filteredEvents = events.filter((event) => {
     const matchesStatus = statusFilter === "all" || event.status === statusFilter;
-    const matchesSearch = event.judul.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          event.lokasi.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      event.judul.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.lokasi.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -106,6 +90,7 @@ const ManajemenEvent = () => {
 
   const handleBackToGallery = () => {
     setSelectedEvent(null);
+    fetchEvents(); // Refresh after detail view changes
   };
 
   const handleUpdateEvent = (updatedEvent: EventData) => {
@@ -132,7 +117,7 @@ const ManajemenEvent = () => {
     }
   };
 
-  const handleCreateEvent = () => {
+  const handleCreateEvent = async () => {
     if (!newEventForm.judul || !newEventForm.waktu) {
       toast({
         title: "Form tidak lengkap",
@@ -142,32 +127,43 @@ const ManajemenEvent = () => {
       return;
     }
 
-    const newEvent: EventData = {
-      id: Date.now().toString(),
-      judul: newEventForm.judul,
-      waktu: newEventForm.waktu,
-      lokasi: newEventForm.lokasi || newEventForm.lokasiManual || lokasiSearch,
-      status: "UPCOMING",
-      poster: newEventForm.posterPreview || undefined,
-      pesertaCount: 0,
-    };
+    setCreating(true);
+    try {
+      await apiRequest("/api/events/regional", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newEventForm.judul.trim(),
+          date: newEventForm.waktu,
+          location: newEventForm.lokasi.trim() || undefined,
+          description: newEventForm.deskripsi.trim() || undefined,
+        }),
+      });
 
-    setEvents([newEvent, ...events]);
-    setIsCreateModalOpen(false);
-    setNewEventForm({
-      poster: null,
-      posterPreview: "",
-      judul: "",
-      waktu: "",
-      lokasi: "",
-      lokasiManual: "",
-    });
-    setLokasiSearch("");
+      setIsCreateModalOpen(false);
+      setNewEventForm({
+        poster: null,
+        posterPreview: "",
+        judul: "",
+        waktu: "",
+        lokasi: "",
+        deskripsi: "",
+      });
 
-    toast({
-      title: "Event berhasil dibuat",
-      description: "Event baru telah ditambahkan ke galeri.",
-    });
+      toast({
+        title: "Event berhasil dibuat",
+        description: "Event baru telah ditambahkan.",
+      });
+
+      await fetchEvents();
+    } catch (error: any) {
+      toast({
+        title: "Gagal membuat event",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
   };
 
   // If an event is selected, show the detail view
@@ -189,7 +185,7 @@ const ManajemenEvent = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Daftar Kegiatan Wilayah</h1>
           <p className="text-muted-foreground">
-            {filteredEvents.length} event ditemukan
+            {loading ? "Memuat..." : `${filteredEvents.length} event ditemukan`}
           </p>
         </div>
 
@@ -264,46 +260,33 @@ const ManajemenEvent = () => {
 
               {/* Lokasi */}
               <div className="space-y-2">
-                <Label>Lokasi</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="Cari pesantren atau ketik lokasi..."
-                    value={lokasiSearch}
-                    onChange={(e) => {
-                      setLokasiSearch(e.target.value);
-                      setShowLokasiDropdown(true);
-                      setNewEventForm({ ...newEventForm, lokasiManual: e.target.value, lokasi: "" });
-                    }}
-                    onFocus={() => setShowLokasiDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowLokasiDropdown(false), 200)}
-                  />
-                  {showLokasiDropdown && lokasiSearch && (
-                    <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg max-h-40 overflow-y-auto">
-                      {filteredPesantren.length > 0 ? (
-                        filteredPesantren.map((p) => (
-                          <div
-                            key={p}
-                            className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
-                            onClick={() => {
-                              setLokasiSearch(p);
-                              setNewEventForm({ ...newEventForm, lokasi: p, lokasiManual: "" });
-                              setShowLokasiDropdown(false);
-                            }}
-                          >
-                            {p}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          Menggunakan input manual
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <Label htmlFor="create-lokasi">Lokasi</Label>
+                <Input
+                  id="create-lokasi"
+                  placeholder="Masukkan lokasi event"
+                  value={newEventForm.lokasi}
+                  onChange={(e) => setNewEventForm({ ...newEventForm, lokasi: e.target.value })}
+                />
               </div>
 
-              <Button onClick={handleCreateEvent} className="w-full bg-emerald-600 hover:bg-emerald-700">
+              {/* Deskripsi */}
+              <div className="space-y-2">
+                <Label htmlFor="create-deskripsi">Deskripsi</Label>
+                <Textarea
+                  id="create-deskripsi"
+                  placeholder="Deskripsi singkat tentang event..."
+                  rows={3}
+                  value={newEventForm.deskripsi}
+                  onChange={(e) => setNewEventForm({ ...newEventForm, deskripsi: e.target.value })}
+                />
+              </div>
+
+              <Button
+                onClick={handleCreateEvent}
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                disabled={creating}
+              >
+                {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Buat Event
               </Button>
             </div>
@@ -338,7 +321,12 @@ const ManajemenEvent = () => {
       </div>
 
       {/* Event Grid */}
-      {filteredEvents.length > 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Loader2 className="h-10 w-10 mx-auto mb-4 animate-spin opacity-50" />
+          <p className="text-sm">Memuat event...</p>
+        </div>
+      ) : filteredEvents.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredEvents.map((event) => (
             <EventCard key={event.id} event={event} onManage={handleManageEvent} />

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Building, 
-  Users, 
-  CreditCard, 
-  Layers, 
+import {
+  LayoutDashboard,
+  Building,
+  Users,
+  CreditCard,
+  Layers,
   Settings,
-  LogOut, 
+  LogOut,
   Bell,
   Menu,
   X,
@@ -63,11 +63,11 @@ const getMenuItems = (showAktivasi: boolean) => {
 
   if (showAktivasi) {
     // Insert aktivasi menu after administrasi
-    baseItems.splice(3, 0, { 
-      id: "aktivasi" as ViewType, 
-      label: "AKTIVASI NIP/NIAM", 
+    baseItems.splice(3, 0, {
+      id: "aktivasi" as ViewType,
+      label: "AKTIVASI NIP/NIAM",
       icon: Sparkles,
-      highlight: true 
+      highlight: true
     } as any);
   }
 
@@ -84,15 +84,15 @@ const MediaDashboard = () => {
   const [regionalApprovedAt, setRegionalApprovedAt] = useState<string | null>(null);
   const [pusatApprovedAt, setPusatApprovedAt] = useState<string | null>(null);
   const { toast } = useToast();
-  
+
   // Support debug mode via location.state
   const debugProfile = (location.state as any)?.debugProfile;
   const debugKoordinator = (location.state as any)?.koordinator;
   const isDebugMode = (location.state as any)?.isDebugMode;
-  
+
   // Use debug profile if available, otherwise use auth profile
   const profile = isDebugMode && debugProfile ? debugProfile : authProfile;
-  
+
   const paymentStatus = profile?.status_payment ?? 'unpaid';
   const profileLevel = profile?.profile_level ?? 'basic';
   const levelInfo = getProfileLevelInfo(profileLevel);
@@ -102,7 +102,7 @@ const MediaDashboard = () => {
   useEffect(() => {
     const fetchApprovalDates = async () => {
       if (isDebugMode || !user?.id) return;
-      
+
       try {
         const data = await apiRequest<{
           regionalApprovedAt: string | null;
@@ -195,42 +195,42 @@ const MediaDashboard = () => {
           <>
             {/* Basic Member Banner - CTA for activation */}
             {paymentStatus === 'unpaid' && (
-              <BasicMemberBanner 
-                onActivate={() => handleMenuClick("aktivasi")} 
+              <BasicMemberBanner
+                onActivate={() => handleMenuClick("aktivasi")}
                 regionalApprovedAt={regionalApprovedAt}
               />
             )}
-            <MediaDashboardHome 
-              paymentStatus={paymentStatus} 
+            <MediaDashboardHome
+              paymentStatus={paymentStatus}
               profileLevel={profileLevel}
               onNavigate={handleMenuClick}
-              debugProfile={isDebugMode ? profile : undefined}
+              debugProfile={profile || undefined}
             />
           </>
         );
       case "identitas":
         return (
-          <IdentitasPesantren 
+          <IdentitasPesantren
             paymentStatus={paymentStatus}
             profileLevel={profileLevel}
-            onProfileLevelChange={() => {}}
-            debugProfile={isDebugMode ? profile : undefined}
+            onProfileLevelChange={() => { }}
+            debugProfile={profile || undefined}
           />
         );
       case "tim":
         return (
-          <ManajemenKru 
-            paymentStatus={paymentStatus} 
-            debugProfile={isDebugMode ? profile : undefined}
+          <ManajemenKru
+            paymentStatus={paymentStatus}
+            debugProfile={profile || undefined}
             onKoordinatorChange={setKoordinator}
           />
         );
       case "eid":
         return (
-          <EIDAsetPage 
+          <EIDAsetPage
             paymentStatus={paymentStatus}
             profileLevel={profileLevel}
-            debugProfile={isDebugMode ? profile : undefined}
+            debugProfile={profile || undefined}
             realProfile={!isDebugMode ? {
               nip: profile?.nip,
               nama_pesantren: profile?.nama_pesantren,
@@ -245,15 +245,15 @@ const MediaDashboard = () => {
         );
       case "administrasi":
         return (
-          <Administrasi 
+          <Administrasi
             paymentStatus={paymentStatus}
-            onPaymentStatusChange={() => {}}
-            debugProfile={isDebugMode ? profile : undefined}
+            onPaymentStatusChange={() => { }}
+            debugProfile={profile || undefined}
           />
         );
       case "aktivasi":
         return (
-          <AktivasiNIPNIAM 
+          <AktivasiNIPNIAM
             onPaymentSubmitted={() => {
               // Refresh the page to update payment status
               window.location.reload();
@@ -270,16 +270,16 @@ const MediaDashboard = () => {
         return (
           <>
             {paymentStatus === 'unpaid' && (
-              <BasicMemberBanner 
-                onActivate={() => handleMenuClick("aktivasi")} 
+              <BasicMemberBanner
+                onActivate={() => handleMenuClick("aktivasi")}
                 regionalApprovedAt={regionalApprovedAt}
               />
             )}
-            <MediaDashboardHome 
-              paymentStatus={paymentStatus} 
+            <MediaDashboardHome
+              paymentStatus={paymentStatus}
               profileLevel={profileLevel}
               onNavigate={handleMenuClick}
-              debugProfile={isDebugMode ? profile : undefined}
+              debugProfile={profile || undefined}
             />
           </>
         );
@@ -306,7 +306,7 @@ const MediaDashboard = () => {
     <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile Overlay */}
       {mobileSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 z-40 lg:hidden"
           onClick={() => setMobileSidebarOpen(false)}
         />
@@ -385,8 +385,8 @@ const MediaDashboard = () => {
               <span className="text-red-700 text-sm">
                 <strong>Masa Aktif Habis.</strong> Lunasi tagihan di menu Administrasi.
               </span>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 className="bg-red-600 hover:bg-red-700 text-white"
                 onClick={() => handleMenuClick("administrasi")}
               >
@@ -435,8 +435,8 @@ const MediaDashboard = () => {
                 {displayNIP && (
                   <Badge className={cn(
                     "font-mono text-sm",
-                    isPlatinum 
-                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/30" 
+                    isPlatinum
+                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-400/30"
                       : "bg-emerald-100 text-emerald-800"
                   )}>
                     NIP: {displayNIP}
@@ -459,8 +459,8 @@ const MediaDashboard = () => {
             {displayNIP && (
               <div className={cn(
                 "flex md:hidden items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-mono",
-                isPlatinum 
-                  ? "bg-cyan-500/20 text-cyan-300" 
+                isPlatinum
+                  ? "bg-cyan-500/20 text-cyan-300"
                   : "bg-emerald-100 text-emerald-800"
               )}>
                 {displayNIP}
@@ -469,8 +469,8 @@ const MediaDashboard = () => {
             {/* E-ID Badge - Icon only on mobile */}
             <div className={cn(
               "flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold",
-              isPlatinum 
-                ? "bg-cyan-500/30 text-cyan-200" 
+              isPlatinum
+                ? "bg-cyan-500/30 text-cyan-200"
                 : "bg-[#166534] text-white"
             )}>
               <IdCard className="h-4 w-4" />
@@ -481,9 +481,9 @@ const MediaDashboard = () => {
               <Zap className="h-4 w-4" />
               <span>150 XP</span>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className={cn(
                 "relative h-9 w-9",
                 isPlatinum ? "text-white hover:bg-white/10" : ""
@@ -495,8 +495,8 @@ const MediaDashboard = () => {
             {/* User Avatar */}
             <div className={cn(
               "h-9 w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0",
-              isPlatinum 
-                ? "bg-gradient-to-br from-cyan-400 to-blue-500 text-white" 
+              isPlatinum
+                ? "bg-gradient-to-br from-cyan-400 to-blue-500 text-white"
                 : "bg-[#166534] text-white"
             )}>
               MP

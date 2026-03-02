@@ -3,9 +3,22 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { authenticate } from "../auth-guard";
 import { prisma } from "../prisma";
+import { assertRegional } from "../services/regional-service";
+import { FastifyRequest } from "fastify";
+
+interface AuthenticatedRequest extends FastifyRequest {
+  user: {
+    sub: string;
+    role: AppRole;
+  };
+}
 
 const rejectSchema = z.object({
   reason: z.string().min(1),
+});
+
+const approveSchema = z.object({
+  pricingPackageId: z.string().uuid().optional(),
 });
 
 async function assertRegional(userId: string) {
@@ -25,8 +38,8 @@ async function assertRegional(userId: string) {
 
 export async function regionalRoutes(app: FastifyInstance) {
   app.get("/master-data", { preHandler: authenticate }, async (request) => {
-    const payload = request.user as { sub: string };
-    const regionId = await assertRegional(payload.sub);
+    const req = request as AuthenticatedRequest;
+    const regionId = await assertRegional(req.user.sub);
 
     const [profiles, crews] = await Promise.all([
       prisma.profile.findMany({
@@ -86,8 +99,8 @@ export async function regionalRoutes(app: FastifyInstance) {
   });
 
   app.get("/pending-claims", { preHandler: authenticate }, async (request) => {
-    const payload = request.user as { sub: string };
-    const regionId = await assertRegional(payload.sub);
+    const req = request as AuthenticatedRequest;
+    const regionId = await assertRegional(req.user.sub);
 
     const claims = await prisma.pesantrenClaim.findMany({
       where: {
@@ -100,7 +113,28 @@ export async function regionalRoutes(app: FastifyInstance) {
             namaPengasuh: true,
             alamatSingkat: true,
             noWaPendaftar: true,
-          },
+            // New fields for validation
+            niam: true,
+            isAlumni: true,
+            alamatLengkap: true,
+            kecamatan: true, // Profile kecamatan
+            desa: true,
+            kodePos: true,
+            mapsLink: true,
+            ketuaMedia: true,
+            tahunBerdiri: true,
+            jumlahKru: true,
+            logoMediaUrl: true,
+            fotoGedungUrl: true,
+            socialLinks: true,
+            // Explicit Socials
+            website: true,
+            instagram: true,
+            facebook: true,
+            youtube: true,
+            tiktok: true,
+            jenjangPendidikan: true,
+          } as any,
         },
       },
       orderBy: { createdAt: "desc" },
@@ -124,15 +158,61 @@ export async function regionalRoutes(app: FastifyInstance) {
         nama_pengasuh: c.user.namaPengasuh,
         alamat_singkat: c.user.alamatSingkat,
         no_wa_pendaftar: c.user.noWaPendaftar,
+        // Detailed Profile Data
+        niam: (c.user as any).niam,
+        is_alumni: (c.user as any).isAlumni,
+        alamat_lengkap: (c.user as any).alamatLengkap,
+        desa: (c.user as any).desa,
+        kode_pos: (c.user as any).kodePos,
+        maps_link: (c.user as any).mapsLink,
+        ketua_media: (c.user as any).ketuaMedia,
+        tahun_berdiri: (c.user as any).tahunBerdiri,
+        jumlah_kru: (c.user as any).jumlahKru,
+        logo_media_url: (c.user as any).logoMediaUrl,
+        foto_gedung_url: (c.user as any).fotoGedungUrl,
+        social_links: (c.user as any).socialLinks,
+        website: (c.user as any).website,
+        instagram: (c.user as any).instagram,
+        facebook: (c.user as any).facebook,
+        youtube: (c.user as any).youtube,
+        tiktok: (c.user as any).tiktok,
+        jenjang_pendidikan: (c.user as any).jenjangPendidikan,
+        kecamatan_profile: (c.user as any).kecamatan, // disambiguate from claim.kecamatan
       })),
     };
   });
 
+  // ── Active pricing packages (for regional dropdown) ──
+  app.get("/pricing-packages", { preHandler: authenticate }, async (request) => {
+    const req = request as AuthenticatedRequest;
+    await assertRegional(req.user.sub);
+
+    const packages = await prisma.pricingPackage.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      packages: packages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        harga_paket: p.hargaPaket,
+        harga_diskon: p.hargaDiskon,
+        is_active: p.isActive,
+        created_at: p.createdAt,
+      })),
+    };
+  });
+
+  // ── Approve claim with pricing package ──
   app.post("/claims/:id/approve", { preHandler: authenticate }, async (request, reply) => {
     const payload = request.user as { sub: string };
     const regionId = await assertRegional(payload.sub);
     const params = request.params as { id?: string };
     if (!params.id) return reply.status(400).send({ message: "id tidak valid" });
+
+    const body = approveSchema.parse(request.body ?? {});
 
     const claim = await prisma.pesantrenClaim.findUnique({ where: { id: params.id } });
     if (!claim || claim.regionId !== regionId) {
@@ -163,16 +243,30 @@ export async function regionalRoutes(app: FastifyInstance) {
         });
 
         if (!existingPayment) {
-          const settings = await tx.systemSetting.findMany({
-            where: { key: { in: ["registration_base_price", "claim_base_price"] } },
-          });
+          let baseAmount = 50000; // fallback
+          let pricingPackageId: string | undefined;
 
-          const registration = settings.find((s) => s.key === "registration_base_price");
-          const claimSetting = settings.find((s) => s.key === "claim_base_price");
-          const baseAmount =
-            claim.jenisPengajuan === "klaim"
-              ? Number(claimSetting?.value ?? 20000)
-              : Number(registration?.value ?? 50000);
+          if (body.pricingPackageId) {
+            // Use the selected pricing package
+            const pkg = await tx.pricingPackage.findUnique({
+              where: { id: body.pricingPackageId },
+            });
+            if (pkg && pkg.isActive) {
+              baseAmount = pkg.hargaDiskon ?? pkg.hargaPaket;
+              pricingPackageId = pkg.id;
+            }
+          } else {
+            // Fallback: auto-select first active registration package
+            const defaultPkg = await tx.pricingPackage.findFirst({
+              where: { category: "registration", isActive: true },
+              orderBy: { createdAt: "asc" },
+            });
+            if (defaultPkg) {
+              baseAmount = defaultPkg.hargaDiskon ?? defaultPkg.hargaPaket;
+              pricingPackageId = defaultPkg.id;
+            }
+          }
+
           const uniqueCode = Math.floor(1 + Math.random() * 999);
 
           await tx.payment.create({
@@ -183,6 +277,7 @@ export async function regionalRoutes(app: FastifyInstance) {
               uniqueCode,
               totalAmount: baseAmount + uniqueCode,
               status: PaymentVerificationStatus.pending_payment,
+              ...(pricingPackageId && { pricingPackageId }),
             },
           });
         }
@@ -245,11 +340,11 @@ export async function regionalRoutes(app: FastifyInstance) {
     const claimIds = claims.map((c) => c.id);
     const payments = claimIds.length
       ? await prisma.payment.findMany({
-          where: {
-            pesantrenClaimId: { in: claimIds },
-          },
-          select: { pesantrenClaimId: true, status: true },
-        })
+        where: {
+          pesantrenClaimId: { in: claimIds },
+        },
+        select: { pesantrenClaimId: true, status: true },
+      })
       : [];
     const paymentMap = new Map(payments.map((p) => [p.pesantrenClaimId, p.status]));
 
@@ -259,8 +354,8 @@ export async function regionalRoutes(app: FastifyInstance) {
         .map((c) => {
           const daysOverdue = c.regionalApprovedAt
             ? Math.floor(
-                (Date.now() - (c.regionalApprovedAt.getTime() + 7 * 24 * 60 * 60 * 1000)) / (24 * 60 * 60 * 1000)
-              )
+              (Date.now() - (c.regionalApprovedAt.getTime() + 7 * 24 * 60 * 60 * 1000)) / (24 * 60 * 60 * 1000)
+            )
             : 0;
           return {
             id: c.id,

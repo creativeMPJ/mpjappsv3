@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Users, 
+import {
+  Users,
   Calendar,
   Building2,
   UserCog,
@@ -34,16 +34,16 @@ interface MediaDashboardHomeProps {
   };
 }
 
-const MediaDashboardHome = ({ 
-  paymentStatus, 
-  profileLevel, 
+const MediaDashboardHome = ({
+  paymentStatus,
+  profileLevel,
   onNavigate,
-  debugProfile 
+  debugProfile
 }: MediaDashboardHomeProps) => {
   const isPlatinum = profileLevel === 'platinum';
-  const displayNIP = debugProfile?.nip ? formatNIP(debugProfile.nip, true) : "2601001";
-  const displayName = debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah";
-  const jumlahSantri = debugProfile?.jumlah_santri || 250;
+  const displayNIP = debugProfile?.nip ? formatNIP(debugProfile.nip, true) : null;
+  const displayName = debugProfile?.nama_pesantren || "Media Pesantren";
+  const jumlahSantri = debugProfile?.jumlah_santri || 0;
 
   // Calculate profile completion based on level
   const getProfileCompletion = () => {
@@ -91,7 +91,7 @@ const MediaDashboardHome = ({
       {/* Hero Card - Clean White Theme with Premium Border */}
       <Card className={cn(
         "border overflow-hidden relative shadow-lg",
-        isPlatinum 
+        isPlatinum
           ? "bg-white border-cyan-200 shadow-cyan-100/50"
           : "bg-white border-emerald-200 shadow-emerald-100/50"
       )}>
@@ -118,15 +118,15 @@ const MediaDashboardHome = ({
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <Badge className={cn(
               "font-mono text-lg px-3 py-1 shadow-sm",
-              isPlatinum 
-                ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0" 
+              isPlatinum
+                ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0"
                 : "bg-emerald-600 text-white border-0"
             )}>
               NIP: {displayNIP}
             </Badge>
             {isPlatinum && <VerifiedBadge isVerified={true} size="lg" showLabel />}
           </div>
-          
+
           {/* Institution Name - Bold & Elegant */}
           <div className="flex items-center gap-3 mb-2">
             <h1 className={cn(
@@ -136,7 +136,7 @@ const MediaDashboardHome = ({
               {displayName}
             </h1>
           </div>
-          
+
           {/* Welcome Message */}
           <p className={cn(
             "text-base md:text-lg font-medium",
@@ -148,7 +148,7 @@ const MediaDashboardHome = ({
           {/* Level & Status Badges - Enhanced with 3D effect */}
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <Badge className={cn(
-              levelInfo.color, 
+              levelInfo.color,
               "text-white shadow-md border-0",
               profileLevel === "platinum" && "shadow-cyan-300/50",
               profileLevel === "gold" && "shadow-amber-300/50",
@@ -158,8 +158,8 @@ const MediaDashboardHome = ({
             </Badge>
             <Badge className={cn(
               "shadow-sm",
-              paymentStatus === "paid" 
-                ? "bg-green-500 text-white shadow-green-200/50" 
+              paymentStatus === "paid"
+                ? "bg-green-500 text-white shadow-green-200/50"
                 : "bg-red-500 text-white shadow-red-200/50"
             )}>
               {paymentStatus === "paid" ? "ACTIVE" : "INACTIVE"}
@@ -179,16 +179,16 @@ const MediaDashboardHome = ({
             <span className="text-lg font-bold text-emerald-700">{profileCompletion}%</span>
           </div>
           <Progress value={profileCompletion} className="h-3 mb-4" />
-          
+
           {/* Mission Checklist */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {missionItems.map((mission, index) => (
-              <div 
+              <div
                 key={index}
                 className={cn(
                   "flex items-center gap-3 p-3 rounded-lg border shadow-sm",
-                  mission.completed 
-                    ? "bg-emerald-50 border-emerald-200" 
+                  mission.completed
+                    ? "bg-emerald-50 border-emerald-200"
                     : "bg-white border-slate-200"
                 )}
               >
@@ -239,7 +239,10 @@ const MediaDashboardHome = ({
         </Card>
 
         {/* Total Kru */}
-        <Card className="bg-white border border-slate-200 shadow-sm">
+        <Card
+          className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          onClick={() => onNavigate("tim")}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-900">Total Kru</h3>
@@ -295,7 +298,7 @@ const MediaDashboardHome = ({
       {/* Quick Menu Grid */}
       <div className="grid grid-cols-2 gap-4">
         {/* Identitas Pesantren */}
-        <Card 
+        <Card
           className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("identitas")}
         >
@@ -312,7 +315,7 @@ const MediaDashboardHome = ({
         </Card>
 
         {/* Tim Media */}
-        <Card 
+        <Card
           className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("tim")}
         >
@@ -329,7 +332,7 @@ const MediaDashboardHome = ({
         </Card>
 
         {/* Administrasi */}
-        <Card 
+        <Card
           className={cn(
             "bg-white border transition-all cursor-pointer group shadow-sm",
             paymentStatus === "unpaid" ? "ring-2 ring-red-300 border-red-200" : "hover:shadow-lg border-slate-200"
@@ -345,11 +348,11 @@ const MediaDashboardHome = ({
             </div>
             <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Administrasi</h3>
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Tagihan</p>
-            <Button 
+            <Button
               className={cn(
                 "w-full text-sm shadow-sm",
-                paymentStatus === "unpaid" 
-                  ? "bg-red-600 hover:bg-red-700 text-white" 
+                paymentStatus === "unpaid"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
                   : "bg-emerald-600 hover:bg-emerald-700 text-white"
               )}
             >
@@ -359,7 +362,7 @@ const MediaDashboardHome = ({
         </Card>
 
         {/* E-ID & Aset */}
-        <Card 
+        <Card
           className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("eid")}
         >

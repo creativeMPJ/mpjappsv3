@@ -86,11 +86,38 @@ export async function paymentRoutes(app: FastifyInstance) {
     }
 
     if (payment.status === PaymentVerificationStatus.pending_verification) {
-      return { redirectTo: "/payment-pending" };
+      return {
+        redirectTo: "/payment-pending",
+        payment: {
+          id: payment.id,
+          status: payment.status,
+          rejectionReason: payment.rejectionReason,
+        },
+      };
     }
 
     if (payment.status === PaymentVerificationStatus.verified) {
-      return { redirectTo: "/user" };
+      return {
+        redirectTo: "/user",
+        payment: {
+          id: payment.id,
+          status: payment.status,
+          rejectionReason: null,
+        },
+      };
+    }
+
+    if (payment.status === PaymentVerificationStatus.rejected) {
+      return {
+        payment: {
+          id: payment.id,
+          baseAmount: payment.baseAmount,
+          uniqueCode: payment.uniqueCode,
+          totalAmount: payment.totalAmount,
+          status: payment.status,
+          rejectionReason: payment.rejectionReason,
+        },
+      };
     }
 
     return {
@@ -120,16 +147,18 @@ export async function paymentRoutes(app: FastifyInstance) {
     const payload = request.user as { sub: string };
     const fields: Record<string, string> = {};
     let filePart: Awaited<ReturnType<typeof request.file>> | null = null;
+    let fileBuffer: Buffer | null = null;
 
     for await (const part of request.parts()) {
       if (part.type === "field") {
         fields[part.fieldname] = String(part.value || "");
       } else if (part.type === "file") {
         filePart = part;
+        fileBuffer = await part.toBuffer();
       }
     }
 
-    if (!filePart) {
+    if (!filePart || !fileBuffer) {
       return reply.status(400).send({ message: "File bukti transfer wajib diupload" });
     }
 
@@ -147,8 +176,7 @@ export async function paymentRoutes(app: FastifyInstance) {
       return reply.status(400).send({ message: "Format file tidak didukung" });
     }
 
-    const buffer = await filePart.toBuffer();
-    if (buffer.byteLength > 350 * 1024) {
+    if (fileBuffer.byteLength > 350 * 1024) {
       return reply.status(400).send({ message: "Ukuran file melebihi 350KB" });
     }
 
@@ -164,7 +192,7 @@ export async function paymentRoutes(app: FastifyInstance) {
     const outputPath = path.join(process.cwd(), "uploads", relativePath);
 
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.writeFile(outputPath, buffer);
+    await fs.writeFile(outputPath, fileBuffer);
 
     await prisma.payment.update({
       where: { id: payment.id },

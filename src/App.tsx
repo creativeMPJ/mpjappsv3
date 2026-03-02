@@ -19,6 +19,7 @@ import PaymentPending from "./pages/PaymentPending";
 import CheckInstitution from "./pages/CheckInstitution";
 import InstitutionSubmission from "./pages/InstitutionSubmission";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
 import DebugView from "./pages/DebugView";
 import PublicPesantrenProfile from "./pages/PublicPesantrenProfile";
 import PublicCrewProfile from "./pages/PublicCrewProfile";
@@ -58,6 +59,7 @@ const App = () => (
             {/* ══════════════════════════════════════════════════════ */}
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/register" element={<InstitutionSubmission />} />
             <Route path="/check-institution" element={<CheckInstitution />} />
             <Route path="/institution-submission" element={<InstitutionSubmission />} />
@@ -67,14 +69,14 @@ const App = () => (
             <Route path="/claim-success" element={<ClaimSuccess />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/payment-pending" element={<PaymentPending />} />
-            
+
             {/* ══════════════════════════════════════════════════════ */}
             {/* PUBLIC VERIFICATION PROFILES - QR Code verification   */}
             {/* ══════════════════════════════════════════════════════ */}
             <Route path="/direktori" element={<PublicDirektori />} />
             <Route path="/pesantren/:nip" element={<PublicPesantrenProfile />} />
             <Route path="/pesantren/:nip/crew/:niamSuffix" element={<PublicCrewProfile />} />
-            
+
             {/* ══════════════════════════════════════════════════════ */}
             {/* DEBUG VIEW - Public audit page (dev only)             */}
             {/* ══════════════════════════════════════════════════════ */}
@@ -82,151 +84,151 @@ const App = () => (
             {/* ══════════════════════════════════════════════════════ */}
             {/* STATUS PAGES - Auth required, special status handling */}
             {/* ══════════════════════════════════════════════════════ */}
-            <Route 
-              path="/verification-pending" 
+            <Route
+              path="/verification-pending"
               element={
                 <ProtectedRoute>
                   <VerificationPending />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/account-rejected" 
+            <Route
+              path="/account-rejected"
               element={
                 <ProtectedRoute>
                   <AccountRejected />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/403" 
+            <Route
+              path="/403"
               element={
                 <ProtectedRoute>
                   <Forbidden />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* ══════════════════════════════════════════════════════ */}
             {/* ADMIN PUSAT ROUTES - role === 'admin_pusat' ONLY      */}
             {/* ══════════════════════════════════════════════════════ */}
-            <Route 
-              path="/admin-pusat" 
+            <Route
+              path="/admin-pusat"
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <AdminPusatDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin-pusat/*" 
+            <Route
+              path="/admin-pusat/*"
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <AdminPusatDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
             {/* ══════════════════════════════════════════════════════ */}
             {/* ADMIN FINANCE ROUTES - role === 'admin_finance' ONLY   */}
             {/* ══════════════════════════════════════════════════════ */}
-            <Route 
-              path="/finance" 
+            <Route
+              path="/finance"
               element={
                 <ProtectedRoute allowedRoles={['admin_finance']}>
                   <FinanceDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/finance/*" 
+            <Route
+              path="/finance/*"
               element={
                 <ProtectedRoute allowedRoles={['admin_finance']}>
                   <FinanceDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
             {/* ══════════════════════════════════════════════════════ */}
             {/* SUPER ADMIN ROUTES - God Mode Dashboard                */}
             {/* ══════════════════════════════════════════════════════ */}
-            <Route 
-              path="/super-admin" 
+            <Route
+              path="/super-admin"
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <SuperAdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/super-admin/*" 
+            <Route
+              path="/super-admin/*"
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <SuperAdminDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
             {/* Majelis Militan merged into SuperAdminDashboard as "Hierarki Data" */}
-            <Route 
-              path="/admin-pusat/regional/:id" 
+            <Route
+              path="/admin-pusat/regional/:id"
               element={
                 <ProtectedRoute allowedRoles={['admin_pusat']}>
                   <AdminRegionalDetail />
                 </ProtectedRoute>
-              } 
+              }
             />
             {/* ══════════════════════════════════════════════════════ */}
             {/* ADMIN REGIONAL ROUTES - role === 'admin_regional' ONLY */}
             {/* ══════════════════════════════════════════════════════ */}
-            <Route 
-              path="/admin-regional" 
+            <Route
+              path="/admin-regional"
               element={
                 <ProtectedRoute allowedRoles={['admin_regional']}>
                   <RegionalDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/admin-regional/*" 
+            <Route
+              path="/admin-regional/*"
               element={
                 <ProtectedRoute allowedRoles={['admin_regional']}>
                   <RegionalDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* ══════════════════════════════════════════════════════ */}
             {/* USER ROUTES - role === 'user' ONLY                    */}
             {/* ══════════════════════════════════════════════════════ */}
-            <Route 
-              path="/user" 
+            <Route
+              path="/user"
               element={
                 <ProtectedRoute allowedRoles={['user']}>
                   <MediaDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/user/*" 
+            <Route
+              path="/user/*"
               element={
                 <ProtectedRoute allowedRoles={['user']}>
                   <MediaDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/user/crew" 
+            <Route
+              path="/user/crew"
               element={
                 <ProtectedRoute allowedRoles={['user']}>
                   <CrewDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
-            <Route 
-              path="/user/crew/*" 
+            <Route
+              path="/user/crew/*"
               element={
                 <ProtectedRoute allowedRoles={['user']}>
                   <CrewDashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
 
             {/* ══════════════════════════════════════════════════════ */}

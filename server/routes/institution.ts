@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { authenticate } from "../auth-guard";
 import { prisma } from "../prisma";
+import sharp from "sharp";
 
 const initialDataSchema = z.object({
   namaPesantren: z.string().min(1),
@@ -56,19 +57,30 @@ export async function institutionRoutes(app: FastifyInstance) {
     }
 
     const buffer = await file.toBuffer();
-    if (buffer.byteLength > 350 * 1024) {
-      return reply.status(400).send({ message: "File size exceeds 350KB" });
+    if (buffer.byteLength > 1024 * 1024) {
+      return reply.status(400).send({ message: "Ukuran file melebihi 1MB" });
     }
 
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+
+    // If image (not PDF), convert to WebP
+    const isImage = ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype);
+
+    if (isImage) {
+      const webpBuffer = await sharp(buffer).webp({ quality: 80 }).toBuffer();
+      const relativePath = `registration-documents/${payload.sub}/${Date.now()}.webp`;
+      const outputPath = path.join(process.cwd(), "uploads", relativePath);
+      await fs.mkdir(path.dirname(outputPath), { recursive: true });
+      await fs.writeFile(outputPath, webpBuffer);
+      return { path: `/uploads/${relativePath}` };
+    }
+
+    // PDF: save as-is
     const ext = (file.filename.split(".").pop() || "bin").toLowerCase();
     const safeExt = ext.replace(/[^a-z0-9]/g, "") || "bin";
     const relativePath = `registration-documents/${payload.sub}/${Date.now()}.${safeExt}`;
-
-    // save under ./uploads
-    const fs = await import("node:fs/promises");
-    const path = await import("node:path");
     const outputPath = path.join(process.cwd(), "uploads", relativePath);
-
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, buffer);
 
@@ -186,9 +198,9 @@ export async function institutionRoutes(app: FastifyInstance) {
       },
       region: claim.region
         ? {
-            name: claim.region.name,
-            admin_phone: "6281234567890",
-          }
+          name: claim.region.name,
+          admin_phone: "6281234567890",
+        }
         : null,
     };
   });

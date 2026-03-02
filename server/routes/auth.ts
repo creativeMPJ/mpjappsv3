@@ -7,7 +7,7 @@ import { prisma } from "../prisma";
 
 const registerSchema = z.object({
   email: z.string().email().toLowerCase(),
-  password: z.string().min(8),
+  password: z.string().min(6),
   namaPesantren: z.string().min(1).optional(),
   namaPengasuh: z.string().min(1).optional(),
 });
@@ -19,7 +19,7 @@ const loginSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: z.string().min(6),
 });
 
 export async function authRoutes(app: FastifyInstance) {
@@ -128,6 +128,15 @@ export async function authRoutes(app: FastifyInstance) {
         email: user.email,
         role: user.profile?.role ?? AppRole.user,
         statusAccount: user.profile?.statusAccount ?? null,
+        statusPayment: user.profile?.statusPayment ?? "unpaid",
+        profileLevel: user.profile?.profileLevel ?? "basic",
+        nip: user.profile?.nip ?? null,
+        namaPesantren: user.profile?.namaPesantren ?? null,
+        namaPengasuh: user.profile?.namaPengasuh ?? null,
+        namaMedia: user.profile?.namaMedia ?? null,
+        alamatSingkat: user.profile?.alamatSingkat ?? null,
+        regionId: user.profile?.regionId ?? null,
+        logoUrl: user.profile?.logoUrl ?? null,
       },
     });
   });
@@ -153,5 +162,40 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ success: true });
+  });
+
+  // Forgot Password - creates a reset request for admin to process
+  app.post("/forgot-password", async (request, reply) => {
+    const body = z.object({
+      email: z.string().min(1).toLowerCase(),
+    }).parse(request.body);
+
+    // Check if user exists (but always return success for security)
+    const user = await prisma.user.findUnique({ where: { email: body.email } });
+
+    if (user) {
+      // Check for recent pending request to prevent spam (within last hour)
+      const recentRequest = await prisma.passwordResetRequest.findFirst({
+        where: {
+          email: body.email,
+          status: "pending",
+          createdAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
+        },
+      });
+
+      if (!recentRequest) {
+        await prisma.passwordResetRequest.create({
+          data: {
+            email: body.email,
+          },
+        });
+      }
+    }
+
+    // Always return success to prevent email enumeration
+    return reply.send({
+      success: true,
+      message: "Jika akun terdaftar, permintaan reset password telah dikirim ke admin.",
+    });
   });
 }

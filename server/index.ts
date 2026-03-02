@@ -14,18 +14,20 @@ import { paymentRoutes } from "./routes/payments";
 import { claimRoutes } from "./routes/claims";
 import { mediaRoutes } from "./routes/media";
 import { regionalRoutes } from "./routes/regional";
+import { eventRoutes } from "./routes/event-routes";
 
 const app = Fastify({ logger: true });
 
 await app.register(cors, {
   origin: true,
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 });
 
 await app.register(jwt, {
   secret: env.JWT_SECRET,
 });
-await app.register(multipart);
+await app.register(multipart, { limits: { fileSize: 2 * 1024 * 1024 } }); // 2MB to accommodate 1MB files + multipart overhead
 await app.register(fastifyStatic, {
   root: path.join(process.cwd(), "uploads"),
   prefix: "/uploads/",
@@ -41,6 +43,7 @@ await app.register(paymentRoutes, { prefix: "/api/payments" });
 await app.register(claimRoutes, { prefix: "/api/claims" });
 await app.register(mediaRoutes, { prefix: "/api/media" });
 await app.register(regionalRoutes, { prefix: "/api/regional" });
+await app.register(eventRoutes, { prefix: "/api/events" });
 
 app.setErrorHandler((error, _request, reply) => {
   if (error instanceof ZodError) {

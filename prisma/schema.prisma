@@ -10,14 +10,44 @@ datasource db {
 model Region {
   id           String           @id @default(uuid()) @db.Uuid
   name         String
-  code         String
+  code         String           @unique
   createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   cities       City[]
   followUpLogs FollowUpLog[]
   claims       PesantrenClaim[]
   profiles     Profile[]
+  eventReports EventReport[]
 
   @@map("regions")
+}
+
+model Event {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  date        DateTime
+  location    String?
+  status      String   @default("upcoming") // upcoming, ongoing, completed
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  report      EventReport[]
+
+  @@map("events")
+}
+
+model EventReport {
+  id          String   @id @default(uuid()) @db.Uuid
+  eventId     String   @map("event_id") @db.Uuid
+  regionId    String   @map("region_id") @db.Uuid
+  participationCount Int @default(0) @map("participation_count")
+  notes       String?
+  photoUrl    String?  @map("photo_url")
+  submittedAt DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  
+  event       Event    @relation(fields: [eventId], references: [id])
+  region      Region   @relation(fields: [regionId], references: [id])
+
+  @@map("event_reports")
 }
 
 model City {
@@ -56,6 +86,35 @@ model Profile {
   sejarah         String?
   visiMisi        String?          @map("visi_misi")
   socialLinks     Json?            @map("social_links")
+  
+  // ── New Fields from User Request (Laravel Adaptation) ──
+  isAlumni        Boolean          @default(false) @map("is_alumni")
+  niam            String?          @unique
+  
+  // Address
+  alamatLengkap   String?          @map("alamat_lengkap")
+  kecamatan       String?
+  desa            String?
+  kodePos         String?          @map("kode_pos")
+  mapsLink        String?          @map("maps_link")
+  
+  // Media Assets
+  ketuaMedia      String?          @map("ketua_media")
+  tahunBerdiri    String?          @map("tahun_berdiri")
+  jumlahKru       Int?             @map("jumlah_kru")
+  logoMediaUrl    String?          @map("logo_media_path") // Mapped from logo_media_path
+  fotoGedungUrl   String?          @map("foto_gedung_path") // Mapped from foto_gedung_path
+  
+  // Social Media Columns (Explicit)
+  website         String?
+  instagram       String?
+  facebook        String?
+  youtube         String?
+  tiktok          String?
+  
+  // Educational
+  jenjangPendidikan Json?          @map("jenjang_pendidikan")
+  
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
   user            User             @relation(fields: [id], references: [id], onDelete: Cascade)
@@ -118,23 +177,39 @@ model PesantrenClaim {
 }
 
 model Payment {
-  id               String                    @id @default(uuid()) @db.Uuid
-  userId           String                    @map("user_id") @db.Uuid
-  pesantrenClaimId String                    @map("pesantren_claim_id") @db.Uuid
-  baseAmount       Int                       @map("base_amount")
-  uniqueCode       Int                       @map("unique_code")
-  totalAmount      Int                       @map("total_amount")
-  status           PaymentVerificationStatus @default(pending_payment)
-  proofFileUrl     String?                   @map("proof_file_url")
-  rejectionReason  String?                   @map("rejection_reason")
-  verifiedBy       String?                   @map("verified_by") @db.Uuid
-  verifiedAt       DateTime?                 @map("verified_at") @db.Timestamptz(6)
-  createdAt        DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  claim            PesantrenClaim            @relation(fields: [pesantrenClaimId], references: [id])
-  user             Profile                   @relation(fields: [userId], references: [id])
+  id                String                    @id @default(uuid()) @db.Uuid
+  userId            String                    @map("user_id") @db.Uuid
+  pesantrenClaimId  String                    @map("pesantren_claim_id") @db.Uuid
+  pricingPackageId  String?                   @map("pricing_package_id") @db.Uuid
+  baseAmount        Int                       @map("base_amount")
+  uniqueCode        Int                       @map("unique_code")
+  totalAmount       Int                       @map("total_amount")
+  status            PaymentVerificationStatus @default(pending_payment)
+  proofFileUrl      String?                   @map("proof_file_url")
+  rejectionReason   String?                   @map("rejection_reason")
+  verifiedBy        String?                   @map("verified_by") @db.Uuid
+  verifiedAt        DateTime?                 @map("verified_at") @db.Timestamptz(6)
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  claim             PesantrenClaim            @relation(fields: [pesantrenClaimId], references: [id])
+  user              Profile                   @relation(fields: [userId], references: [id])
+  pricingPackage    PricingPackage?           @relation(fields: [pricingPackageId], references: [id])
 
   @@map("payments")
+}
+
+model PricingPackage {
+  id          String          @id @default(uuid()) @db.Uuid
+  name        String
+  category    PricingCategory
+  hargaPaket  Int             @map("harga_paket")
+  hargaDiskon Int?            @map("harga_diskon")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  payments    Payment[]
+
+  @@map("pricing_packages")
 }
 
 model JabatanCode {
@@ -193,6 +268,17 @@ model FollowUpLog {
   @@map("follow_up_logs")
 }
 
+model PasswordResetRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  email       String
+  status      String   @default("pending") // pending, completed, rejected
+  processedBy String?  @map("processed_by") @db.Uuid
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("password_reset_requests")
+}
+
 model SystemSetting {
   id          String   @id @default(uuid()) @db.Uuid
   key         String
@@ -215,6 +301,8 @@ enum AppRole {
   admin_regional
   admin_pusat
   admin_finance
+  coordinator // Added from user request
+  crew        // Added from user request
 }
 
 enum ClaimStatus {
@@ -228,6 +316,7 @@ enum ClaimStatus {
 enum PaymentStatus {
   paid
   unpaid
+  expired // Added from user request
 }
 
 enum PaymentVerificationStatus {
@@ -247,4 +336,10 @@ enum ProfileLevel {
 enum RegistrationType {
   klaim
   pesantren_baru
+}
+
+enum PricingCategory {
+  registration
+  renewal
+  upgrade
 }

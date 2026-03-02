@@ -19,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Upload, 
-  MapPin, 
-  Save, 
-  Award, 
-  CheckCircle2, 
+import {
+  Upload,
+  MapPin,
+  Save,
+  Award,
+  CheckCircle2,
   Lock,
   Building2,
   Image,
@@ -91,21 +91,21 @@ const programUnggulanOptions = [
   { value: "teknologi", label: "Teknologi Informasi" },
 ];
 
-const IdentitasPesantren = ({ 
-  paymentStatus, 
+const IdentitasPesantren = ({
+  paymentStatus,
   profileLevel,
   onProfileLevelChange,
-  debugProfile 
+  debugProfile
 }: IdentitasPesantrenProps) => {
   // Form state based on ERD pesantren table
   const [formData, setFormData] = useState({
     // Basic/Silver Level - Read Only Region
-    namaPesantren: debugProfile?.nama_pesantren || "Pondok Pesantren Al-Hikmah",
-    namaPengasuh: debugProfile?.nama_pengasuh || "KH. Ahmad Dahlan",
-    alamatSingkat: debugProfile?.alamat_singkat || "Jl. Raya No. 123, Malang",
-    region: debugProfile?.region_name || "Malang Raya",
-    city: debugProfile?.city_name || "Kota Malang",
-    
+    namaPesantren: debugProfile?.nama_pesantren || "",
+    namaPengasuh: debugProfile?.nama_pengasuh || "",
+    alamatSingkat: debugProfile?.alamat_singkat || "",
+    region: debugProfile?.region_name || "",
+    city: debugProfile?.city_name || "",
+
     // Gold Level Fields
     logoPesantrenUrl: "",
     namaMedia: "",
@@ -121,7 +121,7 @@ const IdentitasPesantren = ({
     tahunBerdiriPesantren: "",
     latitude: "",
     longitude: "",
-    
+
     // Platinum Level Fields
     visiMisi: "",
     sejarahSingkat: "",
@@ -135,10 +135,10 @@ const IdentitasPesantren = ({
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  
+
   // Debounced form data for auto-save
   const debouncedFormData = useDebounce(formData, 1500);
-  
+
   // Auto-save effect
   useEffect(() => {
     if (hasChanges) {
@@ -182,31 +182,31 @@ const IdentitasPesantren = ({
 
   // Level validation functions
   const canClaimSilver = () => {
-    return formData.namaPesantren.trim() !== '' && 
-           formData.namaPengasuh.trim() !== '' && 
-           formData.alamatSingkat.trim() !== '';
+    return formData.namaPesantren.trim() !== '' &&
+      formData.namaPengasuh.trim() !== '' &&
+      formData.alamatSingkat.trim() !== '';
   };
 
   const canClaimGold = () => {
-    return canClaimSilver() && 
-           (formData.logoPesantrenUrl !== '' || true) && 
-           (formData.socialLinks.instagram || formData.socialLinks.youtube || 
-            formData.socialLinks.tiktok || formData.socialLinks.website) &&
-           formData.latitude !== '' && formData.longitude !== '';
+    return canClaimSilver() &&
+      (formData.logoPesantrenUrl !== '' || true) &&
+      (formData.socialLinks.instagram || formData.socialLinks.youtube ||
+        formData.socialLinks.tiktok || formData.socialLinks.website) &&
+      formData.latitude !== '' && formData.longitude !== '';
   };
 
   const canClaimPlatinum = () => {
-    return canClaimGold() && 
-           formData.visiMisi.trim() !== '' && 
-           formData.sejarahSingkat.trim() !== '' && 
-           (formData.fotoGedungPesantren !== '' || true);
+    return canClaimGold() &&
+      formData.visiMisi.trim() !== '' &&
+      formData.sejarahSingkat.trim() !== '' &&
+      (formData.fotoGedungPesantren !== '' || true);
   };
 
   const handleSaveStep = (step: number) => {
     if (step === 1) {
       if (!canClaimSilver()) {
-        toast({ 
-          title: "Data Belum Lengkap", 
+        toast({
+          title: "Data Belum Lengkap",
           description: "Pastikan Nama Pesantren, Pengasuh, dan Alamat sudah diisi.",
           variant: "destructive"
         });
@@ -216,8 +216,8 @@ const IdentitasPesantren = ({
       toast({ title: "Level Silver Tercapai!", description: "Data dasar berhasil disimpan." });
     } else if (step === 2) {
       if (!canClaimGold()) {
-        toast({ 
-          title: "Data Belum Lengkap", 
+        toast({
+          title: "Data Belum Lengkap",
           description: "Pastikan Logo, minimal 1 Media Sosial, dan Koordinat sudah diisi.",
           variant: "destructive"
         });
@@ -227,8 +227,8 @@ const IdentitasPesantren = ({
       toast({ title: "Level Gold Tercapai!", description: "Data media dan kelengkapan tersimpan." });
     } else if (step === 3) {
       if (!canClaimPlatinum()) {
-        toast({ 
-          title: "Data Belum Lengkap", 
+        toast({
+          title: "Data Belum Lengkap",
           description: "Pastikan Visi Misi, Sejarah, dan Foto Gedung sudah diisi.",
           variant: "destructive"
         });
@@ -282,8 +282,8 @@ const IdentitasPesantren = ({
           <Badge className={cn(
             "text-white text-xs md:text-sm",
             profileLevel === "platinum" ? "bg-gradient-to-r from-cyan-500 to-blue-500" :
-            profileLevel === "gold" ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900" :
-            profileLevel === "silver" ? "bg-slate-400" : "bg-slate-300"
+              profileLevel === "gold" ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-900" :
+                profileLevel === "silver" ? "bg-slate-400" : "bg-slate-300"
           )}>
             {profileLevel.charAt(0).toUpperCase() + profileLevel.slice(1)}
           </Badge>
@@ -303,7 +303,7 @@ const IdentitasPesantren = ({
 
       {/* Single View: Leveling Form (No Tabs) */}
       <Accordion type="single" collapsible defaultValue="step1" className="space-y-4">
-        
+
         {/* Step 1: Silver - Data Dasar (Region Locked) */}
         <AccordionItem value="step1" className="border rounded-lg bg-card">
           <AccordionTrigger className="px-4 md:px-6 py-4 hover:no-underline">
@@ -346,7 +346,7 @@ const IdentitasPesantren = ({
                   className="min-h-[80px] text-base"
                 />
               </div>
-              
+
               {/* Locked Region Fields */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm md:text-base">
@@ -371,7 +371,7 @@ const IdentitasPesantren = ({
                 />
               </div>
             </div>
-            <Button 
+            <Button
               className="mt-4 w-full sm:w-auto h-11 text-base bg-primary hover:bg-primary/90"
               onClick={() => handleSaveStep(1)}
               disabled={isStepComplete(1)}
@@ -411,7 +411,7 @@ const IdentitasPesantren = ({
                   <p className="text-sm text-muted-foreground">PNG/JPG</p>
                 </div>
               </div>
-              
+
               {/* Nama Media */}
               <div className="space-y-2">
                 <Label className="text-sm md:text-base">Nama Media Pesantren</Label>
@@ -422,7 +422,7 @@ const IdentitasPesantren = ({
                   className="h-11 md:h-10 text-base"
                 />
               </div>
-              
+
               {/* Foto Pengasuh */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm md:text-base">
@@ -434,7 +434,7 @@ const IdentitasPesantren = ({
                   <p className="text-sm text-muted-foreground">PNG/JPG</p>
                 </div>
               </div>
-              
+
               {/* Social Links - Full width on mobile */}
               <div className="space-y-2 sm:col-span-2 lg:col-span-3">
                 <Label className="flex items-center gap-2 text-sm md:text-base">
@@ -468,7 +468,7 @@ const IdentitasPesantren = ({
                   />
                 </div>
               </div>
-              
+
               {/* Dawuh Pengasuh */}
               <div className="space-y-2 sm:col-span-2 lg:col-span-3">
                 <Label className="text-sm md:text-base">Dawuh / Pesan Pengasuh</Label>
@@ -479,7 +479,7 @@ const IdentitasPesantren = ({
                   className="min-h-[80px] text-base"
                 />
               </div>
-              
+
               {/* Jumlah Santri & Tahun Berdiri */}
               <div className="space-y-2">
                 <Label className="text-sm md:text-base">Jumlah Santri Terbaru</Label>
@@ -501,7 +501,7 @@ const IdentitasPesantren = ({
                   className="h-11 md:h-10 text-base"
                 />
               </div>
-              
+
               {/* Koordinat */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm md:text-base">
@@ -524,7 +524,7 @@ const IdentitasPesantren = ({
                 </div>
               </div>
             </div>
-            <Button 
+            <Button
               className="mt-4 w-full sm:w-auto h-11 text-base bg-primary hover:bg-primary/90"
               onClick={() => handleSaveStep(2)}
               disabled={!isStepComplete(1) || isStepComplete(2)}
@@ -570,7 +570,7 @@ const IdentitasPesantren = ({
                   className="text-base"
                 />
               </div>
-              
+
               {/* Sejarah */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2 text-sm md:text-base">
@@ -585,7 +585,7 @@ const IdentitasPesantren = ({
                   className="text-base"
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Tipe Pesantren */}
                 <div className="space-y-2">
@@ -609,7 +609,7 @@ const IdentitasPesantren = ({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 {/* Jenjang Pendidikan */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2 text-sm md:text-base">
@@ -633,7 +633,7 @@ const IdentitasPesantren = ({
                   </Select>
                 </div>
               </div>
-              
+
               {/* Program Unggulan */}
               <div className="space-y-2">
                 <Label className="text-sm md:text-base">Program Unggulan</Label>
@@ -653,7 +653,7 @@ const IdentitasPesantren = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Foto Gedung & Logo Media */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -672,11 +672,11 @@ const IdentitasPesantren = ({
                 </div>
               </div>
             </div>
-            <Button 
+            <Button
               className={cn(
                 "mt-4 w-full sm:w-auto h-11 text-base",
-                isPlatinum 
-                  ? "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600" 
+                isPlatinum
+                  ? "bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600"
                   : "bg-primary hover:bg-primary/90"
               )}
               onClick={() => handleSaveStep(3)}
@@ -697,7 +697,7 @@ const IdentitasPesantren = ({
               <p className="font-medium text-foreground text-sm md:text-base">Konfirmasi Perubahan</p>
               <p className="text-xs md:text-sm text-muted-foreground">Klik tombol di bawah untuk menyimpan semua perubahan</p>
             </div>
-            <Button 
+            <Button
               onClick={handleUpdateData}
               disabled={isSaving}
               className="h-11 w-full sm:w-auto bg-primary hover:bg-primary/90"

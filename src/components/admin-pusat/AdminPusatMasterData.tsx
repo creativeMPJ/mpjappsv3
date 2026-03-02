@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Building2, Users, Tv, Search, Pencil, Trash2, Eye, X } from "lucide-react";
+import * as XLSX from "xlsx";
+import { Building2, Users, Tv, Search, Pencil, Trash2, Eye, X, Download, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { formatNIP, formatNIAM } from "@/lib/id-utils";
+import ExcelImportDialog from "./ExcelImportDialog";
 
 interface Pesantren {
   id: string;
@@ -100,6 +102,65 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   // Form state for editing
   const [editFormData, setEditFormData] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Import dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importType, setImportType] = useState<"pesantren" | "media" | "kru">("pesantren");
+
+  // Excel export helpers
+  const exportToExcel = (data: Record<string, any>[], fileName: string) => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleExportPesantren = () => {
+    const data = filteredPesantren.map((item) => ({
+      NIP: item.nip || "",
+      "Nama Pesantren": item.nama_pesantren || "",
+      "Nama Pengasuh": item.nama_pengasuh || "",
+      "Alamat Singkat": item.alamat_singkat || "",
+      Regional: item.region_name || "",
+      Kota: item.city_name || "",
+      Status: item.status_account || "",
+      Level: item.profile_level || "",
+    }));
+    exportToExcel(data, "MasterData_Pesantren");
+    toast({ title: "Export Berhasil", description: `${data.length} data pesantren berhasil di-export.` });
+  };
+
+  const handleExportMedia = () => {
+    const data = filteredMedia.map((item) => ({
+      NIP: item.nip || "",
+      "Nama Pesantren": item.nama_pesantren || "",
+      "Nama Media": item.nama_media || "",
+      Regional: item.region_name || "",
+      "No WA": item.no_wa_pendaftar || "",
+      Status: item.status_account || "",
+      Level: item.profile_level || "",
+    }));
+    exportToExcel(data, "MasterData_Media");
+    toast({ title: "Export Berhasil", description: `${data.length} data media berhasil di-export.` });
+  };
+
+  const handleExportKru = () => {
+    const data = filteredCrew.map((item) => ({
+      NIAM: item.niam || "",
+      "Nama Kru": item.nama || "",
+      Jabatan: item.jabatan || "",
+      Pesantren: item.pesantren_name || "",
+      Regional: item.region_name || "",
+      "XP Level": item.xp_level ?? 0,
+    }));
+    exportToExcel(data, "MasterData_Kru");
+    toast({ title: "Export Berhasil", description: `${data.length} data kru berhasil di-export.` });
+  };
+
+  const openImportDialog = (type: "pesantren" | "media" | "kru") => {
+    setImportType(type);
+    setImportDialogOpen(true);
+  };
 
   const fetchData = async () => {
     try {
@@ -220,7 +281,7 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   const filteredPesantren = useMemo(() => {
     return pesantrenList.filter((item) => {
       const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         item.nama_pesantren?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.nip?.includes(searchQuery) ||
         item.nama_pengasuh?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -231,7 +292,7 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   const filteredMedia = useMemo(() => {
     return mediaList.filter((item) => {
       const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         item.nama_pesantren?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.nama_media?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.nip?.includes(searchQuery);
@@ -242,7 +303,7 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   const filteredCrew = useMemo(() => {
     return crewList.filter((item) => {
       const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch = searchQuery === "" ||
         item.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.niam?.includes(searchQuery) ||
         item.pesantren_name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -384,10 +445,10 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
         });
       } else {
         // For pesantren/media, we cannot delete profiles due to RLS
-        toast({ 
-          title: "Tidak Diizinkan", 
-          description: "Profil pesantren tidak dapat dihapus dari Master Data. Gunakan menu administrasi.", 
-          variant: "destructive" 
+        toast({
+          title: "Tidak Diizinkan",
+          description: "Profil pesantren tidak dapat dihapus dari Master Data. Gunakan menu administrasi.",
+          variant: "destructive"
         });
         setDeleteTarget(null);
         setIsSaving(false);
@@ -491,11 +552,21 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
                 <span>Daftar Pesantren ({filteredPesantren.length})</span>
-                {selectedRegionFilter !== "all" && (
-                  <Badge variant="outline" className="font-normal">
-                    {regions.find(r => r.id === selectedRegionFilter)?.name}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedRegionFilter !== "all" && (
+                    <Badge variant="outline" className="font-normal">
+                      {regions.find(r => r.id === selectedRegionFilter)?.name}
+                    </Badge>
+                  )}
+                  <Button variant="outline" size="sm" onClick={handleExportPesantren} className="gap-1.5 text-xs">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openImportDialog("pesantren")} className="gap-1.5 text-xs">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Import</span>
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -598,11 +669,21 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
                 <span>Daftar Admin Media ({filteredMedia.length})</span>
-                {selectedRegionFilter !== "all" && (
-                  <Badge variant="outline" className="font-normal">
-                    {regions.find(r => r.id === selectedRegionFilter)?.name}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedRegionFilter !== "all" && (
+                    <Badge variant="outline" className="font-normal">
+                      {regions.find(r => r.id === selectedRegionFilter)?.name}
+                    </Badge>
+                  )}
+                  <Button variant="outline" size="sm" onClick={handleExportMedia} className="gap-1.5 text-xs">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openImportDialog("media")} className="gap-1.5 text-xs">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Import</span>
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -700,11 +781,21 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
             <CardHeader className="pb-3">
               <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
                 <span>Daftar Kru ({filteredCrew.length})</span>
-                {selectedRegionFilter !== "all" && (
-                  <Badge variant="outline" className="font-normal">
-                    {regions.find(r => r.id === selectedRegionFilter)?.name}
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedRegionFilter !== "all" && (
+                    <Badge variant="outline" className="font-normal">
+                      {regions.find(r => r.id === selectedRegionFilter)?.name}
+                    </Badge>
+                  )}
+                  <Button variant="outline" size="sm" onClick={handleExportKru} className="gap-1.5 text-xs">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openImportDialog("kru")} className="gap-1.5 text-xs">
+                    <Upload className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Import</span>
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -1025,6 +1116,14 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Excel Import Dialog */}
+      <ExcelImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        type={importType}
+        onImportComplete={fetchData}
+      />
     </div>
   );
 };

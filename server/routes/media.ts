@@ -64,6 +64,13 @@ export async function mediaRoutes(app: FastifyInstance) {
       return reply.status(404).send({ message: "Profile tidak ditemukan" });
     }
 
+    // Enforce free slot limit (3 crew max for free)
+    const FREE_SLOT_LIMIT = 3;
+    const currentCount = await prisma.crew.count({ where: { profileId: payload.sub } });
+    if (currentCount >= FREE_SLOT_LIMIT) {
+      return reply.status(403).send({ message: "Slot gratis sudah penuh (3/3). Upgrade untuk menambah kru." });
+    }
+
     let niAm: string | null = null;
     let jabatanName = body.jabatan || null;
 
@@ -184,12 +191,42 @@ export async function mediaRoutes(app: FastifyInstance) {
       pusatApprovedAt: claim?.approvedAt || null,
       koordinator: koordinator
         ? {
-            nama: koordinator.nama,
-            niam: koordinator.niam,
-            jabatan: koordinator.jabatan || "Koordinator",
-            xp_level: koordinator.xpLevel || 0,
-          }
+          nama: koordinator.nama,
+          niam: koordinator.niam,
+          jabatan: koordinator.jabatan || "Koordinator",
+          xp_level: koordinator.xpLevel || 0,
+        }
         : null,
+    };
+  });
+
+  // Profile settings - returns data from registration for Pengaturan page
+  app.get("/profile-settings", { preHandler: authenticate }, async (request) => {
+    const payload = request.user as { sub: string };
+
+    const [user, claim] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: payload.sub },
+        include: {
+          profile: {
+            select: {
+              noWaPendaftar: true,
+              namaPesantren: true,
+            },
+          },
+        },
+      }),
+      prisma.pesantrenClaim.findFirst({
+        where: { userId: payload.sub },
+        select: { namaPengelola: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    return {
+      namaPengelola: claim?.namaPengelola || null,
+      email: user?.email || null,
+      noWaPendaftar: user?.profile?.noWaPendaftar || null,
     };
   });
 }

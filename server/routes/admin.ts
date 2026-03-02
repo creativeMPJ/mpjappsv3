@@ -1,4 +1,4 @@
-import { AppRole, ClaimStatus, PaymentVerificationStatus, ProfileLevel } from "@prisma/client";
+import { AppRole, ClaimStatus, PaymentVerificationStatus, PricingCategory, ProfileLevel } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { authenticate } from "../auth-guard";
@@ -81,9 +81,28 @@ const clearingRejectSchema = z.object({
   reason: z.string().min(1).optional(),
 });
 
+const pricingPackageSchema = z.object({
+  name: z.string().min(1),
+  category: z.nativeEnum(PricingCategory),
+  hargaPaket: z.number().int().positive(),
+  hargaDiskon: z.number().int().positive().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+const pricingPackageUpdateSchema = pricingPackageSchema.partial();
+
 async function assertAdminPusat(userId: string) {
   const profile = await prisma.profile.findUnique({ where: { id: userId } });
   if (!profile || profile.role !== AppRole.admin_pusat) {
+    const error = new Error("Forbidden");
+    (error as any).statusCode = 403;
+    throw error;
+  }
+}
+
+async function assertAdminPusatOrFinance(userId: string) {
+  const profile = await prisma.profile.findUnique({ where: { id: userId } });
+  if (!profile || (profile.role !== AppRole.admin_pusat && profile.role !== AppRole.admin_finance)) {
     const error = new Error("Forbidden");
     (error as any).statusCode = 403;
     throw error;
@@ -532,6 +551,100 @@ export async function adminRoutes(app: FastifyInstance) {
 
     await prisma.crew.delete({ where: { id: params.id } });
     return { success: true };
+  });
+
+  // ── Master Data Import ──────────────────────────────────────────────
+  const masterDataImportSchema = z.object({
+    type: z.enum(["pesantren", "media", "kru"]),
+    rows: z.array(z.record(z.string(), z.any())).min(1),
+  });
+
+  app.post("/master-data/import", { preHandler: authenticate }, async (request, reply) => {
+    const payload = request.user as { sub: string };
+    await assertAdminPusat(payload.sub);
+
+    const parsed = masterDataImportSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ message: "Format data tidak valid", errors: parsed.error.issues });
+    }
+
+    const { type, rows } = parsed.data;
+    const results = { imported: 0, skipped: 0, errors: [] as string[] };
+
+    if (type === "pesantren") {
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const nip = String(row["NIP"] || row["nip"] || "").trim();
+        if (!nip) { results.errors.push(`Baris ${i + 1}: NIP kosong, dilewati`); results.skipped++; continue; }
+
+        const profile = await prisma.profile.findFirst({ where: { nip } });
+        if (!profile) { results.errors.push(`Baris ${i + 1}: NIP ${nip} tidak ditemukan`); results.skipped++; continue; }
+
+        try {
+          await prisma.profile.update({
+            where: { id: profile.id },
+            data: {
+              namaPesantren: row["Nama Pesantren"] ?? row["nama_pesantren"] ?? undefined,
+              namaPengasuh: row["Nama Pengasuh"] ?? row["nama_pengasuh"] ?? undefined,
+              alamatSingkat: row["Alamat Singkat"] ?? row["alamat_singkat"] ?? undefined,
+            },
+          });
+          results.imported++;
+        } catch (err: any) {
+          results.errors.push(`Baris ${i + 1}: ${err.message}`);
+          results.skipped++;
+        }
+      }
+    } else if (type === "media") {
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const nip = String(row["NIP"] || row["nip"] || "").trim();
+        if (!nip) { results.errors.push(`Baris ${i + 1}: NIP kosong, dilewati`); results.skipped++; continue; }
+
+        const profile = await prisma.profile.findFirst({ where: { nip } });
+        if (!profile) { results.errors.push(`Baris ${i + 1}: NIP ${nip} tidak ditemukan`); results.skipped++; continue; }
+
+        try {
+          await prisma.profile.update({
+            where: { id: profile.id },
+            data: {
+              namaPesantren: row["Nama Pesantren"] ?? row["nama_pesantren"] ?? undefined,
+              namaMedia: row["Nama Media"] ?? row["nama_media"] ?? undefined,
+              noWaPendaftar: row["No WA"] ?? row["no_wa_pendaftar"] ?? undefined,
+            },
+          });
+          results.imported++;
+        } catch (err: any) {
+          results.errors.push(`Baris ${i + 1}: ${err.message}`);
+          results.skipped++;
+        }
+      }
+    } else if (type === "kru") {
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const niam = String(row["NIAM"] || row["niam"] || "").trim();
+        if (!niam) { results.errors.push(`Baris ${i + 1}: NIAM kosong, dilewati`); results.skipped++; continue; }
+
+        const crew = await prisma.crew.findFirst({ where: { niam } });
+        if (!crew) { results.errors.push(`Baris ${i + 1}: NIAM ${niam} tidak ditemukan`); results.skipped++; continue; }
+
+        try {
+          await prisma.crew.update({
+            where: { id: crew.id },
+            data: {
+              nama: row["Nama Kru"] ?? row["nama"] ?? undefined,
+              jabatan: row["Jabatan"] ?? row["jabatan"] ?? undefined,
+            },
+          });
+          results.imported++;
+        } catch (err: any) {
+          results.errors.push(`Baris ${i + 1}: ${err.message}`);
+          results.skipped++;
+        }
+      }
+    }
+
+    return { success: true, ...results };
   });
 
   app.get("/jabatan-codes", { preHandler: authenticate }, async (request) => {
@@ -1370,7 +1483,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/payments", { preHandler: authenticate }, async (request) => {
     const payload = request.user as { sub: string };
-    await assertAdminPusat(payload.sub);
+    await assertAdminPusatOrFinance(payload.sub);
 
     const payments = await prisma.payment.findMany({
       include: {
@@ -1418,7 +1531,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.post("/payments/:id/reject", { preHandler: authenticate }, async (request) => {
     const payload = request.user as { sub: string };
-    await assertAdminPusat(payload.sub);
+    await assertAdminPusatOrFinance(payload.sub);
 
     const params = request.params as { id: string };
     const body = rejectPaymentSchema.parse(request.body);
@@ -1437,7 +1550,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.post("/payments/:id/approve", { preHandler: authenticate }, async (request) => {
     const payload = request.user as { sub: string };
-    await assertAdminPusat(payload.sub);
+    await assertAdminPusatOrFinance(payload.sub);
 
     const params = request.params as { id: string };
 
@@ -1502,6 +1615,7 @@ export async function adminRoutes(app: FastifyInstance) {
           statusAccount: "active",
           statusPayment: "paid",
           nip: generatedNip,
+          namaPesantren: payment.claim.pesantrenName,
         },
       });
 
@@ -1556,5 +1670,90 @@ export async function adminRoutes(app: FastifyInstance) {
     });
 
     return { success: true };
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // PRICING PACKAGES — CRUD
+  // ═══════════════════════════════════════════════════════════════
+
+  app.get("/pricing-packages", { preHandler: authenticate }, async (request) => {
+    const payload = request.user as { sub: string };
+    await assertAdminPusatOrFinance(payload.sub);
+
+    const packages = await prisma.pricingPackage.findMany({
+      orderBy: [{ category: "asc" }, { hargaPaket: "asc" }],
+    });
+
+    return {
+      packages: packages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        harga_paket: p.hargaPaket,
+        harga_diskon: p.hargaDiskon,
+        is_active: p.isActive,
+        created_at: p.createdAt,
+      })),
+    };
+  });
+
+  app.post("/pricing-packages", { preHandler: authenticate }, async (request) => {
+    const payload = request.user as { sub: string };
+    await assertAdminPusatOrFinance(payload.sub);
+
+    const body = pricingPackageSchema.parse(request.body);
+
+    const created = await prisma.pricingPackage.create({
+      data: {
+        name: body.name,
+        category: body.category,
+        hargaPaket: body.hargaPaket,
+        hargaDiskon: body.hargaDiskon ?? null,
+        isActive: body.isActive ?? true,
+      },
+    });
+
+    return { success: true, id: created.id };
+  });
+
+  app.put("/pricing-packages/:id", { preHandler: authenticate }, async (request, reply) => {
+    const payload = request.user as { sub: string };
+    await assertAdminPusatOrFinance(payload.sub);
+
+    const params = request.params as { id?: string };
+    if (!params.id) return reply.status(400).send({ message: "ID tidak valid" });
+
+    const body = pricingPackageUpdateSchema.parse(request.body);
+
+    await prisma.pricingPackage.update({
+      where: { id: params.id },
+      data: {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.hargaPaket !== undefined && { hargaPaket: body.hargaPaket }),
+        ...(body.hargaDiskon !== undefined && { hargaDiskon: body.hargaDiskon }),
+        ...(body.isActive !== undefined && { isActive: body.isActive }),
+      },
+    });
+
+    return { success: true };
+  });
+
+  app.patch("/pricing-packages/:id/toggle", { preHandler: authenticate }, async (request, reply) => {
+    const payload = request.user as { sub: string };
+    await assertAdminPusatOrFinance(payload.sub);
+
+    const params = request.params as { id?: string };
+    if (!params.id) return reply.status(400).send({ message: "ID tidak valid" });
+
+    const existing = await prisma.pricingPackage.findUnique({ where: { id: params.id } });
+    if (!existing) return reply.status(404).send({ message: "Paket tidak ditemukan" });
+
+    await prisma.pricingPackage.update({
+      where: { id: params.id },
+      data: { isActive: !existing.isActive },
+    });
+
+    return { success: true, is_active: !existing.isActive };
   });
 }

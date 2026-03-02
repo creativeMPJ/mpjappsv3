@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
+import {
+  LayoutDashboard,
   Database,
   Calendar,
   Medal,
   Layers,
   Settings,
-  LogOut, 
+  LogOut,
   Bell,
   Menu,
   X,
@@ -25,19 +25,20 @@ import AdminPusatMasterData from "@/components/admin-pusat/AdminPusatMasterData"
 import AdminPusatAdministrasi from "@/components/admin-pusat/AdminPusatAdministrasi";
 import AdminPusatRegional from "@/components/admin-pusat/AdminPusatRegional";
 import AdminPusatPengaturan from "@/components/admin-pusat/AdminPusatPengaturan";
+import AdminPusatEvent from "@/components/admin-pusat/AdminPusatEvent";
 import GlobalSearchNIPNIAM from "@/components/admin-pusat/GlobalSearchNIPNIAM";
 import ComingSoonOverlay from "@/components/shared/ComingSoonOverlay";
 
 // Super Admin email check
 const SUPER_ADMIN_EMAIL = "superadmin@mpj.com";
 
-type ViewType = 
-  | "dashboard" 
+type ViewType =
+  | "dashboard"
   | "administrasi"
-  | "master-data" 
+  | "master-data"
   | "master-regional"
   | "manajemen-event"
-  | "manajemen-militansi" 
+  | "manajemen-militansi"
   | "mpj-hub"
   | "pengaturan";
 
@@ -54,7 +55,7 @@ const menuItems: MenuItem[] = [
   { id: "administrasi", label: "ADMINISTRASI", icon: ClipboardCheck },
   { id: "master-data", label: "MASTER DATA", icon: Database },
   { id: "master-regional", label: "MASTER REGIONAL", icon: Map },
-  { id: "manajemen-event", label: "MANAJEMEN EVENT", icon: Calendar, soon: true },
+  { id: "manajemen-event", label: "MANAJEMEN EVENT", icon: Calendar },
   { id: "manajemen-militansi", label: "MANAJEMEN MILITANSI", icon: Medal, soon: true },
   { id: "mpj-hub", label: "MPJ HUB", icon: Layers, soon: true },
   { id: "pengaturan", label: "PENGATURAN", icon: Settings },
@@ -66,12 +67,12 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { signOut, user } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
-  
+
   // Debug mode check
   const isDebugMode = location.state?.isDebugMode === true;
   const debugProfile = location.state?.debugProfile;
   const debugData = location.state?.debugData;
-  
+
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -100,7 +101,7 @@ const Dashboard = () => {
       case "master-regional":
         return <AdminPusatRegional isDebugMode={isDebugMode} debugData={debugData} />;
       case "manajemen-event":
-        return <ComingSoonOverlay title="Manajemen Event" description="Kelola event dan kegiatan pesantren se-Jawa Timur" />;
+        return <AdminPusatEvent />;
       case "manajemen-militansi":
         return <ComingSoonOverlay title="Manajemen Militansi" description="Leaderboard dan sistem gamifikasi XP" />;
       case "mpj-hub":
@@ -121,7 +122,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background flex">
       {/* Mobile Overlay */}
       {mobileSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setMobileSidebarOpen(false)}
         />

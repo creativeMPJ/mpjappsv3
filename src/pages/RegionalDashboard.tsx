@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  LogOut, 
+import {
+  LogOut,
   Menu,
   Bell,
   Database,
@@ -48,7 +48,7 @@ const RegionalDashboard = () => {
   // Support debug mode via location.state
   const debugProfile = (location.state as any)?.debugProfile;
   const isDebugMode = (location.state as any)?.isDebugMode;
-  
+
   // Use debug profile if available, otherwise use auth profile
   const profile = isDebugMode && debugProfile ? debugProfile : authProfile;
 
@@ -155,11 +155,10 @@ const RegionalDashboard = () => {
             <button
               key={item.id}
               onClick={() => handleMenuClick(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all duration-200 text-left min-h-[44px] ${
-                isActive
-                  ? "bg-emerald-800 text-white border-l-4 border-amber-500 ml-[-4px] pl-[20px]"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg transition-all duration-200 text-left min-h-[44px] ${isActive
+                ? "bg-emerald-800 text-white border-l-4 border-amber-500 ml-[-4px] pl-[20px]"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
               <span className="font-medium text-sm flex-1">{item.label}</span>

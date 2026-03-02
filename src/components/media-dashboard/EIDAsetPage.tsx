@@ -62,8 +62,8 @@ interface EIDAsetPageProps {
  * - Tanggal Terbit: From pesantren_claims.approved_at
  * - QR Code: Links to public profile /pesantren/[NIP]
  */
-const EIDAsetPage = ({ 
-  paymentStatus, 
+const EIDAsetPage = ({
+  paymentStatus,
   profileLevel,
   debugProfile,
   realProfile,
@@ -72,7 +72,7 @@ const EIDAsetPage = ({
 }: EIDAsetPageProps) => {
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
-  
+
   // Refs for html2canvas capture
   const charterRef = useRef<HTMLDivElement>(null);
 
@@ -84,7 +84,7 @@ const EIDAsetPage = ({
   const displayPesantrenName = profile?.nama_pesantren || "Pesantren Belum Terdaftar";
   const displayAddress = profile?.alamat_singkat || "Alamat belum diisi";
   const displayMediaName = profile?.nama_media || displayPesantrenName;
-  
+
   // Koordinator data from crews table (for E-ID)
   const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
   const koordinatorNIAM = koordinator?.niam || null;
@@ -102,7 +102,7 @@ const EIDAsetPage = ({
   const highestLevel = getHighestLevel();
   const canAccessEID = paymentStatus === "paid" && (profileLevel === "gold" || profileLevel === "platinum");
   const hasKoordinator = koordinator && koordinator.niam;
-  
+
   // Check if user is unpaid - for paywall logic
   const isUnpaid = paymentStatus === "unpaid";
   const hasValidNIP = !!displayNIP && displayNIP.length >= 7;
@@ -137,7 +137,7 @@ const EIDAsetPage = ({
     }
 
     setIsDownloading(true);
-    
+
     try {
       const filename = generatePiagamFilename(displayPesantrenName);
       const success = await downloadElementAsJPG(charterRef.current, {
@@ -197,15 +197,15 @@ const EIDAsetPage = ({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6 bg-slate-100">
-          <TabsTrigger 
-            value="piagam" 
+          <TabsTrigger
+            value="piagam"
             className="data-[state=active]:bg-[#166534] data-[state=active]:text-white gap-2"
           >
             <Award className="h-4 w-4" />
             Piagam Pesantren
           </TabsTrigger>
-          <TabsTrigger 
-            value="eid" 
+          <TabsTrigger
+            value="eid"
             className="data-[state=active]:bg-[#166534] data-[state=active]:text-white gap-2"
           >
             <IdCard className="h-4 w-4" />
@@ -255,10 +255,10 @@ const EIDAsetPage = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span>
-                        <Button 
+                        <Button
                           onClick={handleDownloadPiagam}
                           className={isUnpaid || !hasValidNIP
-                            ? "bg-slate-400 hover:bg-slate-400 cursor-not-allowed" 
+                            ? "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"
                             : "bg-[#166534] hover:bg-[#14532d]"
                           }
                           disabled={isUnpaid || !hasValidNIP || isDownloading}
@@ -301,8 +301,8 @@ const EIDAsetPage = ({
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Fitur Terkunci</h3>
                 <p className="text-slate-300 text-center mb-4 px-8 max-w-md">
-                  {paymentStatus === "unpaid" 
-                    ? "Lunasi administrasi untuk mengakses E-ID Card" 
+                  {paymentStatus === "unpaid"
+                    ? "Lunasi administrasi untuk mengakses E-ID Card"
                     : "Lengkapi profil ke level Gold untuk mengakses E-ID Card"}
                 </p>
               </div>
@@ -375,38 +375,8 @@ const EIDAsetPage = ({
             </div>
           )}
 
-          {canAccessEID && hasKoordinator && (
-            <div className="flex justify-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button 
-                        onClick={handleDownloadEID}
-                        className={isUnpaid 
-                          ? "bg-slate-400 hover:bg-slate-400 cursor-not-allowed" 
-                          : "bg-[#166534] hover:bg-[#14532d]"
-                        }
-                        disabled={isUnpaid}
-                      >
-                        {isUnpaid ? (
-                          <Lock className="h-4 w-4 mr-2" />
-                        ) : (
-                          <Download className="h-4 w-4 mr-2" />
-                        )}
-                        Download Layout Cetak (PDF)
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {isUnpaid && (
-                    <TooltipContent>
-                      <p className="max-w-xs">{lockedTooltipMessage}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
+
+
         </TabsContent>
       </Tabs>
     </div>
