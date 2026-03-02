@@ -23,4 +23,4 @@ jobs:
           username: mpj@mpj.ingintau.my.id
           password: TUsmekisa1968
           local-dir: ./dist/  # Sesuaikan dengan folder hasil build kamu
-          server-dir: ./mpj.ingintau.my.id/ # Folder tujuan di Dewaweb
+          server-dir: ./ # Folder tujuan di Dewaweb
