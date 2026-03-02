@@ -1,0 +1,26 @@
+name: Deploy to Dewaweb
+on:
+  push:
+    branches:
+      - main  # Ganti jika branch utama kamu bukan main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install and Build
+        run: |
+          npm install
+          npm run build
+
+      - name: Sync files via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.ftp.ingintau.my.id }}
+          username: ${{ secrets.mpj@mpj.ingintau.my.id }}
+          password: ${{ secrets.TUsmekisa1968 }}
+          local-dir: ./dist/  # Sesuaikan dengan folder hasil build kamu
+          server-dir: ./mpj.ingintau.my.id/ # Folder tujuan di Dewaweb
