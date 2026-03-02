@@ -19,8 +19,8 @@ jobs:
       - name: Sync files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          server: ftp.ingintau.my.id
+          username: mpj@mpj.ingintau.my.id
+          password: TUsmekisa1968
           local-dir: ./dist/  # Sesuaikan dengan folder hasil build kamu
           server-dir: ./mpj.ingintau.my.id/ # Folder tujuan di Dewaweb
