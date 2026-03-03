@@ -1,26 +1,30 @@
 name: Deploy to Dewaweb
 on:
   push:
-    branches:
-      - main  # Ganti jika branch utama kamu bukan main
+    branches: [ main ]
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Install and Build
+      # 1. Build Frontend
+      - name: Build Frontend
         run: |
           npm install
           npm run build
+        env:
+          VITE_SUPABASE_URL: https://dgmdrdhwyscqgamsfwlr.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnbWRyZGh3eXNjcWdhbXNmd2xyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDQ3ODYsImV4cCI6MjA4MzcyMDc4Nn0.L1W9Hxr0ZiSZS8PuF3FVSTVxf9jZY5XfoXmApe4OzNU
 
-      - name: Sync files via FTP
+      # 2. Upload ke Dewaweb
+      - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ftp.ingintau.my.id
           username: mpj@mpj.ingintau.my.id
           password: TUsmekisa1968
-          local-dir: ./dist/  # Sesuaikan dengan folder hasil build kamu
-          server-dir: ./ # Folder tujuan di Dewaweb
+          # Upload isi folder dist ke public_html
+          local-dir: ./dist/
+          server-dir: ./
