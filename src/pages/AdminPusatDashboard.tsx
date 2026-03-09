@@ -61,12 +61,18 @@ const menuItems: MenuItem[] = [
   { id: "pengaturan", label: "PENGATURAN", icon: Settings },
 ];
 
+const getViewFromPath = (pathname: string): ViewType => {
+  const segment = pathname.split('/admin-pusat/')[1] as ViewType;
+  const valid: ViewType[] = ["dashboard","administrasi","master-data","master-regional","manajemen-event","manajemen-militansi","mpj-hub","pengaturan"];
+  return valid.includes(segment) ? segment : "dashboard";
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const { signOut, user } = useAuth();
-  const [activeView, setActiveView] = useState<ViewType>("dashboard");
+  const [activeView, setActiveView] = useState<ViewType>(() => getViewFromPath(location.pathname));
 
   // Debug mode check
   const isDebugMode = location.state?.isDebugMode === true;
@@ -116,6 +122,7 @@ const Dashboard = () => {
   const handleMenuClick = (item: MenuItem) => {
     setActiveView(item.id);
     setMobileSidebarOpen(false);
+    navigate(item.id === "dashboard" ? "/admin-pusat" : `/admin-pusat/${item.id}`);
   };
 
   return (

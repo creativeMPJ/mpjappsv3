@@ -13,10 +13,10 @@ const CheckInstitution = () => {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPesantren, setSelectedPesantren] = useState<{ id: string; name: string; region: string; alamat: string } | null>(null);
+  const [selectedPesantren, setSelectedPesantren] = useState<{ id: string; name: string; region: string; alamat: string; is_claimed: boolean } | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isCheckingOwnership, setIsCheckingOwnership] = useState(true);
-  const [registeredPesantren, setRegisteredPesantren] = useState<Array<{ id: string; name: string; region: string; alamat: string }>>([]);
+  const [registeredPesantren, setRegisteredPesantren] = useState<Array<{ id: string; name: string; region: string; alamat: string; is_claimed: boolean }>>([]);
 
   /**
    * GLOBAL GUARD: Check if user already has an approved pesantren claim
@@ -29,7 +29,7 @@ const CheckInstitution = () => {
       // If user is logged in, check their claim status
       if (user) {
         try {
-          const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institutions/ownership");
+          const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institution/ownership");
           const claim = data.claim;
 
           if (claim && (claim.status === 'approved' || claim.status === 'pusat_approved')) {
@@ -68,10 +68,18 @@ const CheckInstitution = () => {
 
     const t = setTimeout(async () => {
       try {
-        const data = await apiRequest<{ pesantren: Array<{ id: string; name: string; region: string; alamat: string }> }>(
-          `/api/public/pesantren?search=${encodeURIComponent(q)}`
+        const data = await apiRequest<{ data: Array<{ id: string; nama_pesantren: string; kota_kabupaten: string; alamat: string; is_claimed: boolean; regency_id: string; region: { id: string; name: string; code: string } }> }>(
+          `/api/public/directory-search?search=${encodeURIComponent(q)}`
         );
-        setRegisteredPesantren(data.pesantren || []);
+        setRegisteredPesantren(
+          (data.data || []).map(item => ({
+            id: item.id,
+            name: item.nama_pesantren,
+            region: `${item.kota_kabupaten}${item.region?.name ? ` · ${item.region.name}` : ""}`,
+            alamat: item.alamat,
+            is_claimed: item.is_claimed,
+          }))
+        );
       } catch (error) {
         console.error("Error searching pesantren:", error);
       }
@@ -82,7 +90,7 @@ const CheckInstitution = () => {
 
   const filteredPesantren = registeredPesantren;
 
-  const handleSelectPesantren = (pesantren: { id: string; name: string; region: string; alamat: string }) => {
+  const handleSelectPesantren = (pesantren: { id: string; name: string; region: string; alamat: string; is_claimed: boolean }) => {
     setSelectedPesantren(pesantren);
     setSearchQuery(pesantren.name);
     setShowDropdown(false);
@@ -164,10 +172,13 @@ const CheckInstitution = () => {
                     onClick={() => handleSelectPesantren(pesantren)}
                     className="w-full px-4 py-3 text-left hover:bg-muted flex items-center justify-between border-b border-border last:border-b-0"
                   >
-                    <div>
-                      <p className="font-medium text-foreground">{pesantren.name}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{pesantren.name}</p>
                       <p className="text-sm text-muted-foreground">{pesantren.region}</p>
                     </div>
+                    {pesantren.is_claimed && (
+                      <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 shrink-0">Diklaim</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -176,27 +187,38 @@ const CheckInstitution = () => {
 
           {/* Selected Pesantren Card - FOUND STATE */}
           {selectedPesantren && (
-            <Card className="border-primary/30 bg-primary/5">
+            <Card className={selectedPesantren.is_claimed ? "border-green-200 bg-green-50 dark:bg-green-950/20" : "border-primary/30 bg-primary/5"}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-5 h-5 text-primary" />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${selectedPesantren.is_claimed ? "bg-green-100" : "bg-primary/10"}`}>
+                    <Building2 className={`w-5 h-5 ${selectedPesantren.is_claimed ? "text-green-600" : "text-primary"}`} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-foreground">{selectedPesantren.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-foreground">{selectedPesantren.name}</p>
+                      {selectedPesantren.is_claimed && (
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Sudah Diklaim</span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                       <MapPin className="w-3.5 h-3.5" />
-                      <span>{selectedPesantren.alamat}</span>
+                      <span>{selectedPesantren.region}</span>
                     </div>
                   </div>
                 </div>
-                <Button
-                  onClick={handleClaimAccount}
-                  className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl"
-                >
-                  <UserCheck className="w-4 h-4 mr-2" />
-                  Klaim Akun Ini
-                </Button>
+                {selectedPesantren.is_claimed ? (
+                  <p className="text-sm text-green-700 dark:text-green-400 text-center py-1">
+                    Pesantren ini sudah diklaim oleh pengguna terdaftar.
+                  </p>
+                ) : (
+                  <Button
+                    onClick={handleClaimAccount}
+                    className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl"
+                  >
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    Klaim Akun Ini
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
