@@ -45,40 +45,20 @@ const VerificationPending = () => {
     if (!user) return;
 
     try {
-      const data = await apiRequest<{ claim: ClaimData | null; region: RegionData | null }>('/api/institutions/pending-status');
+      const data = await apiRequest<{ claim: ClaimData | null; region: RegionData | null }>('/api/institution/pending-status');
       const claim = data.claim;
 
       if (claim) {
         setClaimData(claim);
 
-        // If status changed to approved, redirect to dashboard
-        if (claim.status === 'approved' || claim.status === 'pusat_approved') {
+        // If status changed to approved or regional_approved, redirect to dashboard
+        // pusat_approved dihilangkan — regional_approved sudah cukup untuk redirect
+        if (claim.status === 'approved' || claim.status === 'regional_approved') {
           toast({
             title: "Akun Terverifikasi! ✅",
             description: "Selamat! Akun Anda telah aktif.",
           });
           navigate('/user', { replace: true });
-          return;
-        }
-
-        // If status changed to regional_approved, redirect to payment
-        if (claim.status === 'regional_approved') {
-          // For klaim, redirect to dashboard (auto-activate)
-          if (claim.jenis_pengajuan === 'klaim') {
-            toast({
-              title: "Klaim Disetujui! ✅",
-              description: "Akun legacy Anda telah diaktifkan.",
-            });
-            navigate('/user', { replace: true });
-            return;
-          }
-          
-          // For pesantren_baru, redirect to payment
-          toast({
-            title: "Verifikasi Regional Disetujui! ✅",
-            description: "Silakan lanjutkan ke proses pembayaran.",
-          });
-          navigate('/payment', { replace: true });
           return;
         }
 
@@ -235,10 +215,10 @@ const VerificationPending = () => {
                 </div>
                 <div className="pt-2 opacity-50">
                   <p className="text-sm font-medium text-foreground">
-                    {isKlaim ? 'Akun Aktif (Data Lama)' : 'Pembayaran & Aktivasi NIP'}
+                    {isKlaim ? 'Akun Aktif (Data Lama)' : 'Verifikasi Admin Pusat'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isKlaim ? 'Akun langsung aktif dengan data existing' : 'Lanjutkan ke pembayaran untuk NIP'}
+                    {isKlaim ? 'Akun langsung aktif dengan data existing' : 'Pengesahan akhir oleh Admin Pusat'}
                   </p>
                 </div>
               </div>

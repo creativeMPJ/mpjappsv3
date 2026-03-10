@@ -15,6 +15,8 @@ const initialDataSchema = z.object({
   emailPengelola: z.string().email(),
   noWhatsapp: z.string().min(8),
   dokumenBuktiUrl: z.string().nullable().optional(),
+  jenisPengajuan: z.enum(['klaim', 'pesantren_baru']).optional().default('pesantren_baru'),
+  pesantrenId: z.string().uuid().optional().nullable(),
 });
 
 const locationSchema = z.object({
@@ -125,7 +127,7 @@ export async function institutionRoutes(app: FastifyInstance) {
           data: {
             pesantrenName: body.namaPesantren,
             status: ClaimStatus.pending,
-            jenisPengajuan: RegistrationType.pesantren_baru,
+            jenisPengajuan: body.jenisPengajuan === 'klaim' ? RegistrationType.klaim : RegistrationType.pesantren_baru,
             regionId: city.regionId,
             kecamatan: body.kecamatan,
             namaPengelola: body.namaPengelola,
@@ -139,7 +141,7 @@ export async function institutionRoutes(app: FastifyInstance) {
             userId: payload.sub,
             pesantrenName: body.namaPesantren,
             status: ClaimStatus.pending,
-            jenisPengajuan: RegistrationType.pesantren_baru,
+            jenisPengajuan: body.jenisPengajuan === 'klaim' ? RegistrationType.klaim : RegistrationType.pesantren_baru,
             regionId: city.regionId,
             kecamatan: body.kecamatan,
             namaPengelola: body.namaPengelola,

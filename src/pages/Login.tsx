@@ -75,6 +75,7 @@ const Login = () => {
 
   // Convert WhatsApp number to email format if needed
   const formatIdentifier = (identifier: string): string => {
+    if (identifier.includes('@')) return identifier;
     if (/^(0|62)\d+$/.test(identifier.replace(/\D/g, ''))) {
       const phoneNumber = identifier.replace(/\D/g, '');
       const normalizedPhone = phoneNumber.startsWith('62') 

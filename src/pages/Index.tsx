@@ -1,13 +1,48 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, Calendar, ArrowRight, Zap, Sparkles } from "lucide-react";
+import { Building2, Users, Calendar, ArrowRight, Zap, Sparkles, Search, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { apiRequest } from "@/lib/api-client";
 
 const Index = () => {
   // Mobile header hide on scroll
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const headerRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searched, setSearched] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string;
+    nama_pesantren: string;
+    nama_pengasuh: string | null;
+    kota_kabupaten: string;
+    alamat: string;
+    is_claimed: boolean;
+    regency_id: string;
+    region_id: string;
+    region: { id: string; name: string; code: string };
+  }>>([]);
+
+  const handleSearch = async () => {
+    if (searchQuery.trim().length < 3) return;
+    setSearchLoading(true);
+    setSearched(false);
+    try {
+      const data = await apiRequest<{ data: typeof searchResults }>(
+        `/api/public/directory-search?search=${encodeURIComponent(searchQuery.trim())}`
+      );
+      setSearchResults(data.data ?? []);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+      setSearched(true);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -148,6 +183,111 @@ const Index = () => {
               <div className="text-xs text-muted-foreground">{stat.label}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Search Section */}
+      <section className="px-4 sm:px-6 py-8 sm:py-12">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-card border border-border/50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-soft">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 mb-4">
+                <Search className="h-6 w-6 text-primary" />
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-foreground mb-1">Cek Status Pondok Kamu</h2>
+              <p className="text-sm text-muted-foreground">Cari nama pondok untuk mengetahui apakah sudah terdaftar di MPJ</p>
+            </div>
+
+            {/* Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setSearched(false); }}
+                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                placeholder="Ketik nama pondok..."
+                className="flex-1 h-11 px-4 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition"
+              />
+              <Button
+                onClick={handleSearch}
+                disabled={searchQuery.trim().length < 3}
+                className="h-11 px-5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium shrink-0"
+              >
+                Cek
+              </Button>
+            </div>
+
+            {/* Loading */}
+            {searchLoading && (
+              <div className="mt-4 flex justify-center py-6">
+                <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              </div>
+            )}
+
+            {/* Results */}
+            {searched && !searchLoading && (
+              <div className="mt-4 space-y-3">
+                {searchResults.length > 0 ? (
+                  searchResults.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 p-4 rounded-xl border border-border/50 bg-background">
+                      {item.is_claimed ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-yellow-500 shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{item.nama_pesantren}</p>
+                        <p className="text-xs text-muted-foreground">{item.kota_kabupaten} · {item.region?.name}</p>
+                      </div>
+                      {item.is_claimed ? (
+                        <span className="text-xs font-medium px-2.5 py-1 rounded-full shrink-0 bg-green-100 text-green-700">
+                          Sudah Diklaim
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => navigate("/institution-submission", {
+                            state: {
+                              isKlaim: true,
+                              pesantrenId: item.id,
+                              searchedName: item.nama_pesantren,
+                              prefill: {
+                                namaPengasuh: item.nama_pengasuh ?? "",
+                                alamatLengkap: item.alamat ?? "",
+                                regencyId: item.regency_id ?? "",
+                                cityName: item.kota_kabupaten ?? "",
+                                regionId: item.region?.id ?? "",
+                                regionName: item.region ? `${item.region.code} - ${item.region.name}` : "",
+                              }
+                            }
+                          })}
+                          className="h-8 px-3 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground text-xs font-medium shrink-0"
+                        >
+                          Klaim Sekarang
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-6 text-center">
+                    <XCircle className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm font-medium text-foreground">Pondok tidak ditemukan</p>
+                    <p className="text-xs text-muted-foreground mb-3">Tidak ada data untuk "{searchQuery}" di direktori MPJ</p>
+                    <Link to="/check-institution">
+                      <Button size="sm" className="h-9 px-5 rounded-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium">
+                        Daftar Sekarang
+                        <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!searched && !searchLoading && (
+              <p className="text-xs text-muted-foreground text-center mt-3">Minimal 3 karakter untuk mulai pencarian</p>
+            )}
+          </div>
         </div>
       </section>
 

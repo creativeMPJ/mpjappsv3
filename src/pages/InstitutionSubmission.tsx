@@ -35,6 +35,9 @@ const InstitutionSubmission = () => {
   const { toast } = useToast();
   const { user, isLoading: authLoading, setAuthToken, refreshAuth } = useAuth();
   const searchedName = location.state?.searchedName || "";
+  const prefill = location.state?.prefill || {};
+  const isKlaim = location.state?.isKlaim || false;
+  const pesantrenId = location.state?.pesantrenId || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Guard state
@@ -46,11 +49,11 @@ const InstitutionSubmission = () => {
   const [formData, setFormData] = useState({
     // Data Pesantren
     namaPesantren: searchedName,
-    namaPengasuh: "",
-    alamatLengkap: "",
+    namaPengasuh: prefill.namaPengasuh || "",
+    alamatLengkap: prefill.alamatLengkap || "",
     provinsi: "Jawa Timur", // Fixed for MVP
-    cityId: "",
-    cityName: "",
+    regencyId: prefill.regencyId || "",
+    cityName: prefill.cityName || "",
     kecamatan: "",
     // Data Pengelola
     namaPengelola: "",
@@ -66,8 +69,8 @@ const InstitutionSubmission = () => {
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   // Region auto-lock (derived from city)
-  const [regionId, setRegionId] = useState<string | null>(null);
-  const [regionName, setRegionName] = useState<string>("");
+  const [regionId, setRegionId] = useState<string | null>(prefill.regionId || null);
+  const [regionName, setRegionName] = useState<string>(prefill.regionName || "");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -83,7 +86,7 @@ const InstitutionSubmission = () => {
 
       if (user) {
         try {
-          const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institutions/ownership");
+          const data = await apiRequest<{ claim: { status: string; pesantren_name: string } | null }>("/api/institution/ownership");
           const claim = data.claim;
 
           if (claim && (claim.status === 'approved' || claim.status === 'pusat_approved')) {
@@ -116,14 +119,14 @@ const InstitutionSubmission = () => {
   };
 
   // Handle city selection and auto-lock region
-  const handleCitySelect = async (cityId: string, cityName: string) => {
-    setFormData((prev) => ({ ...prev, cityId, cityName }));
+  const handleCitySelect = async (regencyId: string, cityName: string) => {
+    setFormData((prev) => ({ ...prev, regencyId, cityName }));
 
     // Auto-fetch region for this city
-    if (cityId) {
+    if (regencyId) {
       try {
         const data = await apiRequest<{ region: { id: string; name: string; code: string } }>(
-          `/api/public/cities/${cityId}/region`
+          `/api/public/cities/${regencyId}/region`
         );
         const region = data.region;
         setRegionId(region.id);
@@ -182,7 +185,7 @@ const InstitutionSubmission = () => {
       formData.namaPesantren.trim().length > 0 &&
       formData.namaPengasuh.trim().length > 0 &&
       formData.alamatLengkap.trim().length > 0 &&
-      formData.cityId.length > 0 &&
+      formData.regencyId.length > 0 &&
       formData.kecamatan.trim().length > 0 &&
       formData.namaPengelola.trim().length > 0 &&
       formData.emailPengelola.trim().length > 0 &&
@@ -289,7 +292,7 @@ const InstitutionSubmission = () => {
       if (documentFile) {
         const form = new FormData();
         form.append("file", documentFile);
-        const uploadData = await apiRequest<{ path: string }>("/api/institutions/upload-registration-document", {
+        const uploadData = await apiRequest<{ path: string }>("/api/institution/upload-registration-document", {
           method: "POST",
           body: form,
         });
@@ -297,18 +300,20 @@ const InstitutionSubmission = () => {
       }
       setIsUploadingDoc(false);
 
-      await apiRequest("/api/institutions/initial-data", {
+      await apiRequest("/api/institution/initial-data", {
         method: "POST",
         body: JSON.stringify({
           namaPesantren: formData.namaPesantren,
           namaPengasuh: formData.namaPengasuh,
           alamatLengkap: formData.alamatLengkap,
-          cityId: formData.cityId,
+          regencyId: formData.regencyId,
           kecamatan: formData.kecamatan,
           namaPengelola: formData.namaPengelola,
           emailPengelola: formData.emailPengelola,
           noWhatsapp: formData.noWhatsapp,
           dokumenBuktiUrl: documentUrl,
+          jenisPengajuan: isKlaim ? 'klaim' : 'pesantren_baru',
+          ...(isKlaim && pesantrenId ? { pesantrenId } : {}),
         }),
       });
 
@@ -442,7 +447,7 @@ const InstitutionSubmission = () => {
                       <MapPin className="w-4 h-4" />
                       Kabupaten/Kota <span className="text-destructive">*</span>
                     </label>
-                    <CityCombobox value={formData.cityId} onSelect={handleCitySelect} />
+                    <CityCombobox value={formData.regencyId} onSelect={handleCitySelect} />
                   </div>
 
                   {/* Kecamatan */}
