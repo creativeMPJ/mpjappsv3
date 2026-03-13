@@ -38,7 +38,7 @@ interface Crew {
   is_pic?: boolean;
 }
 
-const FREE_SLOT_LIMIT = 3; // Including PIC
+const DEFAULT_FREE_SLOT = 3; // fallback before API loads
 
 // Fixed jabatan options as dropdown
 const JABATAN_OPTIONS = [
@@ -57,7 +57,9 @@ const ManajemenKru = ({ paymentStatus, onKoordinatorChange }: ManajemenKruProps)
   const [crews, setCrews] = useState<Crew[]>([]);
   const [nama, setNama] = useState("");
   const [jabatan, setJabatan] = useState("");
+  const [slotConfig, setSlotConfig] = useState({ freeSlotQuantity: DEFAULT_FREE_SLOT, addonSlotPrice: 10000 });
 
+  const FREE_SLOT_LIMIT = slotConfig.freeSlotQuantity;
   const totalCrew = crews.length;
   const isFreeSlotFull = totalCrew >= FREE_SLOT_LIMIT;
   const canAddCrew = !isFreeSlotFull;
@@ -65,10 +67,14 @@ const ManajemenKru = ({ paymentStatus, onKoordinatorChange }: ManajemenKruProps)
   const loadData = async () => {
     setLoading(true);
     try {
-      const crewData = await apiRequest<{ crews: Crew[] }>("/api/media/crew");
-      setCrews(crewData.crews || []);
+      const [crewData, config] = await Promise.all([
+        apiRequest<{ crews: Crew[] }>("/api/media/crew"),
+        apiRequest<{ freeSlotQuantity: number; addonSlotPrice: number }>("/api/media/slot-config").catch(() => ({ freeSlotQuantity: DEFAULT_FREE_SLOT, addonSlotPrice: 10000 })),
+      ]);
+      setSlotConfig(config);
+      setCrews(crewData.crews ?? []);
 
-      const koordinator = (crewData.crews || []).find(
+      const koordinator = (crewData.crews ?? []).find(
         (c) => c.jabatan?.toLowerCase() === "koordinator" || c.jabatan?.toLowerCase() === "ketua"
       );
       onKoordinatorChange?.(
@@ -217,11 +223,14 @@ const ManajemenKru = ({ paymentStatus, onKoordinatorChange }: ManajemenKruProps)
             <Button
               variant="outline"
               size="sm"
-              disabled
-              className="border-amber-300 text-amber-700 cursor-not-allowed opacity-70"
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={() => toast({
+                title: "Slot Tambahan",
+                description: `Harga: Rp ${slotConfig.addonSlotPrice.toLocaleString("id-ID")}/slot. Hubungi Admin Pusat untuk menambah slot.`,
+              })}
             >
-              <Lock className="h-3 w-3 mr-1.5" />
-              Beli Slot (Coming Soon)
+              <Users className="h-3 w-3 mr-1.5" />
+              Beli Slot (Rp {slotConfig.addonSlotPrice.toLocaleString("id-ID")}/slot)
             </Button>
           </AlertDescription>
         </Alert>

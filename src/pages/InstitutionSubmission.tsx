@@ -233,7 +233,8 @@ const InstitutionSubmission = () => {
 
     try {
       // Format phone number as email for auth
-      const phoneEmail = `${formData.noWhatsapp}@mpj.local`;
+      // const phoneEmail = `${formData.noWhatsapp}@mpj.local`;
+      const phoneEmail = formData.emailPengelola;
 
       // Sign up user with local API
       const apiBase = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001";

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { History, Search, CheckCircle, XCircle } from "lucide-react";
+import { History, Search, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,108 +11,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { apiRequest } from "@/lib/api-client";
 
-interface Transaction {
+interface Payment {
   id: string;
-  nama_pesantren: string;
-  region: string;
-  payment_type: "new" | "renewal";
-  amount: number;
-  status: "approved" | "rejected";
-  processed_at: string;
-  processed_by: string;
-  reject_reason?: string;
+  total_amount: number;
+  status: "verified" | "rejected";
+  created_at: string;
+  rejection_reason: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
+  pesantren_claims: {
+    pesantren_name: string;
+    nama_pengelola: string;
+    jenis_pengajuan: string;
+  };
 }
-
-// Dummy transaction history
-const dummyTransactions: Transaction[] = [
-  {
-    id: "1",
-    nama_pesantren: "Pesantren Al-Falah",
-    region: "Kediri",
-    payment_type: "new",
-    amount: 250000,
-    status: "approved",
-    processed_at: "2024-01-15T14:30:00",
-    processed_by: "Finance Admin",
-  },
-  {
-    id: "2",
-    nama_pesantren: "Pesantren Miftahul Huda",
-    region: "Blitar",
-    payment_type: "new",
-    amount: 250000,
-    status: "approved",
-    processed_at: "2024-01-15T13:45:00",
-    processed_by: "Finance Admin",
-  },
-  {
-    id: "3",
-    nama_pesantren: "Pesantren An-Nur",
-    region: "Sidoarjo",
-    payment_type: "renewal",
-    amount: 150000,
-    status: "rejected",
-    processed_at: "2024-01-15T12:20:00",
-    processed_by: "Finance Admin",
-    reject_reason: "Bukti transfer tidak jelas",
-  },
-  {
-    id: "4",
-    nama_pesantren: "Pesantren Darussalam",
-    region: "Gresik",
-    payment_type: "new",
-    amount: 250000,
-    status: "approved",
-    processed_at: "2024-01-15T11:00:00",
-    processed_by: "Finance Admin",
-  },
-  {
-    id: "5",
-    nama_pesantren: "Pesantren Al-Mubarok",
-    region: "Lamongan",
-    payment_type: "new",
-    amount: 250000,
-    status: "approved",
-    processed_at: "2024-01-14T16:30:00",
-    processed_by: "Finance Admin",
-  },
-  {
-    id: "6",
-    nama_pesantren: "Pesantren Baitul Hikmah",
-    region: "Mojokerto",
-    payment_type: "renewal",
-    amount: 150000,
-    status: "rejected",
-    processed_at: "2024-01-14T15:15:00",
-    processed_by: "Finance Admin",
-    reject_reason: "Nominal tidak sesuai",
-  },
-  {
-    id: "7",
-    nama_pesantren: "Pesantren Raudlatul Ulum",
-    region: "Pasuruan",
-    payment_type: "new",
-    amount: 250000,
-    status: "approved",
-    processed_at: "2024-01-14T14:00:00",
-    processed_by: "Finance Admin",
-  },
-  {
-    id: "8",
-    nama_pesantren: "Pesantren Al-Khoiriyah",
-    region: "Probolinggo",
-    payment_type: "new",
-    amount: 250000,
-    status: "approved",
-    processed_at: "2024-01-14T10:45:00",
-    processed_by: "Finance Admin",
-  },
-];
 
 const FinanceRiwayat = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [transactions] = useState<Transaction[]>(dummyTransactions);
+  const [transactions, setTransactions] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await apiRequest<{ payments: any[] }>("/api/admin/payments");
+        const history = (data.payments || []).filter(
+          (p) => p.status === "verified" || p.status === "rejected"
+        );
+        setTransactions(history);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -122,7 +56,8 @@ const FinanceRiwayat = () => {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'short',
@@ -133,15 +68,15 @@ const FinanceRiwayat = () => {
   };
 
   const filteredTransactions = transactions.filter(t =>
-    t.nama_pesantren.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.region.toLowerCase().includes(searchQuery.toLowerCase())
+    t.pesantren_claims.pesantren_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.pesantren_claims.nama_pengelola.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const approvedCount = transactions.filter(t => t.status === "approved").length;
+  const approvedCount = transactions.filter(t => t.status === "verified").length;
   const rejectedCount = transactions.filter(t => t.status === "rejected").length;
   const totalApproved = transactions
-    .filter(t => t.status === "approved")
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter(t => t.status === "verified")
+    .reduce((sum, t) => sum + t.total_amount, 0);
 
   return (
     <div className="space-y-6">
@@ -215,61 +150,71 @@ const FinanceRiwayat = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Pesantren</TableHead>
-                  <TableHead className="hidden md:table-cell">Wilayah</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Nominal</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Waktu</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium text-foreground">{transaction.nama_pesantren}</p>
-                        {transaction.reject_reason && (
-                          <p className="text-xs text-red-500 mt-1">
-                            Alasan: {transaction.reject_reason}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">
-                      {transaction.region}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={transaction.payment_type === "new" ? "default" : "secondary"}
-                        className={transaction.payment_type === "new" ? "bg-blue-500" : ""}
-                      >
-                        {transaction.payment_type === "new" ? "Baru" : "Perpanjang"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(transaction.amount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={transaction.status === "approved" ? "default" : "destructive"}
-                        className={transaction.status === "approved" ? "bg-green-500" : ""}
-                      >
-                        {transaction.status === "approved" ? "Disetujui" : "Ditolak"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                      {formatDate(transaction.processed_at)}
-                    </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada riwayat transaksi"}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pesantren</TableHead>
+                    <TableHead className="hidden md:table-cell">Pengelola</TableHead>
+                    <TableHead>Tipe</TableHead>
+                    <TableHead>Nominal</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Waktu Verifikasi</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-foreground">{t.pesantren_claims.pesantren_name}</p>
+                          {t.rejection_reason && (
+                            <p className="text-xs text-red-500 mt-1">
+                              Alasan: {t.rejection_reason}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">
+                        {t.pesantren_claims.nama_pengelola}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={t.pesantren_claims.jenis_pengajuan === "pesantren_baru" ? "default" : "secondary"}
+                          className={t.pesantren_claims.jenis_pengajuan === "pesantren_baru" ? "bg-blue-500" : ""}
+                        >
+                          {t.pesantren_claims.jenis_pengajuan === "pesantren_baru" ? "Baru" : "Klaim"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(t.total_amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={t.status === "verified" ? "default" : "destructive"}
+                          className={t.status === "verified" ? "bg-green-500" : ""}
+                        >
+                          {t.status === "verified" ? "Disetujui" : "Ditolak"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                        {formatDate(t.verified_at || t.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

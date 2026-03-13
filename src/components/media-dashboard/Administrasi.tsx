@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, CheckCircle2, Clock3, CreditCard, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock3, CreditCard, Loader2, PartyPopper } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
+import { useNavigate } from "react-router-dom";
 
 interface AdministrasiProps {
   paymentStatus: "paid" | "unpaid";
@@ -29,24 +30,17 @@ const Administrasi = ({ paymentStatus, onPaymentStatusChange }: AdministrasiProp
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>(paymentStatus);
   const [payment, setPayment] = useState<PaymentSnapshot | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
-        const data = await apiRequest<{ payment?: PaymentSnapshot | null; redirectTo?: string }>("/api/payments/current");
-
-        if (data.redirectTo === "/user") {
-          setStatus("verified");
-          onPaymentStatusChange("paid");
-          return;
-        }
+        const data = await apiRequest<{ paymentStatus: string; payment?: PaymentSnapshot | null }>("/api/payments/summary");
 
         setPayment(data.payment || null);
-        const currentStatus = data.payment?.status || "pending_payment";
-        const nextStatus = currentStatus === "verified" ? "paid" : "unpaid";
-        setStatus(currentStatus);
-        onPaymentStatusChange(nextStatus);
+        setStatus(data.paymentStatus || "pending_payment");
+        onPaymentStatusChange(data.paymentStatus === "verified" ? "paid" : "unpaid");
       } catch {
         setStatus("pending_payment");
       } finally {
@@ -56,97 +50,196 @@ const Administrasi = ({ paymentStatus, onPaymentStatusChange }: AdministrasiProp
     load();
   }, [onPaymentStatusChange]);
 
-  const statusMeta = useMemo(() => {
-    if (status === "verified") {
-      return {
-        label: "Lunas & Terverifikasi",
-        tone: "bg-emerald-100 text-emerald-700 border-emerald-200",
-        icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
-      };
-    }
-
-    if (status === "pending_verification") {
-      return {
-        label: "Menunggu Verifikasi Admin",
-        tone: "bg-amber-100 text-amber-700 border-amber-200",
-        icon: <Clock3 className="h-4 w-4 text-amber-600" />,
-      };
-    }
-
-    if (status === "rejected") {
-      return {
-        label: "Bukti Ditolak",
-        tone: "bg-red-100 text-red-700 border-red-200",
-        icon: <AlertCircle className="h-4 w-4 text-red-600" />,
-      };
-    }
-
-    return {
-      label: "Belum Bayar",
-      tone: "bg-slate-100 text-slate-700 border-slate-200",
-      icon: <CreditCard className="h-4 w-4 text-slate-600" />,
-    };
-  }, [status]);
-
   const formatRupiah = (amount: number) => new Intl.NumberFormat("id-ID").format(amount);
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          Administrasi
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Memuat status pembayaran...
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              {statusMeta.icon}
-              <Badge variant="outline" className={statusMeta.tone}>
-                {statusMeta.label}
-              </Badge>
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Memuat status pembayaran...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── VERIFIED ──────────────────────────────────────────────────────────────
+  if (status === "verified") {
+    return (
+      <div className="space-y-4">
+        <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+          <CardContent className="flex flex-col items-center py-8 text-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <PartyPopper className="h-8 w-8 text-emerald-600" />
             </div>
+            <div>
+              <h3 className="text-lg font-bold text-emerald-700">Pembayaran Lunas!</h3>
+              <p className="text-sm text-muted-foreground mt-1">Akun Anda aktif penuh. Nikmati semua fitur MPJ Apps.</p>
+            </div>
+            <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+              Lunas & Terverifikasi
+            </Badge>
+          </CardContent>
+        </Card>
 
-            {payment && (
-              <div className="rounded-md border bg-muted/20 p-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Tagihan Dasar</span>
-                  <span>Rp {formatRupiah(payment.baseAmount)}</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-muted-foreground">Kode Unik</span>
-                  <span>{payment.uniqueCode}</span>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex items-center justify-between font-semibold">
-                  <span>Total Transfer</span>
-                  <span>Rp {formatRupiah(payment.totalAmount)}</span>
-                </div>
+        {payment && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Rincian Pembayaran</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tagihan Dasar</span>
+                <span>Rp {formatRupiah(payment.baseAmount)}</span>
               </div>
-            )}
-
-            {status === "rejected" && payment?.rejectionReason && (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                Alasan penolakan: {payment.rejectionReason}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Kode Unik</span>
+                <span>{payment.uniqueCode}</span>
               </div>
-            )}
-
-            <p className="text-sm text-muted-foreground">
-              Upload ulang bukti transfer jika ditolak, atau pantau status verifikasi di halaman pembayaran.
-            </p>
-            <Button onClick={() => (window.location.href = "/payment")}>
-              Buka Halaman Pembayaran
-            </Button>
-          </>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-semibold">
+                <span>Total Transfer</span>
+                <span className="text-emerald-600">Rp {formatRupiah(payment.totalAmount)}</span>
+              </div>
+            </CardContent>
+          </Card>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    );
+  }
+
+  // ── PENDING VERIFICATION ──────────────────────────────────────────────────
+  if (status === "pending_verification") {
+    return (
+      <div className="space-y-4">
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+          <CardContent className="flex flex-col items-center py-8 text-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+              <Clock3 className="h-8 w-8 text-amber-500 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-amber-700">Menunggu Verifikasi</h3>
+              <p className="text-sm text-muted-foreground mt-1">Bukti pembayaran Anda sedang diproses admin. Estimasi 1×24 jam kerja.</p>
+            </div>
+            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+              <Clock3 className="h-3.5 w-3.5 mr-1" />
+              Dalam Proses
+            </Badge>
+          </CardContent>
+        </Card>
+
+        {payment && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Rincian Pembayaran</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tagihan Dasar</span>
+                <span>Rp {formatRupiah(payment.baseAmount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Kode Unik</span>
+                <span>{payment.uniqueCode}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between font-semibold">
+                <span>Total Transfer</span>
+                <span>Rp {formatRupiah(payment.totalAmount)}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Button variant="outline" className="w-full" onClick={() => navigate("/payment-pending")}>
+          <Clock3 className="h-4 w-4 mr-2" />
+          Pantau Status Pembayaran
+        </Button>
+      </div>
+    );
+  }
+
+  // ── REJECTED ──────────────────────────────────────────────────────────────
+  if (status === "rejected") {
+    return (
+      <div className="space-y-4">
+        <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white">
+          <CardContent className="flex flex-col items-center py-8 text-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-red-700">Bukti Pembayaran Ditolak</h3>
+              <p className="text-sm text-muted-foreground mt-1">Silakan upload ulang bukti transfer yang sesuai.</p>
+            </div>
+            <Badge variant="outline" className="bg-red-100 text-red-700 border-red-200">
+              <AlertCircle className="h-3.5 w-3.5 mr-1" />
+              Ditolak
+            </Badge>
+          </CardContent>
+        </Card>
+
+        {payment?.rejectionReason && (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <span className="font-medium">Alasan: </span>{payment.rejectionReason}
+          </div>
+        )}
+
+        <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => navigate("/payment")}>
+          Upload Ulang Bukti Transfer
+        </Button>
+      </div>
+    );
+  }
+
+  // ── PENDING PAYMENT (belum bayar) ─────────────────────────────────────────
+  return (
+    <div className="space-y-4">
+      <Card className="border-slate-200 bg-gradient-to-br from-slate-50 to-white">
+        <CardContent className="flex flex-col items-center py-8 text-center gap-3">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+            <CreditCard className="h-8 w-8 text-slate-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-700">Belum Melakukan Pembayaran</h3>
+            <p className="text-sm text-muted-foreground mt-1">Selesaikan pembayaran untuk mengaktifkan akun Anda.</p>
+          </div>
+          <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">
+            <CreditCard className="h-3.5 w-3.5 mr-1" />
+            Belum Bayar
+          </Badge>
+        </CardContent>
+      </Card>
+
+      {payment && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Rincian Tagihan</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tagihan Dasar</span>
+              <span>Rp {formatRupiah(payment.baseAmount)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Kode Unik</span>
+              <span>{payment.uniqueCode}</span>
+            </div>
+            <Separator className="my-2" />
+            <div className="flex justify-between font-semibold">
+              <span>Total Transfer</span>
+              <span>Rp {formatRupiah(payment.totalAmount)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Button className="w-full" onClick={() => navigate("/payment")}>
+        <CreditCard className="h-4 w-4 mr-2" />
+        Bayar Sekarang
+      </Button>
+    </div>
   );
 };
 

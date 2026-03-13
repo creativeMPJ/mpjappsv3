@@ -143,6 +143,39 @@ export async function paymentRoutes(app: FastifyInstance) {
     };
   });
 
+  app.get("/summary", { preHandler: authenticate }, async (request) => {
+    const payload = request.user as { sub: string };
+
+    const claim = await prisma.pesantrenClaim.findFirst({
+      where: { userId: payload.sub },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!claim) {
+      return { paymentStatus: "pending_payment", payment: null };
+    }
+
+    const payment = await prisma.payment.findFirst({
+      where: { userId: payload.sub, pesantrenClaimId: claim.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!payment) {
+      return { paymentStatus: "pending_payment", payment: null };
+    }
+
+    return {
+      paymentStatus: payment.status,
+      payment: {
+        id: payment.id,
+        baseAmount: payment.baseAmount,
+        uniqueCode: payment.uniqueCode,
+        totalAmount: payment.totalAmount,
+        rejectionReason: payment.rejectionReason ?? null,
+      },
+    };
+  });
+
   app.post("/submit-proof", { preHandler: authenticate }, async (request, reply) => {
     const payload = request.user as { sub: string };
     const fields: Record<string, string> = {};

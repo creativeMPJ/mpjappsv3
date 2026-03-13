@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { 
-  MapPin, 
-  Plus, 
-  Trash2, 
-  ArrowRight, 
-  Building2, 
+import {
+  MapPin,
+  Plus,
+  Trash2,
+  ArrowRight,
+  Building2,
   CheckCircle2,
-  UserPlus, 
-  Shield, 
-  Search, 
-  AlertTriangle 
+  UserPlus,
+  Shield,
+  Search,
+  AlertTriangle,
+  GitMerge,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +23,52 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+
+const JAWA_TIMUR_CITIES = [
+  "Kabupaten Bangkalan",
+  "Kabupaten Banyuwangi",
+  "Kabupaten Blitar",
+  "Kabupaten Bojonegoro",
+  "Kabupaten Bondowoso",
+  "Kabupaten Gresik",
+  "Kabupaten Jember",
+  "Kabupaten Jombang",
+  "Kabupaten Kediri",
+  "Kabupaten Lamongan",
+  "Kabupaten Lumajang",
+  "Kabupaten Madiun",
+  "Kabupaten Magetan",
+  "Kabupaten Malang",
+  "Kabupaten Mojokerto",
+  "Kabupaten Nganjuk",
+  "Kabupaten Ngawi",
+  "Kabupaten Pacitan",
+  "Kabupaten Pamekasan",
+  "Kabupaten Pasuruan",
+  "Kabupaten Ponorogo",
+  "Kabupaten Probolinggo",
+  "Kabupaten Sampang",
+  "Kabupaten Sidoarjo",
+  "Kabupaten Situbondo",
+  "Kabupaten Sumenep",
+  "Kabupaten Trenggalek",
+  "Kabupaten Tuban",
+  "Kabupaten Tulungagung",
+  "Kota Batu",
+  "Kota Blitar",
+  "Kota Kediri",
+  "Kota Madiun",
+  "Kota Malang",
+  "Kota Mojokerto",
+  "Kota Pasuruan",
+  "Kota Probolinggo",
+  "Kota Surabaya",
+];
 
 type AppRole = "user" | "admin_regional" | "admin_pusat" | "admin_finance";
 
@@ -83,8 +130,16 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
   const [newRegionName, setNewRegionName] = useState("");
   const [newRegionCode, setNewRegionCode] = useState("");
   const [newCityName, setNewCityName] = useState("");
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Merge region state
+  const [isMergeOpen, setIsMergeOpen] = useState(false);
+  const [mergeSource, setMergeSource] = useState<Region | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState("");
+  const [mergeNewName, setMergeNewName] = useState("");
+  const [mergeNewCode, setMergeNewCode] = useState("");
+
   // Admin assignment
   const [searchQuery, setSearchQuery] = useState("");
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
@@ -524,6 +579,41 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
     }
   };
 
+  const handleMergeRegions = async () => {
+    if (!mergeSource || !mergeTargetId || !mergeNewName.trim() || !mergeNewCode.trim()) {
+      toast({ title: "Error", description: "Semua field wajib diisi", variant: "destructive" });
+      return;
+    }
+    if (mergeSource.id === mergeTargetId) {
+      toast({ title: "Error", description: "Pilih regional yang berbeda", variant: "destructive" });
+      return;
+    }
+    if (!/^\d{2}$/.test(mergeNewCode)) {
+      toast({ title: "Error", description: "Kode harus 2 digit angka", variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await apiRequest("/api/admin/regional-management/regions/merge", {
+        method: "POST",
+        body: JSON.stringify({
+          sourceId: mergeSource.id,
+          targetId: mergeTargetId,
+          newName: mergeNewName.trim(),
+          newCode: mergeNewCode.trim(),
+        }),
+      });
+      toast({ title: "Berhasil", description: `${mergeSource.name} berhasil digabung ke regional tujuan.` });
+      setIsMergeOpen(false);
+      setMergeSource(null);
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleOpenAssignDialog = (user: UserData) => {
     setSelectedUser(user);
     setSelectedRegionForAssign(user.region_id || "");
@@ -728,6 +818,23 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
                             <Badge variant="secondary">
                               {stats?.city_count || 0} Kota
                             </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Gabung Regional"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMergeSource(region);
+                                const other = regions.find(r => r.id !== region.id);
+                                setMergeTargetId(other?.id || "");
+                                setMergeNewName(region.name);
+                                setMergeNewCode(region.code);
+                                setIsMergeOpen(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <GitMerge className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1068,12 +1175,47 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
           <div className="space-y-4">
             <div>
               <Label>Nama Kota</Label>
-              <Input
-                value={newCityName}
-                onChange={(e) => setNewCityName(e.target.value)}
-                placeholder="Contoh: Surabaya"
-                className="mt-1"
-              />
+              <Popover open={cityDropdownOpen} onOpenChange={setCityDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={cityDropdownOpen}
+                    className="w-full justify-between mt-1 font-normal"
+                  >
+                    {newCityName || "Pilih kota/kabupaten..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Cari kota/kabupaten..." />
+                    <CommandList>
+                      <CommandEmpty>Kota tidak ditemukan.</CommandEmpty>
+                      <CommandGroup>
+                        {JAWA_TIMUR_CITIES.map((city) => (
+                          <CommandItem
+                            key={city}
+                            value={city}
+                            onSelect={(val) => {
+                              setNewCityName(val);
+                              setCityDropdownOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                newCityName === city ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {city}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <DialogFooter>
@@ -1082,6 +1224,69 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
             </Button>
             <Button onClick={handleAddCity} disabled={isSaving}>
               {isSaving ? "Menyimpan..." : "Tambah Kota"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Region Dialog */}
+      <Dialog open={isMergeOpen} onOpenChange={setIsMergeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gabung Regional</DialogTitle>
+            <DialogDescription>
+              Semua pesantren & kota dari regional sumber akan dipindahkan ke regional tujuan, lalu regional sumber dihapus.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Regional sumber (akan dihapus)</Label>
+              <Input value={mergeSource?.name || ""} readOnly className="mt-1 bg-muted text-muted-foreground" />
+            </div>
+            <div>
+              <Label>Digabung ke regional</Label>
+              <Select value={mergeTargetId} onValueChange={setMergeTargetId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Pilih regional tujuan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {regions.filter(r => r.id !== mergeSource?.id).map(r => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name} (RR {r.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Nama regional hasil gabungan</Label>
+              <Input
+                value={mergeNewName}
+                onChange={(e) => setMergeNewName(e.target.value)}
+                placeholder="Contoh: Situbondo-Bondowoso"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Kode RR baru (2 digit angka)</Label>
+              <Input
+                value={mergeNewCode}
+                onChange={(e) => setMergeNewCode(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                placeholder="Contoh: 16"
+                className="mt-1"
+                maxLength={2}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Kode ini akan menggantikan kode regional tujuan.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMergeOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleMergeRegions} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+              {isSaving ? "Menggabung..." : "Gabung Sekarang"}
             </Button>
           </DialogFooter>
         </DialogContent>

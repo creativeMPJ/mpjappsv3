@@ -16,7 +16,8 @@ import {
   User,
   History,
   ShieldCheck,
-  MessageCircle
+  MessageCircle,
+  Users
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -268,6 +269,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   // Price settings state
   const [registrationPrice, setRegistrationPrice] = useState<string>("50000");
   const [claimPrice, setClaimPrice] = useState<string>("20000");
+  const [freeSlotQty, setFreeSlotQty] = useState<string>("3");
+  const [addonSlotPrice, setAddonSlotPrice] = useState<string>("10000");
   const [isSavingPrices, setIsSavingPrices] = useState(false);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
@@ -405,9 +408,11 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
   const fetchPriceSettings = async () => {
     setIsLoadingPrices(true);
     try {
-      const data = await apiRequest<{ registrationPrice: number; claimPrice: number }>('/api/admin/price-settings');
+      const data = await apiRequest<{ registrationPrice: number; claimPrice: number; freeSlotQuantity: number; addonSlotPrice: number }>('/api/admin/price-settings');
       setRegistrationPrice(String(data.registrationPrice ?? 50000));
       setClaimPrice(String(data.claimPrice ?? 20000));
+      setFreeSlotQty(String(data.freeSlotQuantity ?? 3));
+      setAddonSlotPrice(String(data.addonSlotPrice ?? 10000));
     } catch (error) {
       console.error('Error fetching prices:', error);
     } finally {
@@ -543,6 +548,8 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
         body: JSON.stringify({
           registrationPrice: parseInt(registrationPrice, 10),
           claimPrice: parseInt(claimPrice, 10),
+          freeSlotQuantity: parseInt(freeSlotQty, 10) || 3,
+          addonSlotPrice: parseInt(addonSlotPrice, 10) || 0,
         }),
       });
 
@@ -1042,6 +1049,70 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
                       <p className="text-xs text-muted-foreground">
                         Untuk pesantren yang mengklaim data Legacy
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Manajemen Slot */}
+                  <div className="border rounded-xl p-5 space-y-4 bg-emerald-50/40 border-emerald-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <Users className="h-4 w-4 text-emerald-700" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">Manajemen Slot (The Golden 3)</p>
+                        <p className="text-xs text-muted-foreground">Konfigurasi slot gratis & add-on per pesantren</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Slot Gratis per Pesantren</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={20}
+                          value={freeSlotQty}
+                          onChange={(e) => setFreeSlotQty(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Default bundle slot untuk pesantren yang sudah bayar
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Harga Add-On per Slot</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">Rp</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={addonSlotPrice}
+                            onChange={(e) => setAddonSlotPrice(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Harga per slot tambahan jika pesantren butuh lebih dari batas gratis
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Bundle Preview */}
+                    <div className="bg-white border border-emerald-200 rounded-lg p-4 text-sm space-y-1.5">
+                      <p className="font-medium text-emerald-800 mb-2">Preview Bundle Aktif:</p>
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">1</span>
+                        <span>Slot 1 → Admin Pengelola (PIC) otomatis</span>
+                      </div>
+                      {Number(freeSlotQty) >= 2 && (
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">2</span>
+                          <span>Slot 2{Number(freeSlotQty) > 2 ? `–${freeSlotQty}` : ""} → Crew bebas</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-amber-700 pt-1 border-t border-emerald-100">
+                        <span className="text-xs">+</span>
+                        <span>Slot Tambahan: <strong>Rp {Number(addonSlotPrice || 0).toLocaleString("id-ID")}</strong> / slot</span>
+                      </div>
                     </div>
                   </div>
 

@@ -1,14 +1,35 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Clock, CheckCircle, XCircle } from "lucide-react";
+import { DollarSign, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { apiRequest } from "@/lib/api-client";
+
+interface FinanceStats {
+  total_income: number;
+  pending_verification: number;
+  approved_today: number;
+  rejected_today: number;
+}
 
 const FinanceBeranda = () => {
-  // Dummy stats for MVP
-  const stats = {
-    totalIncome: 15750000,
-    pendingTransactions: 5,
-    approvedToday: 12,
-    rejectedToday: 2,
-  };
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<FinanceStats>({
+    total_income: 0,
+    pending_verification: 0,
+    approved_today: 0,
+    rejected_today: 0,
+  });
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await apiRequest<FinanceStats>("/api/finance/stats");
+        setStats(data);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -31,67 +52,73 @@ const FinanceBeranda = () => {
       </Card>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Pemasukan
-            </CardTitle>
-            <DollarSign className="h-5 w-5 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {formatCurrency(stats.totalIncome)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Bulan ini</p>
-          </CardContent>
-        </Card>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-l-4 border-l-emerald-500">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Pemasukan
+              </CardTitle>
+              <DollarSign className="h-5 w-5 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {formatCurrency(stats.total_income)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Semua waktu</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Menunggu Verifikasi
-            </CardTitle>
-            <Clock className="h-5 w-5 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {stats.pendingTransactions}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Perlu tindakan</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-amber-500">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Menunggu Verifikasi
+              </CardTitle>
+              <Clock className="h-5 w-5 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.pending_verification}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Perlu tindakan</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Disetujui Hari Ini
-            </CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {stats.approvedToday}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Akun diaktifkan</p>
-          </CardContent>
-        </Card>
+          <Card className="border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Disetujui Hari Ini
+              </CardTitle>
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.approved_today}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Akun diaktifkan</p>
+            </CardContent>
+          </Card>
 
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ditolak Hari Ini
-            </CardTitle>
-            <XCircle className="h-5 w-5 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {stats.rejectedToday}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Pembayaran invalid</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-l-4 border-l-red-500">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Ditolak Hari Ini
+              </CardTitle>
+              <XCircle className="h-5 w-5 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {stats.rejected_today}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Pembayaran invalid</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Info Card */}
       <Card>

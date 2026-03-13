@@ -84,7 +84,7 @@ const getMenuItems = (showAktivasi: boolean) => {
 const MediaDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile: authProfile, signOut, user } = useAuth();
+  const { profile: authProfile, signOut, user, refreshAuth } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>(() => getViewFromPath(location.pathname));
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [koordinator, setKoordinator] = useState<KoordinatorData | undefined>();
@@ -228,8 +228,7 @@ const MediaDashboard = () => {
           <IdentitasPesantren
             paymentStatus={paymentStatus}
             profileLevel={profileLevel}
-            onProfileLevelChange={() => { }}
-            debugProfile={profile || undefined}
+            onProfileLevelChange={() => refreshAuth()}
           />
         );
       case "tim":
@@ -268,12 +267,7 @@ const MediaDashboard = () => {
         );
       case "aktivasi":
         return (
-          <AktivasiNIPNIAM
-            onPaymentSubmitted={() => {
-              // Refresh the page to update payment status
-              window.location.reload();
-            }}
-          />
+          <AktivasiNIPNIAM />
         );
       case "event":
         return <EventPage />;

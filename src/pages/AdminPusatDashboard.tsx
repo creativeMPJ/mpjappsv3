@@ -76,7 +76,6 @@ const Dashboard = () => {
 
   // Debug mode check
   const isDebugMode = location.state?.isDebugMode === true;
-  const debugProfile = location.state?.debugProfile;
   const debugData = location.state?.debugData;
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
@@ -239,8 +238,8 @@ const Dashboard = () => {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h2 className="text-lg font-semibold text-foreground hidden sm:block">
-              Dashboard Admin Pusat
+            <h2 className="text-lg font-semibold text-foreground">
+              Halo, {isSuperAdmin ? "Super Admin" : "Admin Pusat"}
             </h2>
           </div>
           <div className="flex items-center gap-3">
@@ -253,7 +252,9 @@ const Dashboard = () => {
               <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full" />
             </Button>
             <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center">
-              <span className="text-sm font-semibold text-white">AP</span>
+              <span className="text-sm font-semibold text-white">
+                {isSuperAdmin ? "SA" : "AP"}
+              </span>
             </div>
           </div>
         </header>

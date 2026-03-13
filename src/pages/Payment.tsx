@@ -227,8 +227,8 @@ const Payment = () => {
           <p className="text-muted-foreground mb-6 leading-relaxed">
             {accessDeniedReason}
           </p>
-          <Button onClick={() => navigate('/login')} className="w-full">
-            Kembali ke Login
+          <Button onClick={() => navigate('/user')} className="w-full">
+            Kembali ke Dashboard
           </Button>
         </div>
       </div>
@@ -239,7 +239,7 @@ const Payment = () => {
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary/90 to-primary">
       {/* Header */}
       <div className="flex-shrink-0 pt-6 pb-3 px-4">
-        <Link to="/login" className="inline-flex items-center text-primary-foreground/80 text-sm mb-3">
+        <Link to="/user" className="inline-flex items-center text-primary-foreground/80 text-sm mb-3">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Kembali
         </Link>

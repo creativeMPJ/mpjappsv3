@@ -26,6 +26,16 @@ export async function mediaRoutes(app: FastifyInstance) {
     };
   });
 
+  app.get("/slot-config", { preHandler: authenticate }, async () => {
+    const settings = await prisma.systemSetting.findMany({
+      where: { key: { in: ["free_slot_quantity", "addon_slot_price"] } },
+    });
+    return {
+      freeSlotQuantity: Number(settings.find((s) => s.key === "free_slot_quantity")?.value ?? 3),
+      addonSlotPrice: Number(settings.find((s) => s.key === "addon_slot_price")?.value ?? 10000),
+    };
+  });
+
   app.get("/crew", { preHandler: authenticate }, async (request) => {
     const payload = request.user as { sub: string };
 
@@ -64,11 +74,12 @@ export async function mediaRoutes(app: FastifyInstance) {
       return reply.status(404).send({ message: "Profile tidak ditemukan" });
     }
 
-    // Enforce free slot limit (3 crew max for free)
-    const FREE_SLOT_LIMIT = 3;
+    // Enforce free slot limit — dynamic from SystemSetting
+    const slotSetting = await prisma.systemSetting.findFirst({ where: { key: "free_slot_quantity" } });
+    const FREE_SLOT_LIMIT = Number(slotSetting?.value ?? 3);
     const currentCount = await prisma.crew.count({ where: { profileId: payload.sub } });
     if (currentCount >= FREE_SLOT_LIMIT) {
-      return reply.status(403).send({ message: "Slot gratis sudah penuh (3/3). Upgrade untuk menambah kru." });
+      return reply.status(403).send({ message: `Slot gratis sudah penuh (${FREE_SLOT_LIMIT}/${FREE_SLOT_LIMIT}). Hubungi Admin Pusat untuk menambah slot.` });
     }
 
     let niAm: string | null = null;

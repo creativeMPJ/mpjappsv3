@@ -237,10 +237,10 @@ const PaymentPending = () => {
                 </Button>
               </Link>
             ) : (
-              <Link to="/">
+              <Link to="/user">
                 <Button className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                   <Home className="mr-2 h-4 w-4" />
-                  Kembali ke Beranda
+                  Ke Dashboard
                 </Button>
               </Link>
             )}

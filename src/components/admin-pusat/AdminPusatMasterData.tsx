@@ -132,13 +132,12 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
 
   const handleExportMedia = () => {
     const data = filteredMedia.map((item) => ({
-      NIP: item.nip || "",
-      "Nama Pesantren": item.nama_pesantren || "",
-      "Nama Media": item.nama_media || "",
+      NIAM: item.niam || "",
+      "Nama Pengelola": item.nama || "",
+      Jabatan: item.jabatan || "",
+      Pesantren: item.pesantren_name || "",
       Regional: item.region_name || "",
-      "No WA": item.no_wa_pendaftar || "",
-      Status: item.status_account || "",
-      Level: item.profile_level || "",
+      "XP Level": item.xp_level ?? 0,
     }));
     exportToExcel(data, "MasterData_Media");
     toast({ title: "Export Berhasil", description: `${data.length} data media berhasil di-export.` });
@@ -290,15 +289,16 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
   }, [pesantrenList, selectedRegionFilter, searchQuery]);
 
   const filteredMedia = useMemo(() => {
-    return mediaList.filter((item) => {
+    return crewList.filter((item) => {
       const matchesRegion = selectedRegionFilter === "all" || item.region_id === selectedRegionFilter;
       const matchesSearch = searchQuery === "" ||
-        item.nama_pesantren?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nama_media?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nip?.includes(searchQuery);
+        item.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.niam?.includes(searchQuery) ||
+        item.jabatan?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.pesantren_name?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesRegion && matchesSearch;
     });
-  }, [mediaList, selectedRegionFilter, searchQuery]);
+  }, [crewList, selectedRegionFilter, searchQuery]);
 
   const filteredCrew = useMemo(() => {
     return crewList.filter((item) => {
@@ -668,7 +668,7 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
           <Card className="bg-card border-0 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base md:text-lg text-foreground font-semibold flex items-center justify-between">
-                <span>Daftar Admin Media ({filteredMedia.length})</span>
+                <span>Daftar Pengelola Media ({filteredMedia.length})</span>
                 <div className="flex items-center gap-2">
                   {selectedRegionFilter !== "all" && (
                     <Badge variant="outline" className="font-normal">
@@ -692,11 +692,11 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-muted-foreground">NIP</TableHead>
+                      <TableHead className="text-muted-foreground">NIAM</TableHead>
+                      <TableHead className="text-muted-foreground">Nama Pengelola</TableHead>
+                      <TableHead className="text-muted-foreground">Jabatan</TableHead>
                       <TableHead className="text-muted-foreground">Pesantren</TableHead>
-                      <TableHead className="text-muted-foreground">Nama Media</TableHead>
                       <TableHead className="text-muted-foreground">Regional</TableHead>
-                      <TableHead className="text-muted-foreground">Status</TableHead>
                       <TableHead className="text-muted-foreground text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -705,18 +705,19 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
                       filteredMedia.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-mono text-sm font-medium">
-                            {item.nip ? formatNIP(item.nip, true) : "-"}
+                            {item.niam ? formatNIAM(item.niam, true) : <span className="text-muted-foreground">-</span>}
                           </TableCell>
-                          <TableCell className="font-medium text-foreground">
-                            {item.nama_pesantren || "Belum diisi"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{item.nama_media || "-"}</TableCell>
+                          <TableCell className="font-medium text-foreground">{item.nama}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.jabatan || "-"}</TableCell>
+                          <TableCell className="text-muted-foreground">{item.pesantren_name || "-"}</TableCell>
                           <TableCell className="text-muted-foreground">{item.region_name || "-"}</TableCell>
-                          <TableCell>{getStatusBadge(item.status_account)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => openEditMedia(item)} title="Edit">
+                              <Button variant="ghost" size="sm" onClick={() => openEditCrew(item)} title="Edit">
                                 <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ type: 'crew', id: item.id, name: item.nama })} title="Hapus" className="text-destructive hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -725,7 +726,7 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data media"}
+                          {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data pengelola media"}
                         </TableCell>
                       </TableRow>
                     )}
@@ -740,34 +741,33 @@ const AdminPusatMasterData = ({ isDebugMode, debugData }: Props = {}) => {
                     <div key={item.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
-                          <p className="font-semibold text-foreground text-base">
-                            {item.nama_pesantren || "Belum diisi"}
-                          </p>
-                          {item.nama_media && (
-                            <p className="text-sm text-muted-foreground">{item.nama_media}</p>
-                          )}
-                          {item.nip && (
+                          <p className="font-semibold text-foreground text-base">{item.nama}</p>
+                          {item.niam && (
                             <p className="font-mono text-sm text-primary font-bold mt-1">
-                              NIP: {formatNIP(item.nip, true)}
+                              NIAM: {formatNIAM(item.niam, true)}
                             </p>
                           )}
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {item.jabatan || "Tanpa Jabatan"} • {item.pesantren_name || "-"}
+                          </p>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditMedia(item)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditCrew(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => setDeleteTarget({ type: 'crew', id: item.id, name: item.nama })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {getStatusBadge(item.status_account)}
-                        {getLevelBadge(item.profile_level)}
-                        {item.region_name && (
-                          <Badge variant="outline" className="text-xs">{item.region_name}</Badge>
-                        )}
-                      </div>
+                      {item.region_name && (
+                        <Badge variant="outline" className="text-xs mt-2">{item.region_name}</Badge>
+                      )}
                     </div>
                   ))
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
-                    {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data media"}
+                    {searchQuery ? "Tidak ada hasil pencarian" : "Belum ada data pengelola media"}
                   </div>
                 )}
               </div>

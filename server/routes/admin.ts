@@ -7,6 +7,8 @@ import { prisma } from "../prisma";
 const priceSettingsSchema = z.object({
   registrationPrice: z.number().int().positive(),
   claimPrice: z.number().int().positive(),
+  freeSlotQuantity: z.number().int().min(1).max(20).optional(),
+  addonSlotPrice: z.number().int().min(0).optional(),
 });
 
 const rejectPaymentSchema = z.object({
@@ -37,6 +39,13 @@ const addRegionSchema = z.object({
 const addCitySchema = z.object({
   name: z.string().min(1),
   regionId: z.string().uuid(),
+});
+
+const mergeRegionSchema = z.object({
+  sourceId: z.string().uuid(),
+  targetId: z.string().uuid(),
+  newName: z.string().min(1),
+  newCode: z.string().regex(/^\d{2}$/),
 });
 
 const assignRegionalAdminSchema = z.object({
@@ -1025,6 +1034,30 @@ export async function adminRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
+  app.post("/regional-management/regions/merge", { preHandler: authenticate }, async (request, reply) => {
+    const payload = request.user as { sub: string };
+    await assertAdminPusat(payload.sub);
+    const body = mergeRegionSchema.parse(request.body);
+
+    if (body.sourceId === body.targetId)
+      return reply.status(400).send({ message: "Source dan target tidak boleh sama" });
+
+    const codeConflict = await prisma.region.findFirst({
+      where: { code: body.newCode, id: { not: body.targetId } },
+    });
+    if (codeConflict)
+      return reply.status(409).send({ message: "Kode sudah digunakan regional lain" });
+
+    await prisma.$transaction([
+      prisma.profile.updateMany({ where: { regionId: body.sourceId }, data: { regionId: body.targetId } }),
+      prisma.city.updateMany({ where: { regionId: body.sourceId }, data: { regionId: body.targetId } }),
+      prisma.region.update({ where: { id: body.targetId }, data: { name: body.newName, code: body.newCode } }),
+      prisma.region.delete({ where: { id: body.sourceId } }),
+    ]);
+
+    return { success: true };
+  });
+
   app.post("/regional-management/cities", { preHandler: authenticate }, async (request) => {
     const payload = request.user as { sub: string };
     await assertAdminPusat(payload.sub);
@@ -1367,16 +1400,20 @@ export async function adminRoutes(app: FastifyInstance) {
 
     const settings = await prisma.systemSetting.findMany({
       where: {
-        key: { in: ["registration_base_price", "claim_base_price"] },
+        key: { in: ["registration_base_price", "claim_base_price", "free_slot_quantity", "addon_slot_price"] },
       },
     });
 
     const registration = settings.find((s) => s.key === "registration_base_price");
     const claim = settings.find((s) => s.key === "claim_base_price");
+    const slotQty = settings.find((s) => s.key === "free_slot_quantity");
+    const addonPrice = settings.find((s) => s.key === "addon_slot_price");
 
     return {
       registrationPrice: Number(registration?.value ?? 50000),
       claimPrice: Number(claim?.value ?? 20000),
+      freeSlotQuantity: Number(slotQty?.value ?? 3),
+      addonSlotPrice: Number(addonPrice?.value ?? 10000),
     };
   });
 
@@ -1418,6 +1455,28 @@ export async function adminRoutes(app: FastifyInstance) {
             description: "Harga dasar klaim akun lama",
           },
         });
+      }
+
+      if (body.freeSlotQuantity !== undefined) {
+        const slotQty = await tx.systemSetting.findFirst({ where: { key: "free_slot_quantity" } });
+        if (slotQty) {
+          await tx.systemSetting.update({ where: { id: slotQty.id }, data: { value: body.freeSlotQuantity } });
+        } else {
+          await tx.systemSetting.create({
+            data: { key: "free_slot_quantity", value: body.freeSlotQuantity, description: "Jumlah slot gratis per pesantren (The Golden 3)" },
+          });
+        }
+      }
+
+      if (body.addonSlotPrice !== undefined) {
+        const addonPrice = await tx.systemSetting.findFirst({ where: { key: "addon_slot_price" } });
+        if (addonPrice) {
+          await tx.systemSetting.update({ where: { id: addonPrice.id }, data: { value: body.addonSlotPrice } });
+        } else {
+          await tx.systemSetting.create({
+            data: { key: "addon_slot_price", value: body.addonSlotPrice, description: "Harga per slot tambahan (add-on)" },
+          });
+        }
       }
     });
 

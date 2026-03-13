@@ -6,13 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock3, CreditCard, Loader2, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
 
-interface AktivasiNIPNIAMProps {
-  onPaymentSubmitted?: () => void;
-}
-
 type PaymentStatus = "pending_payment" | "pending_verification" | "verified" | "rejected";
 
-const AktivasiNIPNIAM = ({ onPaymentSubmitted }: AktivasiNIPNIAMProps) => {
+const AktivasiNIPNIAM = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<PaymentStatus>("pending_payment");
@@ -98,7 +94,6 @@ const AktivasiNIPNIAM = ({ onPaymentSubmitted }: AktivasiNIPNIAMProps) => {
         <Button
           className="gap-2"
           onClick={() => {
-            onPaymentSubmitted?.();
             navigate("/payment");
           }}
         >

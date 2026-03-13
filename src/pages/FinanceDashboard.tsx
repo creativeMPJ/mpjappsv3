@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { 
   LogOut, 
   Menu, 
@@ -24,6 +24,12 @@ import FinanceLaporan from "@/components/finance-dashboard/FinanceLaporan";
 
 type ViewType = "beranda" | "verifikasi" | "riwayat" | "harga" | "laporan";
 
+const getViewFromPath = (pathname: string): ViewType => {
+  const segment = pathname.split('/finance/')[1] as ViewType;
+  const valid: ViewType[] = ["beranda", "verifikasi", "riwayat", "harga", "laporan"];
+  return valid.includes(segment) ? segment : "beranda";
+};
+
 const menuItems = [
   { id: "beranda" as ViewType, label: "Dashboard Beranda", icon: LayoutDashboard },
   { id: "verifikasi" as ViewType, label: "Verifikasi", icon: CheckCircle, badge: 5 },
@@ -34,8 +40,9 @@ const menuItems = [
 
 const FinanceDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const [activeView, setActiveView] = useState<ViewType>("beranda");
+  const [activeView, setActiveView] = useState<ViewType>(() => getViewFromPath(location.pathname));
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { profile, signOut } = useAuth();
 
@@ -68,6 +75,7 @@ const FinanceDashboard = () => {
   const handleMenuClick = (viewId: ViewType) => {
     setActiveView(viewId);
     setMobileSidebarOpen(false);
+    navigate(viewId === "beranda" ? "/finance" : `/finance/${viewId}`);
   };
 
   const SidebarContent = () => (
