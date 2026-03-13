@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import mpjLogo from "@/assets/mpj-vertical-color.png";
 import {
   LayoutDashboard,
   Building,
@@ -48,6 +49,12 @@ interface KoordinatorData {
 // Menu order as per specification - includes aktivasi menu for unpaid users
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan" | "aktivasi";
 
+const getViewFromPath = (pathname: string): ViewType => {
+  const segment = pathname.split('/user/')[1] as ViewType;
+  const valid: ViewType[] = ["beranda","identitas","administrasi","tim","event","eid","hub","pengaturan","aktivasi"];
+  return valid.includes(segment) ? segment : "beranda";
+};
+
 // Base menu items - aktivasi menu will be conditionally added
 const getMenuItems = (showAktivasi: boolean) => {
   const baseItems = [
@@ -78,11 +85,12 @@ const MediaDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile: authProfile, signOut, user } = useAuth();
-  const [activeView, setActiveView] = useState<ViewType>("beranda");
+  const [activeView, setActiveView] = useState<ViewType>(() => getViewFromPath(location.pathname));
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [koordinator, setKoordinator] = useState<KoordinatorData | undefined>();
   const [regionalApprovedAt, setRegionalApprovedAt] = useState<string | null>(null);
   const [pusatApprovedAt, setPusatApprovedAt] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const { toast } = useToast();
 
   // Support debug mode via location.state
@@ -97,6 +105,13 @@ const MediaDashboard = () => {
   const profileLevel = profile?.profile_level ?? 'basic';
   const levelInfo = getProfileLevelInfo(profileLevel);
   const isPlatinum = profileLevel === 'platinum';
+
+  // Show welcome modal for unpaid users (once per session)
+  useEffect(() => {
+    if (paymentStatus === 'unpaid' && !sessionStorage.getItem('mpj_welcome_shown')) {
+      setShowWelcomeModal(true);
+    }
+  }, [paymentStatus]);
 
   // Fetch approval dates from pesantren_claims
   useEffect(() => {
@@ -289,6 +304,17 @@ const MediaDashboard = () => {
   const handleMenuClick = (viewId: ViewType) => {
     setActiveView(viewId);
     setMobileSidebarOpen(false);
+    navigate(viewId === "beranda" ? "/user" : `/user/${viewId}`);
+  };
+
+  const handleDismissWelcome = () => {
+    sessionStorage.setItem('mpj_welcome_shown', '1');
+    setShowWelcomeModal(false);
+  };
+
+  const handleActivateFromWelcome = () => {
+    handleDismissWelcome();
+    handleMenuClick("aktivasi");
   };
 
   // Format NIP for display (clean, without dots)
@@ -304,6 +330,33 @@ const MediaDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Welcome Modal */}
+      {showWelcomeModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 flex flex-col items-center text-center">
+            <img src={mpjLogo} alt="Media Pondok Jawa Timur" className="h-24 mb-6 object-contain" />
+            <h2 className="text-2xl font-bold text-[#166534] mb-4 leading-tight">
+              Ahlan wa Sahlan<br />Khodim MPJ!
+            </h2>
+            <p className="text-gray-500 text-sm mb-8">
+              Status Akun: <strong>BASIC</strong>. ID Card terkunci.
+            </p>
+            <button
+              onClick={handleActivateFromWelcome}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-4 rounded-xl text-base transition-colors mb-4"
+            >
+              Aktifkan Keanggoatan
+            </button>
+            <button
+              onClick={handleDismissWelcome}
+              className="text-gray-500 hover:text-gray-700 text-sm underline transition-colors"
+            >
+              Nanti Saja
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Overlay */}
       {mobileSidebarOpen && (
         <div
