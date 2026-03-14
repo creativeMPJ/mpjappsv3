@@ -56,6 +56,9 @@ const Login = () => {
   }, [user, profile, authLoading]);
 
   const redirectToDashboard = (role: string) => {
+    // Redirect berdasarkan role dari login response
+    // Role-based routing akan dihandle oleh Router.tsx
+    // Dashboard component yang sesuai akan dirender
     switch (role) {
       case 'admin_pusat':
         navigate('/admin-pusat', { replace: true });
@@ -66,8 +69,12 @@ const Login = () => {
       case 'admin_finance':
         navigate('/finance', { replace: true });
         break;
+      case 'super_admin':
+        navigate('/super-admin', { replace: true });
+        break;
       case 'user':
       default:
+        // User role redirect ke halaman check institution untuk setup awal
         navigate('/check-institution', { replace: true });
         break;
     }
