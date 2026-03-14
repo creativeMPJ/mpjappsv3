@@ -92,7 +92,7 @@ const SECTION_META: Record<string, SectionMeta> = {
   user: {
     getTitle: (p) => p?.nama_pesantren ?? 'MPJ Media',
     getSubtitle: () => 'Dashboard Media Pesantren',
-    sidebarBg: 'bg-emerald-700',
+    sidebarBg: 'bg-[#166534]',
     accentColor: 'text-emerald-700',
     roleLabel: 'Media Pesantren',
     avatarBorder: 'border-emerald-600',
@@ -101,7 +101,7 @@ const SECTION_META: Record<string, SectionMeta> = {
   admin_regional: {
     getTitle: () => 'MPJ REGIONAL',
     getSubtitle: () => 'Admin Panel',
-    sidebarBg: 'bg-emerald-700',
+    sidebarBg: 'bg-[#166534]',
     accentColor: 'text-emerald-700',
     roleLabel: 'Admin Regional',
     avatarBorder: 'border-emerald-600',
@@ -110,7 +110,7 @@ const SECTION_META: Record<string, SectionMeta> = {
   admin_pusat: {
     getTitle: () => 'MPJ PUSAT',
     getSubtitle: () => 'Admin Panel',
-    sidebarBg: 'bg-emerald-700',
+    sidebarBg: 'bg-[#166534]',
     accentColor: 'text-emerald-700',
     roleLabel: 'Admin Pusat',
     avatarBorder: 'border-emerald-600',
@@ -119,7 +119,7 @@ const SECTION_META: Record<string, SectionMeta> = {
   admin_finance: {
     getTitle: () => 'MPJ FINANCE',
     getSubtitle: () => 'Admin Panel',
-    sidebarBg: 'bg-emerald-700',
+    sidebarBg: 'bg-[#166534]',
     accentColor: 'text-emerald-700',
     roleLabel: 'Admin Finance',
     avatarBorder: 'border-emerald-600',
@@ -130,7 +130,7 @@ const SECTION_META: Record<string, SectionMeta> = {
 const DEFAULT_META: SectionMeta = {
   getTitle: () => 'MPJ SUPER ADMIN',
   getSubtitle: () => 'Admin Panel',
-  sidebarBg: 'bg-emerald-700',
+  sidebarBg: 'bg-[#166534]',
   accentColor: 'text-emerald-700',
   roleLabel: 'Super Admin',
   avatarBorder: 'border-emerald-600',
