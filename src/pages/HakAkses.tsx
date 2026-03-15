@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Search,
@@ -10,7 +10,6 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronDown,
-  LayoutDashboard,
   Map,
   CalendarDays,
   Layers,
@@ -37,7 +36,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -54,6 +52,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { apiRequest } from "@/lib/api-client";
 
 // ─── Menu Groups — per fitur/modul, ID & label sesuai ALL_MENUS di CmsLayout ──
 const menuGroups = [
@@ -63,8 +63,8 @@ const menuGroups = [
     icon: IdCard,
     items: [
       { id: "user-identitas",          label: "IDENTITAS PESANTREN", icon: IdCard },
-      { id: "user-administrasi",       label: "ADMINISTRASI",        icon: ClipboardList },
-      { id: "admin-pusat-administrasi",label: "ADMINISTRASI",        icon: ClipboardList },
+      { id: "user-administrasi",       label: "ADMINISTRASI (User)",        icon: ClipboardList },
+      { id: "admin-pusat-administrasi",label: "ADMINISTRASI (Admin Pusat)",        icon: ClipboardList },
     ],
   },
   {
@@ -82,8 +82,8 @@ const menuGroups = [
     icon: CalendarDays,
     items: [
       { id: "user-event",                    label: "EVENT",           icon: CalendarDays },
-      { id: "admin-pusat-manajemen-event",   label: "MANAJEMEN EVENT", icon: CalendarDays },
-      { id: "admin-regional-manajemen-event",label: "MANAJEMEN EVENT", icon: CalendarDays },
+      { id: "admin-pusat-manajemen-event",   label: "MANAJEMEN EVENT (Admin Pusat)", icon: CalendarDays },
+      { id: "admin-regional-manajemen-event",label: "MANAJEMEN EVENT (Admin Regional)", icon: CalendarDays },
     ],
   },
   {
@@ -132,8 +132,8 @@ const menuGroups = [
     label: "Hub & Militansi",
     icon: Globe,
     items: [
-      { id: "user-hub",                        label: "MPJ HUB",              icon: Globe },
-      { id: "admin-pusat-mpj-hub",             label: "MPJ HUB",              icon: Globe },
+      { id: "user-hub",                        label: "MPJ HUB (User)",              icon: Globe },
+      { id: "admin-pusat-mpj-hub",             label: "MPJ HUB (Admin Pusat)",              icon: Globe },
       { id: "admin-pusat-manajemen-militansi", label: "MANAJEMEN MILITANSI",  icon: Swords },
     ],
   },
@@ -152,11 +152,11 @@ const menuGroups = [
     label: "Pengaturan",
     icon: Settings,
     items: [
-      { id: "user-pengaturan",          label: "PENGATURAN", icon: Settings },
-      { id: "admin-pusat-pengaturan",   label: "PENGATURAN", icon: Settings },
-      { id: "admin-regional-pengaturan",label: "PENGATURAN", icon: Settings },
-      { id: "admin-finance-pengaturan", label: "PENGATURAN", icon: Settings },
-      { id: "super-admin-settings",     label: "SETTINGS",   icon: Settings },
+      { id: "user-pengaturan",          label: "PENGATURAN (User)", icon: Settings },
+      { id: "admin-pusat-pengaturan",   label: "PENGATURAN (Admin Pusat)", icon: Settings },
+      { id: "admin-regional-pengaturan",label: "PENGATURAN (Admin Regional)", icon: Settings },
+      { id: "admin-finance-pengaturan", label: "PENGATURAN (Admin Finance)", icon: Settings },
+      { id: "super-admin-settings",     label: "SETTINGS (Super Admin)",   icon: Settings },
     ],
   },
 ];
@@ -165,91 +165,52 @@ const menuGroups = [
 const allMenuItems = menuGroups.flatMap((g) => g.items);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+interface PermissionAccess {
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
 interface HakAksesItem {
   id: string;
   nama: string;
-  role: string;
-  permissions: string;
+  is_super_admin: boolean;
+  akses: Record<string, PermissionAccess>;
   created_at: string;
+  updated_at?: string;
 }
 
-// ─── Dummy data ───────────────────────────────────────────────────────────────
-const dummyHakAkses: HakAksesItem[] = [
-  {
-    id: "1",
-    nama: "Admin Pusat",
-    role: "admin_pusat",
-    permissions: "admin-pusat-dashboard:read, user-identitas:read, admin-pusat-administrasi:read, admin-pusat-administrasi:create, admin-pusat-administrasi:update, admin-pusat-master-data:read, admin-pusat-master-regional:read, admin-pusat-manajemen-event:read, admin-pusat-manajemen-event:create, admin-pusat-pengaturan:read",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    nama: "Admin Regional",
-    role: "admin_regional",
-    permissions: "admin-regional-dashboard:read, admin-regional-validasi-pendaftar:read, admin-regional-validasi-pendaftar:update, admin-regional-data-master:read, admin-pusat-master-regional:read, admin-regional-manajemen-event:read, admin-regional-laporan-dokumentasi:read, admin-regional-download-center:read",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    nama: "Admin Finance",
-    role: "admin_finance",
-    permissions: "admin-finance-dashboard:read, admin-finance-verifikasi:read, admin-finance-verifikasi:update, admin-finance-laporan:read, admin-finance-harga:read, admin-finance-harga:update, admin-finance-clearing:read, admin-finance-regional-monitoring:read",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "4",
-    nama: "User (Media Pesantren)",
-    role: "user",
-    permissions: "user-beranda:read, user-identitas:read, user-identitas:update, user-administrasi:read, user-tim:read, user-tim:create, user-tim:update, user-eid:read, user-event:read, user-hub:read, admin-pusat-pengaturan:read",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "5",
-    nama: "Super Admin",
-    role: "super_admin",
-    permissions: ":read, super-admin-user-management:read, super-admin-user-management:create, super-admin-user-management:update, super-admin-user-management:delete, super-admin-hierarchy:read, super-admin-hak-akses:read, super-admin-hak-akses:create, super-admin-hak-akses:update, super-admin-hak-akses:delete, super-admin-settings:read, super-admin-settings:update",
-    created_at: new Date().toISOString(),
-  },
-];
+// ─── API Functions ─────────────────────────────────────────────────────────────
+// Data akan diambil dari API
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function slugifyRoleCode(nama: string): string {
-  return nama.toLowerCase().trim().replace(/\s+/g, "_");
-}
+const CRUD_ACTIONS = ["view", "create", "update", "delete"] as const;
+type CRUDAction = typeof CRUD_ACTIONS[number];
 
-function parsePermissions(str: string): string[] {
-  return str.split(",").map((p) => p.trim()).filter((p) => p.length > 0);
+function createEmptyPermissions(): Record<string, PermissionAccess> {
+  const empty: Record<string, PermissionAccess> = {};
+  allMenuItems.forEach((item) => {
+    empty[item.id] = { view: false, create: false, update: false, delete: false };
+  });
+  return empty;
 }
-
-function getPermissionColor(permission: string): string {
-  if (permission.includes(":create"))
-    return "bg-blue-100 text-blue-800 border-blue-200";
-  if (permission.includes(":update"))
-    return "bg-amber-100 text-amber-800 border-amber-200";
-  if (permission.includes(":delete"))
-    return "bg-red-100 text-red-800 border-red-200";
-  if (permission.includes(":read"))
-    return "bg-emerald-100 text-emerald-800 border-emerald-200";
-  return "bg-gray-100 text-gray-800 border-gray-200";
-}
-
-const CRUD_ACTIONS = ["create", "read", "update", "delete"] as const;
 
 // ─── Permission Checkboxes ────────────────────────────────────────────────────
 function PermissionCheckboxes({
   path,
-  permissions,
+  akses,
   onChange,
 }: {
   path: string;
-  permissions: Record<string, boolean>;
-  onChange: (key: string, value: boolean) => void;
+  akses: Record<string, PermissionAccess>;
+  onChange: (path: string, action: CRUDAction, value: boolean) => void;
 }) {
-  const allChecked = CRUD_ACTIONS.every((a) => permissions[`${path}_${a}`]);
+  const itemAccess = akses[path] || { view: false, create: false, update: false, delete: false };
+  const allChecked = CRUD_ACTIONS.every((a) => itemAccess[a]);
 
   const handleAll = (checked: boolean) => {
-    CRUD_ACTIONS.forEach((a) => onChange(`${path}_${a}`, checked));
-    onChange(`${path}_all`, checked);
+    CRUD_ACTIONS.forEach((a) => onChange(path, a, checked));
   };
 
   return (
@@ -273,23 +234,23 @@ function PermissionCheckboxes({
         >
           <Checkbox
             id={`${path}_create`}
-            checked={!!permissions[`${path}_create`]}
-            onCheckedChange={(c) => onChange(`${path}_create`, !!c)}
+            checked={itemAccess.create}
+            onCheckedChange={(c) => onChange(path, "create", !!c)}
             className="h-3.5 w-3.5"
           />
           <span className="text-xs font-medium text-blue-700">Create</span>
         </label>
         <label
-          htmlFor={`${path}_read`}
+          htmlFor={`${path}_view`}
           className="flex items-center gap-1.5 bg-emerald-50 rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-emerald-100 transition-colors"
         >
           <Checkbox
-            id={`${path}_read`}
-            checked={!!permissions[`${path}_read`]}
-            onCheckedChange={(c) => onChange(`${path}_read`, !!c)}
+            id={`${path}_view`}
+            checked={itemAccess.view}
+            onCheckedChange={(c) => onChange(path, "view", !!c)}
             className="h-3.5 w-3.5"
           />
-          <span className="text-xs font-medium text-emerald-700">Read</span>
+          <span className="text-xs font-medium text-emerald-700">View</span>
         </label>
       </div>
       <div className="grid grid-cols-3 gap-2">
@@ -299,8 +260,8 @@ function PermissionCheckboxes({
         >
           <Checkbox
             id={`${path}_update`}
-            checked={!!permissions[`${path}_update`]}
-            onCheckedChange={(c) => onChange(`${path}_update`, !!c)}
+            checked={itemAccess.update}
+            onCheckedChange={(c) => onChange(path, "update", !!c)}
             className="h-3.5 w-3.5"
           />
           <span className="text-xs font-medium text-amber-700">Update</span>
@@ -311,8 +272,8 @@ function PermissionCheckboxes({
         >
           <Checkbox
             id={`${path}_delete`}
-            checked={!!permissions[`${path}_delete`]}
-            onCheckedChange={(c) => onChange(`${path}_delete`, !!c)}
+            checked={itemAccess.delete}
+            onCheckedChange={(c) => onChange(path, "delete", !!c)}
             className="h-3.5 w-3.5"
           />
           <span className="text-xs font-medium text-red-700">Delete</span>
@@ -325,12 +286,12 @@ function PermissionCheckboxes({
 // ─── Menu Group Permission Card ───────────────────────────────────────────────
 function MenuGroupPermissionCard({
   group,
-  permissions,
+  akses,
   onChange,
 }: {
   group: (typeof menuGroups)[0];
-  permissions: Record<string, boolean>;
-  onChange: (key: string, value: boolean) => void;
+  akses: Record<string, PermissionAccess>;
+  onChange: (path: string, action: CRUDAction, value: boolean) => void;
 }) {
   const [isGroupOpen, setIsGroupOpen] = useState(true);
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
@@ -386,7 +347,7 @@ function MenuGroupPermissionCard({
                 {isItemOpen && (
                   <PermissionCheckboxes
                     path={item.id}
-                    permissions={permissions}
+                    akses={akses}
                     onChange={onChange}
                   />
                 )}
@@ -403,43 +364,84 @@ function MenuGroupPermissionCard({
 const HakAkses = () => {
   const { toast } = useToast();
 
-  const [hakAksesList, setHakAksesList] = useState<HakAksesItem[]>(dummyHakAkses);
+  const [hakAksesList, setHakAksesList] = useState<HakAksesItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     nama: "",
-    role: "",
-    permissions: {} as Record<string, boolean>,
+    is_super_admin: false,
+    akses: createEmptyPermissions(),
   });
 
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"role" | "created_at">("role");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Fetch Data from API ──
+  const fetchRolesData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.set('page', String(currentPage));
+      queryParams.set('limit', String(itemsPerPage));
+      if (search) queryParams.set('search', search);
+      queryParams.set('sort_by', sortBy === 'role' ? 'nama' : 'created_at');
+      queryParams.set('sort_order', 'desc');
+
+      const result = await apiRequest<{
+        success: boolean;
+        data: HakAksesItem[];
+        message?: string;
+        pagination?: { total_pages: number };
+      }>(`/api/v1/roles?${queryParams}`);
+
+      if (result.success) {
+        setHakAksesList(result.data || []);
+        setTotalPages(result.pagination?.total_pages || 1);
+      } else {
+        setError(result.message || 'Terjadi kesalahan');
+      }
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, search, sortBy]);
+
+  useEffect(() => {
+    fetchRolesData();
+  }, [fetchRolesData]);
 
   // ── Filtering & Sorting ──
+  // Note: Filtering & sorting sekarang dihandle oleh API
+  // Client-side filtering hanya sebagai fallback
   const filtered = hakAksesList
     .filter(
       (item) =>
         search === "" ||
-        item.nama.toLowerCase().includes(search.toLowerCase()) ||
-        item.role.toLowerCase().includes(search.toLowerCase())
+        item.nama.toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
-      if (sortBy === "role") return a.role.localeCompare(b.role);
+      if (sortBy === "role") return a.nama.localeCompare(b.nama);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginationStart = (currentPage - 1) * itemsPerPage + 1;
+  const paginationStart = filtered.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
   const paginationEnd = Math.min(currentPage * itemsPerPage, filtered.length);
-  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginated = filtered; // Data sudah paginated dari API
 
   // ── Form helpers ──
   const resetForm = () => {
-    setFormData({ nama: "", role: "", permissions: {} });
+    setFormData({ nama: "", is_super_admin: false, akses: createEmptyPermissions() });
     setFormMode("create");
     setEditingId(null);
   };
@@ -449,117 +451,168 @@ const HakAkses = () => {
     setShowForm(!showForm);
   };
 
-  const handlePermissionChange = (key: string, value: boolean) => {
+  const handlePermissionChange = (path: string, action: CRUDAction, value: boolean) => {
     setFormData((prev) => ({
       ...prev,
-      permissions: { ...prev.permissions, [key]: value },
+      akses: {
+        ...prev.akses,
+        [path]: { ...prev.akses[path], [action]: value },
+      },
     }));
   };
 
   const checkAll = () => {
-    const next: Record<string, boolean> = {};
+    const next: Record<string, PermissionAccess> = {};
     allMenuItems.forEach((item) => {
-      const k = item.id;
-      CRUD_ACTIONS.forEach((a) => (next[`${k}_${a}`] = true));
-      next[`${k}_all`] = true;
+      next[item.id] = { view: true, create: true, update: true, delete: true };
     });
-    setFormData((prev) => ({ ...prev, permissions: next }));
+    setFormData((prev) => ({ ...prev, akses: next }));
   };
 
   const uncheckAll = () => {
-    setFormData((prev) => ({ ...prev, permissions: {} }));
-  };
-
-  const collectPermissions = (): string => {
-    const perms: string[] = [];
-    allMenuItems.forEach((item) => {
-      CRUD_ACTIONS.forEach((action) => {
-        if (formData.permissions[`${item.id}_${action}`]) {
-          perms.push(`${item.id}:${action}`);
-        }
-      });
-    });
-    return perms.join(", ");
-  };
-
-  const parsePermissionsToFormState = (permStr: string) => {
-    const perms = parsePermissions(permStr);
-    const next: Record<string, boolean> = {};
-    perms.forEach((perm) => {
-      const colonIdx = perm.lastIndexOf(":");
-      const path = perm.substring(0, colonIdx);
-      const action = perm.substring(colonIdx + 1);
-      if (allMenuItems.find((m) => m.id === path) && action) {
-        next[`${path}_${action}`] = true;
-      }
-    });
-    allMenuItems.forEach((item) => {
-      if (CRUD_ACTIONS.every((a) => next[`${item.id}_${a}`])) {
-        next[`${item.id}_all`] = true;
-      }
-    });
-    return next;
+    setFormData((prev) => ({ ...prev, akses: createEmptyPermissions() }));
   };
 
   // ── Submit ──
-  const submitForm = () => {
+  const submitForm = async () => {
     if (!formData.nama.trim()) {
       toast({ title: "Nama role wajib diisi", variant: "destructive" });
       return;
     }
-    if (!formData.role.trim()) {
-      toast({ title: "Role code wajib diisi", variant: "destructive" });
-      return;
-    }
-    const permissions = collectPermissions();
-    if (!permissions) {
+
+    // Check if at least one permission is selected
+    const hasAnyPermission = Object.values(formData.akses).some(
+      (access) => access.view || access.create || access.update || access.delete
+    );
+
+    if (!hasAnyPermission) {
       toast({ title: "Pilih minimal satu menu untuk hak akses", variant: "destructive" });
       return;
     }
 
-    if (formMode === "create") {
-      setHakAksesList((prev) => [
-        {
-          id: Date.now().toString(),
-          nama: formData.nama,
-          role: formData.role,
-          permissions,
-          created_at: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-      toast({ title: "Hak akses berhasil dibuat!" });
-    } else {
-      setHakAksesList((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? { ...item, nama: formData.nama, role: formData.role, permissions }
-            : item
-        )
-      );
-      toast({ title: "Hak akses berhasil diperbarui!" });
-    }
+    setLoading(true);
+    setError(null);
 
-    resetForm();
-    setShowForm(false);
+    try {
+      const payload = {
+        nama: formData.nama,
+        is_super_admin: formData.is_super_admin,
+        akses: formData.akses,
+      };
+
+      console.log('=== API REQUEST ===');
+      console.log('Mode:', formMode);
+      console.log('Payload:', JSON.stringify(payload, null, 2));
+      console.log('===================');
+
+      let result: {
+        success: boolean;
+        data: HakAksesItem;
+        message?: string;
+      };
+
+      if (formMode === 'edit' && editingId) {
+        result = await apiRequest<{
+          success: boolean;
+          data: HakAksesItem;
+          message?: string;
+        }>(`/api/v1/roles/${editingId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        result = await apiRequest<{
+          success: boolean;
+          data: HakAksesItem;
+          message?: string;
+        }>(`/api/v1/roles`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (result.success) {
+        toast({ title: formMode === "create" ? "Hak akses berhasil dibuat!" : "Hak akses berhasil diperbarui!" });
+
+        // Reload data
+        await fetchRolesData();
+        resetForm();
+        setShowForm(false);
+      } else {
+        setError(result.message || 'Gagal menyimpan data');
+      }
+    } catch (err) {
+      console.error('API Error:', err);
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      toast({ title: "Terjadi kesalahan", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Actions ──
-  const handleEdit = (item: HakAksesItem) => {
-    setFormData({
-      nama: item.nama,
-      role: item.role,
-      permissions: parsePermissionsToFormState(item.permissions),
-    });
-    setFormMode("edit");
-    setEditingId(item.id);
-    setShowForm(true);
+  const handleEdit = async (item: HakAksesItem) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await apiRequest<{
+        success: boolean;
+        data: HakAksesItem;
+        message?: string;
+      }>(`/api/v1/roles/${item.id}`);
+
+      if (result.success) {
+        setFormData({
+          nama: result.data.nama,
+          is_super_admin: result.data.is_super_admin,
+          akses: result.data.akses || {},
+        });
+        setFormMode("edit");
+        setEditingId(item.id);
+        setShowForm(true);
+      } else {
+        setError(result.message || 'Gagal mengambil data role');
+        toast({ title: "Terjadi kesalahan", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error('API Error:', err);
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      toast({ title: "Terjadi kesalahan", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (item: HakAksesItem) => {
+  const handleDelete = async (item: HakAksesItem) => {
     if (!window.confirm(`Hapus hak akses "${item.nama}"?`)) return;
-    setHakAksesList((prev) => prev.filter((h) => h.id !== item.id));
-    toast({ title: "Hak akses berhasil dihapus!" });
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await apiRequest<{
+        success: boolean;
+        message?: string;
+      }>(`/api/v1/roles/${item.id}`, {
+        method: 'DELETE',
+      });
+
+      if (result.success) {
+        toast({ title: "Hak akses berhasil dihapus!" });
+
+        // Reload data
+        await fetchRolesData();
+      } else {
+        setError(result.message || 'Gagal menghapus data');
+      }
+    } catch (err) {
+      console.error('API Error:', err);
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      toast({ title: "Terjadi kesalahan", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -570,11 +623,27 @@ const HakAkses = () => {
           <h1 className="text-3xl font-bold tracking-tight">Pengaturan Hak Akses</h1>
           <p className="text-muted-foreground">Kelola hak akses dan permissions untuk setiap role</p>
         </div>
-        <Button onClick={toggleForm}>
+        <Button onClick={toggleForm} disabled={loading}>
           {showForm ? <ChevronUp className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
           {showForm ? "Tutup Form" : "Tambah Hak Akses"}
         </Button>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Loading Spinner */}
+      {loading && !showForm && (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300" />
+        </div>
+      )}
 
       {/* Inline Form */}
       {showForm && (
@@ -591,7 +660,7 @@ const HakAkses = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Nama & Role Code */}
+            {/* Nama Role & Super Admin */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="nama">Nama Role *</Label>
@@ -601,20 +670,20 @@ const HakAkses = () => {
                   placeholder="Contoh: Super Admin, Admin Pusat"
                   onChange={(e) => {
                     const val = e.target.value;
-                    setFormData((prev) => ({ ...prev, nama: val, role: slugifyRoleCode(val) }));
+                    setFormData((prev) => ({ ...prev, nama: val }));
                   }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role Code *</Label>
-                <Input
-                  id="role"
-                  value={formData.role}
-                  placeholder="Contoh: super_admin, admin_pusat"
-                  readOnly
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">Otomatis digenerate dari nama role</p>
+                <Label htmlFor="is_super_admin">Super Admin</Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="is_super_admin"
+                    checked={formData.is_super_admin}
+                    onCheckedChange={(c) => setFormData((prev) => ({ ...prev, is_super_admin: !!c }))}
+                  />
+                  <span className="text-sm text-muted-foreground">Set sebagai Super Admin</span>
+                </div>
               </div>
             </div>
 
@@ -640,7 +709,7 @@ const HakAkses = () => {
                   <MenuGroupPermissionCard
                     key={group.id}
                     group={group}
-                    permissions={formData.permissions}
+                    akses={formData.akses}
                     onChange={handlePermissionChange}
                   />
                 ))}
@@ -648,12 +717,19 @@ const HakAkses = () => {
             </div>
 
             {/* Form Actions */}
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={toggleForm}>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={toggleForm} disabled={loading}>
                 Batal
               </Button>
-              <Button type="button" onClick={submitForm}>
-                {formMode === "create" ? "Simpan" : "Perbarui"}
+              <Button type="button" onClick={submitForm} disabled={loading}>
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    {formMode === "create" ? "Menyimpan..." : "Memperbarui..."}
+                  </span>
+                ) : (
+                  formMode === "create" ? "Simpan" : "Perbarui"
+                )}
               </Button>
             </div>
           </CardContent>
@@ -676,7 +752,11 @@ const HakAkses = () => {
                     value={search}
                     placeholder="Cari role atau nama..."
                     className="pl-10"
-                    onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -684,7 +764,11 @@ const HakAkses = () => {
                 <Label>Urutkan</Label>
                 <Select
                   value={sortBy}
-                  onValueChange={(v) => { setSortBy(v as typeof sortBy); setCurrentPage(1); }}
+                  onValueChange={(v) => {
+                    setSortBy(v as typeof sortBy);
+                    setCurrentPage(1);
+                  }}
+                  disabled={loading}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih urutan" />
@@ -708,96 +792,109 @@ const HakAkses = () => {
             <CardDescription>Daftar semua hak akses ({filtered.length} data)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginated.map((item) => {
-                    return (
-                      <TableRow key={item.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-sm text-muted-foreground">{item.nama}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button size="sm" variant="ghost" onClick={() => handleEdit(item)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => handleDelete(item)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-2 py-4">
-              <p className="text-sm text-muted-foreground">
-                Menampilkan {paginationStart}–{paginationEnd} dari {filtered.length} data
-              </p>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={String(itemsPerPage)}
-                  onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage((p) => p - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="px-3 py-1 text-sm">
-                    Halaman {currentPage} dari {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage((p) => p + 1)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-300" />
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Role</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginated.map((item) => {
+                        return (
+                          <TableRow key={item.id} className="hover:bg-muted/50">
+                            <TableCell className="font-medium">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm text-muted-foreground">{item.nama}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => handleEdit(item)} disabled={loading}>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleEdit(item)} disabled={loading}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => handleDelete(item)}
+                                  disabled={loading}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-2 py-4">
+                  <p className="text-sm text-muted-foreground">
+                    Menampilkan {paginationStart}–{paginationEnd} dari {filtered.length} data
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={String(itemsPerPage)}
+                      onValueChange={(v) => {
+                        setItemsPerPage(Number(v));
+                        setCurrentPage(1);
+                      }}
+                      disabled={loading}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage <= 1 || loading}
+                        onClick={() => setCurrentPage((p) => p - 1)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="px-3 py-1 text-sm">
+                        Halaman {currentPage} dari {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage >= totalPages || loading}
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
       {/* Empty State */}
-      {!showForm && filtered.length === 0 && (
+      {!showForm && filtered.length === 0 && !loading && (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">

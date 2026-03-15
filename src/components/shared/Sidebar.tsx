@@ -62,7 +62,7 @@ const Sidebar = ({
   };
 
   const NavItems = ({ showLabels }: { showLabels: boolean }) => (
-    <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+    <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
       {menuItems.map((item) => {
         const isActive = activeView === item.id;
         return (
