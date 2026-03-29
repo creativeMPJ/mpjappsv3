@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -27,7 +28,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Sidebar, { SidebarMenuItem } from '@/components/shared/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
-import type { AppRole, AuthProfile } from '@/contexts/AuthContext';
+import type { AksesItem } from '@/contexts/AuthContext';
 
 const ALL_MENUS: SidebarMenuItem[] = [
   // User (Media Pesantren)
@@ -78,74 +79,77 @@ const ALL_MENUS: SidebarMenuItem[] = [
   { id: 'super-admin-settings', label: 'SETTINGS', icon: Settings },
 ];
 
-interface SectionMeta {
-  getTitle: (p: AuthProfile | null) => string;
-  getSubtitle: (p: AuthProfile | null) => string;
-  sidebarBg: string;
-  accentColor: string;
-  roleLabel: string;
-  avatarBorder: string;
-  avatarBg: string;
+// Dashboard tiap section — selalu tampil jika section cocok, tidak perlu akses eksplisit
+const SECTION_DASHBOARD_IDS = new Set([
+  'user-beranda',
+  'admin-pusat-dashboard',
+  'admin-regional-dashboard',
+  'admin-finance-dashboard',
+  '', // super admin dashboard
+]);
+
+function detectSection(akses: Record<string, AksesItem>): string {
+  const ids = Object.keys(akses);
+  if (ids.some(k => k.startsWith('admin-pusat-') && akses[k].view))    return 'admin_pusat';
+  if (ids.some(k => k.startsWith('admin-finance-') && akses[k].view))  return 'admin_finance';
+  if (ids.some(k => k.startsWith('admin-regional-') && akses[k].view)) return 'admin_regional';
+  if (ids.some(k => k.startsWith('super-admin-') && akses[k].view))    return 'super_admin';
+  return 'user';
 }
 
-const SECTION_META: Record<string, SectionMeta> = {
-  user: {
-    getTitle: (p) => p?.nama_pesantren ?? 'MPJ Media',
-    getSubtitle: () => 'Dashboard Media Pesantren',
-    sidebarBg: 'bg-[#166534]',
-    accentColor: 'text-emerald-700',
-    roleLabel: 'Media Pesantren',
-    avatarBorder: 'border-emerald-600',
-    avatarBg: 'bg-emerald-600',
-  },
-  admin_regional: {
-    getTitle: () => 'MPJ REGIONAL',
-    getSubtitle: () => 'Admin Panel',
-    sidebarBg: 'bg-[#166534]',
-    accentColor: 'text-emerald-700',
-    roleLabel: 'Admin Regional',
-    avatarBorder: 'border-emerald-600',
-    avatarBg: 'bg-emerald-600',
-  },
-  admin_pusat: {
-    getTitle: () => 'MPJ PUSAT',
-    getSubtitle: () => 'Admin Panel',
-    sidebarBg: 'bg-[#166534]',
-    accentColor: 'text-emerald-700',
-    roleLabel: 'Admin Pusat',
-    avatarBorder: 'border-emerald-600',
-    avatarBg: 'bg-emerald-600',
-  },
-  admin_finance: {
-    getTitle: () => 'MPJ FINANCE',
-    getSubtitle: () => 'Admin Panel',
-    sidebarBg: 'bg-[#166534]',
-    accentColor: 'text-emerald-700',
-    roleLabel: 'Admin Finance',
-    avatarBorder: 'border-emerald-600',
-    avatarBg: 'bg-emerald-600',
-  },
-};
+function getMenuSection(id: string): string {
+  if (id.startsWith('user-'))           return 'user';
+  if (id.startsWith('admin-pusat-'))    return 'admin_pusat';
+  if (id.startsWith('admin-regional-')) return 'admin_regional';
+  if (id.startsWith('admin-finance-'))  return 'admin_finance';
+  return 'super_admin';
+}
 
-const DEFAULT_META: SectionMeta = {
-  getTitle: () => 'MPJ SUPER ADMIN',
-  getSubtitle: () => 'Admin Panel',
-  sidebarBg: 'bg-[#166534]',
-  accentColor: 'text-emerald-700',
-  roleLabel: 'Super Admin',
-  avatarBorder: 'border-emerald-600',
-  avatarBg: 'bg-emerald-600',
-};
 
 const CmsLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
 
-  const role: AppRole | undefined = profile?.role;
-  const meta = (role && SECTION_META[role]) ?? DEFAULT_META;
+  const akses = profile?.akses ?? {};
+  const isSuperAdmin = profile?.is_super_admin ?? false;
+  const section = isSuperAdmin ? 'super_admin' : detectSection(akses);
+  const roleLabel = profile?.role ?? '';
+  const sidebarTitle = section === 'user'
+    ? (profile?.nama_pesantren ?? 'MPJ Media')
+    : `MPJ ${roleLabel.toUpperCase()}`;
+  const sidebarSubtitle = section === 'user' ? 'Dashboard Media Pesantren' : 'Admin Panel';
+
+  const filteredMenus = ALL_MENUS.filter((m) => {
+    if (isSuperAdmin) {
+      if (SECTION_DASHBOARD_IDS.has(m.id) && m.id !== '') return false;
+      if (m.id === '') return true;
+      return akses[m.id]?.view === true;
+    }
+    if (getMenuSection(m.id) !== section) return false;
+    if (SECTION_DASHBOARD_IDS.has(m.id)) return true;
+    return akses[m.id]?.view === true;
+  });
+
+  // Super admin: pastikan dashboard (id: '') selalu di posisi pertama
+  const visibleMenus = isSuperAdmin
+    ? [
+        ...filteredMenus.filter((m) => m.id === ''),
+        ...filteredMenus.filter((m) => m.id !== ''),
+      ]
+    : filteredMenus;
 
   const activeSlug = pathname.replace('/cms', '').replace(/^\//, '');
+
+  // Redirect ke menu pertama yang accessible jika landing di /cms
+  // Super admin default di /cms (dashboard), tidak perlu redirect
+  useEffect(() => {
+    if (!activeSlug && !isSuperAdmin && visibleMenus.length > 0) {
+      const firstId = visibleMenus[0].id;
+      navigate(firstId ? `/cms/${firstId}` : '/cms', { replace: true });
+    }
+  }, [activeSlug, isSuperAdmin, visibleMenus.length]);
+
   const displayName = profile?.nama_pesantren || 'Admin';
   const initials = displayName.substring(0, 2).toUpperCase();
 
@@ -160,18 +164,18 @@ const CmsLayout = () => {
 
   return (
     <Sidebar
-      menuItems={ALL_MENUS}
+      menuItems={visibleMenus}
       activeView={activeSlug}
       onViewChange={handleViewChange}
       onLogout={handleLogout}
-      title={meta.getTitle(profile)}
-      subtitle={meta.getSubtitle(profile)}
-      sidebarBg={meta.sidebarBg}
+      title={sidebarTitle}
+      subtitle={sidebarSubtitle}
+      sidebarBg="bg-[#166534]"
       collapsible
       headerLeft={
         <div>
           <p className="text-sm text-muted-foreground">Selamat datang kembali,</p>
-          <h2 className={`text-lg font-bold ${meta.accentColor}`}>
+          <h2 className="text-lg font-bold text-emerald-700">
             Halo, {displayName} 👋
           </h2>
         </div>
@@ -183,15 +187,15 @@ const CmsLayout = () => {
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
           </button>
           <div className="flex items-center gap-2">
-            <Avatar className={`w-9 h-9 border-2 ${meta.avatarBorder}`}>
+            <Avatar className="w-9 h-9 border-2 border-emerald-600">
               <AvatarImage src={profile?.logo_url || '/placeholder.svg'} />
-              <AvatarFallback className={`${meta.avatarBg} text-white text-sm`}>
+              <AvatarFallback className="bg-emerald-600 text-white text-sm">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="hidden sm:block">
               <p className="text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-muted-foreground">{meta.roleLabel}</p>
+              <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </div>
           </div>
         </>

@@ -401,7 +401,7 @@ const HakAkses = () => {
         data: HakAksesItem[];
         message?: string;
         pagination?: { total_pages: number };
-      }>(`/api/v1/roles?${queryParams}`);
+      }>(`/api/roles?${queryParams}`);
 
       if (result.success) {
         setHakAksesList(result.data || []);
@@ -516,7 +516,7 @@ const HakAkses = () => {
           success: boolean;
           data: HakAksesItem;
           message?: string;
-        }>(`/api/v1/roles/${editingId}`, {
+        }>(`/api/roles/${editingId}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
@@ -525,7 +525,7 @@ const HakAkses = () => {
           success: boolean;
           data: HakAksesItem;
           message?: string;
-        }>(`/api/v1/roles`, {
+        }>(`/api/roles`, {
           method: 'POST',
           body: JSON.stringify(payload),
         });
@@ -560,7 +560,7 @@ const HakAkses = () => {
         success: boolean;
         data: HakAksesItem;
         message?: string;
-      }>(`/api/v1/roles/${item.id}`);
+      }>(`/api/roles/${item.id}`);
 
       if (result.success) {
         setFormData({
@@ -594,7 +594,7 @@ const HakAkses = () => {
       const result = await apiRequest<{
         success: boolean;
         message?: string;
-      }>(`/api/v1/roles/${item.id}`, {
+      }>(`/api/roles/${item.id}`, {
         method: 'DELETE',
       });
 

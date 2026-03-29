@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff, ArrowRight, Phone, Lock, KeyRound } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Mail, Lock, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import logoMpj from "@/assets/logo-mpj.png";
@@ -12,19 +12,10 @@ import { z } from "zod";
 
 // Validation schema
 const loginSchema = z.object({
-  identifier: z.string()
+  email: z.string()
     .trim()
-    .min(1, "Email atau No. WhatsApp wajib diisi")
-    .refine((val) => {
-      // Check if it's a valid email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (emailRegex.test(val)) return true;
-      
-      // Check if it's a valid Indonesian phone number (08xx or 628xx)
-      const phoneRegex = /^(0|62)\d{9,13}$/;
-      const cleanPhone = val.replace(/\D/g, '');
-      return phoneRegex.test(cleanPhone);
-    }, "Format email atau nomor WhatsApp tidak valid"),
+    .min(1, "Email wajib diisi")
+    .email("Format email tidak valid"),
   password: z.string()
     .min(6, "Password minimal 6 karakter")
     .max(100, "Password maksimal 100 karakter"),
@@ -38,10 +29,10 @@ const loginSchema = z.object({
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    identifier: "",
+    email: "",
     password: "",
   });
-  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -51,47 +42,9 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (!authLoading && user && profile) {
-      redirectToDashboard(profile.role);
+      navigate('/cms', { replace: true });
     }
   }, [user, profile, authLoading]);
-
-  const redirectToDashboard = (role: string) => {
-    // Redirect berdasarkan role dari login response
-    // Role-based routing akan dihandle oleh Router.tsx
-    // Dashboard component yang sesuai akan dirender
-    switch (role) {
-      case 'admin_pusat':
-        navigate('/admin-pusat', { replace: true });
-        break;
-      case 'admin_regional':
-        navigate('/admin-regional', { replace: true });
-        break;
-      case 'admin_finance':
-        navigate('/finance', { replace: true });
-        break;
-      case 'super_admin':
-        navigate('/super-admin', { replace: true });
-        break;
-      case 'user':
-      default:
-        // User role redirect ke halaman check institution untuk setup awal
-        navigate('/check-institution', { replace: true });
-        break;
-    }
-  };
-
-  // Convert WhatsApp number to email format if needed
-  const formatIdentifier = (identifier: string): string => {
-    if (identifier.includes('@')) return identifier;
-    if (/^(0|62)\d+$/.test(identifier.replace(/\D/g, ''))) {
-      const phoneNumber = identifier.replace(/\D/g, '');
-      const normalizedPhone = phoneNumber.startsWith('62') 
-        ? '0' + phoneNumber.slice(2) 
-        : phoneNumber;
-      return `${normalizedPhone}@mpj.local`;
-    }
-    return identifier;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,11 +52,11 @@ const Login = () => {
     
     // Validate with zod
     const result = loginSchema.safeParse(formData);
-    
+
     if (!result.success) {
-      const fieldErrors: { identifier?: string; password?: string } = {};
+      const fieldErrors: { email?: string; password?: string } = {};
       result.error.errors.forEach((err) => {
-        const field = err.path[0] as 'identifier' | 'password';
+        const field = err.path[0] as 'email' | 'password';
         fieldErrors[field] = err.message;
       });
       setErrors(fieldErrors);
@@ -111,17 +64,15 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    
-    try {
-      const email = formatIdentifier(formData.identifier);
 
+    try {
       const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          email: formData.email,
           password: formData.password,
         }),
       });
@@ -129,7 +80,7 @@ const Login = () => {
       if (!response.ok) {
         toast({
           title: "Login Gagal",
-          description: "Email/No WA atau password salah",
+          description: "Email atau password salah",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -139,7 +90,7 @@ const Login = () => {
       const data = await response.json();
       setAuthToken(data.token);
       await refreshAuth();
-      redirectToDashboard(data.user.role);
+      navigate('/cms', { replace: true });
     } catch (error) {
       toast({
         title: "Terjadi Kesalahan",
@@ -179,26 +130,26 @@ const Login = () => {
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email / No WA */}
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="identifier" className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Email atau No. WhatsApp
+              <Label htmlFor="email" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email
               </Label>
               <Input
-                id="identifier"
-                type="text"
-                placeholder="contoh@email.com atau 08xxxxxxxxxx"
-                value={formData.identifier}
+                id="email"
+                type="email"
+                placeholder="contoh@email.com"
+                value={formData.email}
                 onChange={(e) => {
-                  setFormData({ ...formData, identifier: e.target.value });
-                  if (errors.identifier) setErrors((prev) => ({ ...prev, identifier: undefined }));
+                  setFormData({ ...formData, email: e.target.value });
+                  if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
                 }}
-                className={`h-12 ${errors.identifier ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                className={`h-12 ${errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                 autoComplete="email"
               />
-              {errors.identifier && (
-                <p className="text-sm text-destructive">{errors.identifier}</p>
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email}</p>
               )}
             </div>
 
