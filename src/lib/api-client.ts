@@ -26,6 +26,10 @@ export async function apiRequest<T = any>(path: string, init?: RequestInit): Pro
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem("mpj_auth_token");
+      window.location.href = "/login";
+    }
     throw new Error(data?.message || "Request failed");
   }
 

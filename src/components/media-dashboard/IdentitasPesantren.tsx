@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +39,6 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/api-client";
 
-interface IdentitasPesantrenProps {
-  paymentStatus: "paid" | "unpaid";
-  profileLevel: "basic" | "silver" | "gold" | "platinum";
-  onProfileLevelChange: (level: "basic" | "silver" | "gold" | "platinum") => void;
-}
 
 // Tipe Pesantren options
 const tipePesantrenOptions = [
@@ -71,11 +67,10 @@ const programUnggulanOptions = [
   { value: "teknologi", label: "Teknologi Informasi" },
 ];
 
-const IdentitasPesantren = ({
-  paymentStatus,
-  profileLevel,
-  onProfileLevelChange,
-}: IdentitasPesantrenProps) => {
+const IdentitasPesantren = () => {
+  const { profile } = useAuth();
+  const paymentStatus = profile?.status_payment ?? 'unpaid';
+  const [profileLevel, setProfileLevel] = useState<"basic" | "silver" | "gold" | "platinum">(profile?.profile_level ?? 'basic');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState<string | null>(null);
@@ -150,7 +145,7 @@ const IdentitasPesantren = ({
           logoMediaPesantren: p.logoMediaUrl ?? "",
         });
         if (p.profileLevel) {
-          onProfileLevelChange(p.profileLevel);
+          setProfileLevel(p.profileLevel);
         }
       } catch (err: any) {
         if (!err.message?.includes("404")) {
@@ -248,7 +243,7 @@ const IdentitasPesantren = ({
         method: "PUT",
         body: JSON.stringify(payloads[step]),
       });
-      onProfileLevelChange(res.profileLevel as any);
+      setProfileLevel(res.profileLevel as any);
       const labels = ["Silver", "Gold", "Platinum"];
       toast({ title: `Level ${labels[step - 1]} Tercapai!`, description: "Data berhasil disimpan." });
     } catch (err: any) {

@@ -5,6 +5,13 @@ export type AccountStatus = 'pending' | 'active' | 'rejected';
 export type ProfileLevel = 'basic' | 'silver' | 'gold' | 'platinum';
 export type PaymentStatus = 'paid' | 'unpaid';
 
+export interface AksesItem {
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -12,7 +19,9 @@ export interface AuthUser {
 
 export interface AuthProfile {
   id: string;
-  role: AppRole;
+  role: string;
+  akses: Record<string, AksesItem>;
+  is_super_admin: boolean;
   status_account: AccountStatus;
   region_id: string | null;
   profile_level: ProfileLevel;
@@ -94,6 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile({
         id: me.user.id,
         role: me.user.role ?? 'user',
+        akses: me.user.akses ?? [],
+        is_super_admin: me.user.isSuperAdmin ?? false,
         status_account: me.user.statusAccount ?? 'active',
         region_id: me.user.regionId ?? null,
         profile_level: me.user.profileLevel ?? 'basic',
