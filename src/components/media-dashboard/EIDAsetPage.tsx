@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +23,6 @@ interface KoordinatorData {
 }
 
 interface EIDAsetPageProps {
-  paymentStatus: "paid" | "unpaid";
-  profileLevel: ProfileLevel;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
@@ -63,13 +62,14 @@ interface EIDAsetPageProps {
  * - QR Code: Links to public profile /pesantren/[NIP]
  */
 const EIDAsetPage = ({
-  paymentStatus,
-  profileLevel,
   debugProfile,
   realProfile,
   approvalDate,
   koordinator
-}: EIDAsetPageProps) => {
+}: EIDAsetPageProps = {}) => {
+  const { profile } = useAuth();
+  const paymentStatus = profile?.status_payment ?? 'unpaid';
+  const profileLevel: ProfileLevel = profile?.profile_level ?? 'basic';
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
 

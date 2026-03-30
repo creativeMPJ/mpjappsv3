@@ -55,16 +55,16 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/api-client";
 
-// ─── Menu Groups — per fitur/modul, ID & label sesuai ALL_MENUS di CmsLayout ──
+// ─── Menu Groups — menggunakan aksesKey global (tanpa prefix role) ──────────
 const menuGroups = [
   {
     id: "identitas-administrasi",
     label: "Identitas & Administrasi",
     icon: IdCard,
     items: [
-      { id: "user-identitas",          label: "IDENTITAS PESANTREN", icon: IdCard },
-      { id: "user-administrasi",       label: "ADMINISTRASI (User)",        icon: ClipboardList },
-      { id: "admin-pusat-administrasi",label: "ADMINISTRASI (Admin Pusat)",        icon: ClipboardList },
+      { id: "identitas",    label: "IDENTITAS PESANTREN", icon: IdCard },
+      { id: "pembayaran",   label: "PEMBAYARAN",          icon: CreditCard },
+      { id: "administrasi", label: "ADMINISTRASI",        icon: ClipboardList },
     ],
   },
   {
@@ -72,8 +72,8 @@ const menuGroups = [
     label: "Manajemen Kru",
     icon: Users,
     items: [
-      { id: "user-tim", label: "MANAJEMEN KRU", icon: Users },
-      { id: "user-eid", label: "EID ASET",      icon: ImageIcon },
+      { id: "tim", label: "MANAJEMEN KRU", icon: Users },
+      { id: "eid", label: "EID ASET",      icon: ImageIcon },
     ],
   },
   {
@@ -81,9 +81,9 @@ const menuGroups = [
     label: "Event",
     icon: CalendarDays,
     items: [
-      { id: "user-event",                    label: "EVENT",           icon: CalendarDays },
-      { id: "admin-pusat-manajemen-event",   label: "MANAJEMEN EVENT (Admin Pusat)", icon: CalendarDays },
-      { id: "admin-regional-manajemen-event",label: "MANAJEMEN EVENT (Admin Regional)", icon: CalendarDays },
+      { id: "user-event",                    label: "EVENT (User)",             icon: CalendarDays },
+      { id: "admin-pusat-manajemen-event",   label: "EVENT (Admin Pusat)",      icon: CalendarDays },
+      { id: "admin-regional-manajemen-event",label: "EVENT (Admin Regional)",   icon: CalendarDays },
     ],
   },
   {
@@ -91,8 +91,8 @@ const menuGroups = [
     label: "Verifikasi",
     icon: UserCheck,
     items: [
-      { id: "admin-regional-validasi-pendaftar", label: "VALIDASI PENDAFTAR", icon: UserCheck },
-      { id: "admin-finance-verifikasi",          label: "VERIFIKASI",         icon: UserCheck },
+      { id: "validasi-pendaftar", label: "VALIDASI PENDAFTAR", icon: UserCheck },
+      { id: "verifikasi",         label: "VERIFIKASI",         icon: UserCheck },
     ],
   },
   {
@@ -100,10 +100,10 @@ const menuGroups = [
     label: "Laporan & Dokumen",
     icon: FileText,
     items: [
-      { id: "admin-regional-laporan-dokumentasi", label: "LAPORAN & DOKUMENTASI", icon: FileText },
-      { id: "admin-regional-late-payment",        label: "LATE PAYMENT",          icon: AlertCircle },
-      { id: "admin-regional-download-center",     label: "DOWNLOAD CENTER",       icon: Download },
-      { id: "admin-finance-laporan",              label: "LAPORAN",               icon: FileText },
+      { id: "laporan",          label: "LAPORAN & DOKUMENTASI", icon: FileText },
+      { id: "laporan-keuangan", label: "LAPORAN KEUANGAN",      icon: FileText },
+      { id: "late-payment",     label: "LATE PAYMENT",          icon: AlertCircle },
+      { id: "download-center",  label: "DOWNLOAD CENTER",       icon: Download },
     ],
   },
   {
@@ -111,9 +111,9 @@ const menuGroups = [
     label: "Master Data",
     icon: BarChart3,
     items: [
-      { id: "admin-pusat-master-data",     label: "MASTER DATA",     icon: BarChart3 },
-      { id: "admin-pusat-master-regional", label: "MASTER REGIONAL", icon: Map },
-      { id: "admin-regional-data-master",  label: "DATA MASTER",     icon: BarChart3 },
+      { id: "master-data",     label: "MASTER DATA",     icon: BarChart3 },
+      { id: "data-master",     label: "DATA MASTER",     icon: BarChart3 },
+      { id: "master-regional", label: "MASTER REGIONAL", icon: Map },
     ],
   },
   {
@@ -121,10 +121,10 @@ const menuGroups = [
     label: "Keuangan",
     icon: Banknote,
     items: [
-      { id: "admin-finance-harga",              label: "HARGA",              icon: Banknote },
-      { id: "admin-finance-clearing",           label: "CLEARING",           icon: CreditCard },
-      { id: "admin-finance-regional-monitoring",label: "REGIONAL MONITORING",icon: MonitorDot },
-      { id: "super-admin-finance",              label: "FINANCE",            icon: DollarSign },
+      { id: "harga",              label: "HARGA",              icon: Banknote },
+      { id: "clearing",           label: "CLEARING",           icon: CreditCard },
+      { id: "regional-monitoring",label: "REGIONAL MONITORING",icon: MonitorDot },
+      { id: "finance",            label: "FINANCE",            icon: DollarSign },
     ],
   },
   {
@@ -132,9 +132,9 @@ const menuGroups = [
     label: "Hub & Militansi",
     icon: Globe,
     items: [
-      { id: "user-hub",                        label: "MPJ HUB (User)",              icon: Globe },
-      { id: "admin-pusat-mpj-hub",             label: "MPJ HUB (Admin Pusat)",              icon: Globe },
-      { id: "admin-pusat-manajemen-militansi", label: "MANAJEMEN MILITANSI",  icon: Swords },
+      { id: "hub",       label: "MPJ HUB",            icon: Globe },
+      { id: "mpj-hub",   label: "MPJ HUB (COMING SOON)", icon: Globe },
+      { id: "militansi", label: "MANAJEMEN MILITANSI", icon: Swords },
     ],
   },
   {
@@ -142,9 +142,9 @@ const menuGroups = [
     label: "User & Akses",
     icon: UserCog,
     items: [
-      { id: "super-admin-user-management", label: "USER MANAGEMENT", icon: UserCog },
-      { id: "super-admin-hierarchy",       label: "HIERARKI DATA",   icon: Layers },
-      { id: "super-admin-hak-akses",       label: "HAK AKSES",       icon: Shield },
+      { id: "user-management", label: "USER MANAGEMENT", icon: UserCog },
+      { id: "hierarchy",       label: "HIERARKI DATA",   icon: Layers },
+      { id: "hak-akses",       label: "HAK AKSES",       icon: Shield },
     ],
   },
   {
@@ -152,11 +152,7 @@ const menuGroups = [
     label: "Pengaturan",
     icon: Settings,
     items: [
-      { id: "user-pengaturan",          label: "PENGATURAN (User)", icon: Settings },
-      { id: "admin-pusat-pengaturan",   label: "PENGATURAN (Admin Pusat)", icon: Settings },
-      { id: "admin-regional-pengaturan",label: "PENGATURAN (Admin Regional)", icon: Settings },
-      { id: "admin-finance-pengaturan", label: "PENGATURAN (Admin Finance)", icon: Settings },
-      { id: "super-admin-settings",     label: "SETTINGS (Super Admin)",   icon: Settings },
+      { id: "pengaturan", label: "PENGATURAN", icon: Settings },
     ],
   },
 ];

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -28,127 +28,116 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Sidebar, { SidebarMenuItem } from '@/components/shared/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
-import type { AksesItem } from '@/contexts/AuthContext';
 
-const ALL_MENUS: SidebarMenuItem[] = [
-  // User (Media Pesantren)
-  { id: 'user-beranda', label: 'BERANDA', icon: LayoutDashboard },
-  { id: 'user-identitas', label: 'IDENTITAS PESANTREN', icon: IdCard },
-  { id: 'user-administrasi', label: 'ADMINISTRASI', icon: ClipboardList },
-  { id: 'user-tim', label: 'MANAJEMEN KRU', icon: Users },
-  { id: 'user-eid', label: 'EID ASET', icon: Image },
-  { id: 'user-event', label: 'EVENT', icon: CalendarDays },
-  { id: 'user-hub', label: 'MPJ HUB', icon: Globe },
-  { id: 'user-pengaturan', label: 'PENGATURAN', icon: Settings },
+interface CmsMenuItem extends SidebarMenuItem {
+  aksesKey: string;
+}
 
-  // Admin Pusat
-  { id: 'admin-pusat-dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
-  { id: 'admin-pusat-administrasi', label: 'ADMINISTRASI', icon: ClipboardList },
-  { id: 'admin-pusat-master-data', label: 'MASTER DATA', icon: BarChart3 },
-  { id: 'admin-pusat-master-regional', label: 'MASTER REGIONAL', icon: Map },
-  { id: 'admin-pusat-manajemen-event', label: 'MANAJEMEN EVENT', icon: CalendarDays },
-  { id: 'admin-pusat-manajemen-militansi', label: 'MANAJEMEN MILITANSI', icon: Swords, soon: true },
-  { id: 'admin-pusat-mpj-hub', label: 'MPJ HUB', icon: Globe, soon: true },
-  { id: 'admin-pusat-pengaturan', label: 'PENGATURAN', icon: Settings },
-
-  // Admin Regional
-  { id: 'admin-regional-dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
-  { id: 'admin-regional-data-master', label: 'DATA MASTER', icon: BarChart3 },
-  { id: 'admin-regional-validasi-pendaftar', label: 'VALIDASI PENDAFTAR', icon: UserCheck },
-  { id: 'admin-regional-manajemen-event', label: 'MANAJEMEN EVENT', icon: CalendarDays },
-  { id: 'admin-regional-laporan-dokumentasi', label: 'LAPORAN & DOKUMENTASI', icon: FileText },
-  { id: 'admin-regional-late-payment', label: 'LATE PAYMENT', icon: AlertCircle },
-  { id: 'admin-regional-download-center', label: 'DOWNLOAD CENTER', icon: Download },
-  { id: 'admin-regional-pengaturan', label: 'PENGATURAN', icon: Settings },
-
-  // Admin Finance
-  { id: 'admin-finance-dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
-  { id: 'admin-finance-verifikasi', label: 'VERIFIKASI', icon: UserCheck },
-  { id: 'admin-finance-laporan', label: 'LAPORAN', icon: FileText },
-  { id: 'admin-finance-harga', label: 'HARGA', icon: Banknote },
-  { id: 'admin-finance-clearing', label: 'CLEARING', icon: CreditCard },
-  { id: 'admin-finance-regional-monitoring', label: 'REGIONAL MONITORING', icon: MonitorDot, soon: true },
-  { id: 'admin-finance-pengaturan', label: 'PENGATURAN', icon: Settings, soon: true },
-
-  // Super Admin
-  { id: '', label: 'DASHBOARD', icon: LayoutDashboard },
-  { id: 'super-admin-user-management', label: 'USER MANAGEMENT', icon: UserCog },
-  { id: 'super-admin-hierarchy', label: 'HIERARKI DATA', icon: Layers },
-  { id: 'super-admin-finance', label: 'FINANCE', icon: DollarSign, soon: true },
-  { id: 'super-admin-hak-akses', label: 'HAK AKSES', icon: Shield },
-  { id: 'super-admin-settings', label: 'SETTINGS', icon: Settings },
-];
-
-// Dashboard tiap section — selalu tampil jika section cocok, tidak perlu akses eksplisit
-const SECTION_DASHBOARD_IDS = new Set([
+// Dashboard IDs — ditampilkan berdasarkan role, bukan akses
+const DASHBOARD_IDS = new Set([
+  '',
   'user-beranda',
   'admin-pusat-dashboard',
   'admin-regional-dashboard',
   'admin-finance-dashboard',
-  '', // super admin dashboard
 ]);
 
-function detectSection(akses: Record<string, AksesItem>): string {
-  const ids = Object.keys(akses);
-  if (ids.some(k => k.startsWith('admin-pusat-') && akses[k].view))    return 'admin_pusat';
-  if (ids.some(k => k.startsWith('admin-finance-') && akses[k].view))  return 'admin_finance';
-  if (ids.some(k => k.startsWith('admin-regional-') && akses[k].view)) return 'admin_regional';
-  if (ids.some(k => k.startsWith('super-admin-') && akses[k].view))    return 'super_admin';
-  return 'user';
-}
+const ALL_MENUS: CmsMenuItem[] = [
+  // Dashboards — satu per role, dipilih berdasarkan role
+  { id: 'user-beranda',             aksesKey: 'user-beranda',             label: 'BERANDA',   icon: LayoutDashboard },
+  { id: 'admin-pusat-dashboard',    aksesKey: 'admin-pusat-dashboard',    label: 'DASHBOARD', icon: LayoutDashboard },
+  { id: 'admin-regional-dashboard', aksesKey: 'admin-regional-dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
+  { id: 'admin-finance-dashboard',  aksesKey: 'admin-finance-dashboard',  label: 'DASHBOARD', icon: LayoutDashboard },
+  { id: '',                         aksesKey: '',                         label: 'DASHBOARD', icon: LayoutDashboard },
 
-function getMenuSection(id: string): string {
-  if (id.startsWith('user-'))           return 'user';
-  if (id.startsWith('admin-pusat-'))    return 'admin_pusat';
-  if (id.startsWith('admin-regional-')) return 'admin_regional';
-  if (id.startsWith('admin-finance-'))  return 'admin_finance';
-  return 'super_admin';
-}
+  // Feature menus — tampil jika akses[aksesKey].view === true (dari API)
+  { id: 'identitas',    aksesKey: 'identitas',   label: 'PROFIL PESANTREN', icon: IdCard },
+  { id: 'pembayaran',   aksesKey: 'pembayaran',  label: 'ADMINISTRASI',     icon: ClipboardList },
+  { id: 'tim',          aksesKey: 'tim',         label: 'KELOLA CREW',      icon: Users },
+  { id: 'eid',          aksesKey: 'eid',         label: 'E-ID CARD',        icon: Image },
+  { id: 'user-event',   aksesKey: 'user-event',  label: 'EVENT',               icon: CalendarDays },
+  { id: 'hub',          aksesKey: 'hub',         label: 'MPJ HUB',             icon: Globe },
 
+  { id: 'administrasi',               aksesKey: 'administrasi',               label: 'ADMINISTRASI',        icon: ClipboardList },
+  { id: 'master-data',                aksesKey: 'master-data',                label: 'MASTER DATA',         icon: BarChart3 },
+  { id: 'master-regional',            aksesKey: 'master-regional',            label: 'MASTER REGIONAL',     icon: Map },
+  { id: 'admin-pusat-manajemen-event',aksesKey: 'admin-pusat-manajemen-event',label: 'KELOLA EVENT',        icon: CalendarDays },
+  { id: 'militansi',                  aksesKey: 'militansi',                  label: 'MANAJEMEN MILITANSI', icon: Swords, soon: true },
+  { id: 'mpj-hub',                    aksesKey: 'mpj-hub',                    label: 'MPJ HUB',             icon: Globe, soon: true },
+
+  { id: 'data-master',               aksesKey: 'data-master',               label: 'DATA REGIONAL',         icon: BarChart3 },
+  { id: 'validasi-pendaftar',        aksesKey: 'validasi-pendaftar',        label: 'VERIFIKASI',            icon: UserCheck },
+  { id: 'admin-regional-manajemen-event', aksesKey: 'admin-regional-manajemen-event', label: 'KELOLA EVENT', icon: CalendarDays },
+  { id: 'laporan',                   aksesKey: 'laporan',                   label: 'LAPORAN & DOKUMENTASI', icon: FileText },
+  { id: 'late-payment',              aksesKey: 'late-payment',              label: 'LATE PAYMENT',          icon: AlertCircle },
+  { id: 'download-center',           aksesKey: 'download-center',           label: 'DOWNLOAD CENTER',       icon: Download },
+
+  { id: 'verifikasi',          aksesKey: 'verifikasi',          label: 'VERIFIKASI',          icon: UserCheck },
+  { id: 'laporan-keuangan',    aksesKey: 'laporan-keuangan',    label: 'LAPORAN',             icon: FileText },
+  { id: 'harga',               aksesKey: 'harga',               label: 'HARGA',               icon: Banknote },
+  { id: 'clearing',            aksesKey: 'clearing',            label: 'CLEARING',            icon: CreditCard },
+  { id: 'regional-monitoring', aksesKey: 'regional-monitoring', label: 'REGIONAL MONITORING', icon: MonitorDot, soon: true },
+
+  { id: 'user-management', aksesKey: 'user-management', label: 'USER MANAGEMENT', icon: UserCog },
+  { id: 'hierarchy',       aksesKey: 'hierarchy',       label: 'HIERARKI DATA',   icon: Layers },
+  { id: 'finance',         aksesKey: 'finance',         label: 'FINANCE',         icon: DollarSign, soon: true },
+  { id: 'hak-akses',       aksesKey: 'hak-akses',       label: 'HAK AKSES',       icon: Shield },
+
+  // Shared — satu route, semua role
+  { id: 'pengaturan', aksesKey: 'pengaturan', label: 'PENGATURAN', icon: Settings },
+];
+
+function getActiveDashboardId(role: string, isSuperAdmin: boolean): string {
+  if (isSuperAdmin)              return '';
+  if (role === 'Admin Pusat')    return 'admin-pusat-dashboard';
+  if (role === 'Admin Regional') return 'admin-regional-dashboard';
+  if (role === 'Admin Finance')  return 'admin-finance-dashboard';
+  return 'user-beranda';
+}
 
 const CmsLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
 
-  const akses = profile?.akses ?? {};
+  const akses = useMemo(() => profile?.akses ?? {}, [profile?.akses]);
   const isSuperAdmin = profile?.is_super_admin ?? false;
-  const section = isSuperAdmin ? 'super_admin' : detectSection(akses);
   const roleLabel = profile?.role ?? '';
-  const sidebarTitle = section === 'user'
+
+  const activeDashboardId = useMemo(
+    () => getActiveDashboardId(roleLabel, isSuperAdmin),
+    [roleLabel, isSuperAdmin]
+  );
+
+  const isUserRole = activeDashboardId === 'user-beranda';
+  const sidebarTitle = isUserRole
     ? (profile?.nama_pesantren ?? 'MPJ Media')
     : `MPJ ${roleLabel.toUpperCase()}`;
-  const sidebarSubtitle = section === 'user' ? 'Dashboard Media Pesantren' : 'Admin Panel';
+  const sidebarSubtitle = isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
 
-  const filteredMenus = ALL_MENUS.filter((m) => {
-    if (isSuperAdmin) {
-      if (SECTION_DASHBOARD_IDS.has(m.id) && m.id !== '') return false;
-      if (m.id === '') return true;
-      return akses[m.id]?.view === true;
-    }
-    if (getMenuSection(m.id) !== section) return false;
-    if (SECTION_DASHBOARD_IDS.has(m.id)) return true;
-    return akses[m.id]?.view === true;
-  });
-
-  // Super admin: pastikan dashboard (id: '') selalu di posisi pertama
-  const visibleMenus = isSuperAdmin
-    ? [
-        ...filteredMenus.filter((m) => m.id === ''),
-        ...filteredMenus.filter((m) => m.id !== ''),
-      ]
-    : filteredMenus;
+  // Filter murni berdasarkan akses dari API — tidak ada section logic di frontend
+  const visibleMenus = useMemo(() => ALL_MENUS.filter((m) => {
+    if (DASHBOARD_IDS.has(m.id)) return m.id === activeDashboardId;
+    return akses[m.aksesKey]?.view === true;
+  }), [akses, activeDashboardId]);
 
   const activeSlug = pathname.replace('/cms', '').replace(/^\//, '');
 
-  // Redirect ke menu pertama yang accessible jika landing di /cms
-  // Super admin default di /cms (dashboard), tidak perlu redirect
+  // Redirect ke menu pertama jika landing di /cms
   useEffect(() => {
-    if (!activeSlug && !isSuperAdmin && visibleMenus.length > 0) {
-      const firstId = visibleMenus[0].id;
-      navigate(firstId ? `/cms/${firstId}` : '/cms', { replace: true });
+    if (activeSlug || visibleMenus.length === 0) return;
+    const firstId = visibleMenus[0].id;
+    navigate(firstId ? `/cms/${firstId}` : '/cms', { replace: true });
+  }, [activeSlug, visibleMenus, navigate]);
+
+  // Akses guard: redirect ke /403 jika route diblokir eksplisit
+  useEffect(() => {
+    if (!profile) return;
+    if (DASHBOARD_IDS.has(activeSlug)) return;
+    if (activeSlug && akses[activeSlug]?.view === false) {
+      navigate('/403', { replace: true });
     }
-  }, [activeSlug, isSuperAdmin, visibleMenus.length]);
+  }, [activeSlug, akses, profile, navigate]);
 
   const displayName = profile?.nama_pesantren || 'Admin';
   const initials = displayName.substring(0, 2).toUpperCase();

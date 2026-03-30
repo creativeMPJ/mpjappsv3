@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,29 +23,30 @@ import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge
 
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
-type PaymentStatus = "paid" | "unpaid";
 
-interface MediaDashboardHomeProps {
-  paymentStatus: PaymentStatus;
-  profileLevel: ProfileLevel;
-  onNavigate: (view: ViewType) => void;
-  debugProfile?: {
-    nip?: string;
-    nama_pesantren?: string;
-    jumlah_santri?: number;
-  };
-}
+const VIEW_ROUTES: Record<ViewType, string> = {
+  beranda:       '/cms/user-beranda',
+  identitas:     '/cms/identitas',
+  administrasi:  '/cms/pembayaran',
+  tim:           '/cms/tim',
+  event:         '/cms/user-event',
+  eid:           '/cms/eid',
+  hub:           '/cms/hub',
+  pengaturan:    '/cms/pengaturan',
+};
 
-const MediaDashboardHome = ({
-  paymentStatus,
-  profileLevel,
-  onNavigate,
-  debugProfile
-}: MediaDashboardHomeProps) => {
+const MediaDashboardHome = () => {
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+
+  const paymentStatus = profile?.status_payment ?? 'unpaid';
+  const profileLevel: ProfileLevel = profile?.profile_level ?? 'basic';
+  const onNavigate = (view: ViewType) => navigate(VIEW_ROUTES[view]);
+
   const isPlatinum = profileLevel === 'platinum';
-  const displayNIP = debugProfile?.nip ? formatNIP(debugProfile.nip, true) : null;
-  const displayName = debugProfile?.nama_pesantren || "Media Pesantren";
-  const jumlahSantri = debugProfile?.jumlah_santri || 0;
+  const displayNIP = profile?.nip ? formatNIP(profile.nip, true) : null;
+  const displayName = profile?.nama_pesantren || "Media Pesantren";
+  const jumlahSantri = 0;
 
   // Calculate profile completion based on level
   const getProfileCompletion = () => {

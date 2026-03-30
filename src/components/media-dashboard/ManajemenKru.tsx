@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Trash2, Users, RefreshCw, Lock, AlertTriangle, Zap, UserPlus, Shield } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 interface KoordinatorData {
@@ -20,7 +21,6 @@ interface KoordinatorData {
 }
 
 interface ManajemenKruProps {
-  paymentStatus: "paid" | "unpaid";
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
@@ -50,8 +50,10 @@ const JABATAN_OPTIONS = [
   { value: "admin", label: "Admin" },
 ];
 
-const ManajemenKru = ({ paymentStatus, onKoordinatorChange }: ManajemenKruProps) => {
+const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const paymentStatus = profile?.status_payment ?? 'unpaid';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [crews, setCrews] = useState<Crew[]>([]);

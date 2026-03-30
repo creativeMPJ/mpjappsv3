@@ -8,8 +8,6 @@ import { apiRequest } from "@/lib/api-client";
 import { useNavigate } from "react-router-dom";
 
 interface AdministrasiProps {
-  paymentStatus: "paid" | "unpaid";
-  onPaymentStatusChange: (status: "paid" | "unpaid") => void;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
@@ -26,9 +24,9 @@ type PaymentSnapshot = {
   rejectionReason?: string | null;
 };
 
-const Administrasi = ({ paymentStatus, onPaymentStatusChange }: AdministrasiProps) => {
+const Administrasi = (_props: AdministrasiProps = {}) => {
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string>(paymentStatus);
+  const [status, setStatus] = useState<string>('pending_payment');
   const [payment, setPayment] = useState<PaymentSnapshot | null>(null);
   const navigate = useNavigate();
 
@@ -40,7 +38,6 @@ const Administrasi = ({ paymentStatus, onPaymentStatusChange }: AdministrasiProp
 
         setPayment(data.payment || null);
         setStatus(data.paymentStatus || "pending_payment");
-        onPaymentStatusChange(data.paymentStatus === "verified" ? "paid" : "unpaid");
       } catch {
         setStatus("pending_payment");
       } finally {
@@ -48,7 +45,7 @@ const Administrasi = ({ paymentStatus, onPaymentStatusChange }: AdministrasiProp
       }
     };
     load();
-  }, [onPaymentStatusChange]);
+  }, []);
 
   const formatRupiah = (amount: number) => new Intl.NumberFormat("id-ID").format(amount);
 
