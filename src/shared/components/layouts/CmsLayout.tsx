@@ -88,10 +88,10 @@ const ALL_MENUS: CmsMenuItem[] = [
 ];
 
 function getActiveDashboardId(role: string, isSuperAdmin: boolean): string {
-  if (isSuperAdmin)              return '';
-  if (role === 'Admin Pusat')    return 'admin-pusat-dashboard';
-  if (role === 'Admin Regional') return 'admin-regional-dashboard';
-  if (role === 'Admin Finance')  return 'admin-finance-dashboard';
+  if (isSuperAdmin)                return '';
+  if (role === 'admin_pusat')      return 'admin-pusat-dashboard';
+  if (role === 'admin_regional')   return 'admin-regional-dashboard';
+  if (role === 'admin_finance')    return 'admin-finance-dashboard';
   return 'user-beranda';
 }
 
