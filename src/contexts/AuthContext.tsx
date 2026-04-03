@@ -44,6 +44,50 @@ interface AuthContextType {
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3001';
 const TOKEN_KEY = 'mpj_auth_token';
 
+const ROLE_MAP: Record<string, AppRole> = {
+  user: 'user',
+  admin_regional: 'admin_regional',
+  admin_pusat: 'admin_pusat',
+  admin_finance: 'admin_finance',
+  'pengguna pesantren': 'user',
+  'admin wilayah': 'admin_regional',
+  'admin pusat': 'admin_pusat',
+  'admin keuangan': 'admin_finance',
+};
+
+const AKSES_KEY_MAP: Record<string, string> = {
+  'user-identitas': 'identitas',
+  'user-administrasi': 'pembayaran',
+  'user-tim': 'tim',
+  'user-eid': 'eid',
+  'user-hub': 'hub',
+  'user-pengaturan': 'pengaturan',
+  'admin-pusat-administrasi': 'administrasi',
+  'admin-pusat-master-data': 'master-data',
+  'admin-pusat-master-regional': 'master-regional',
+  'admin-pusat-manajemen-event': 'admin-pusat-manajemen-event',
+  'admin-pusat-manajemen-militansi': 'militansi',
+  'admin-pusat-mpj-hub': 'mpj-hub',
+  'admin-pusat-pengaturan': 'pengaturan',
+  'admin-regional-data-master': 'data-master',
+  'admin-regional-validasi-pendaftar': 'validasi-pendaftar',
+  'admin-regional-manajemen-event': 'admin-regional-manajemen-event',
+  'admin-regional-laporan-dokumentasi': 'laporan',
+  'admin-regional-late-payment': 'late-payment',
+  'admin-regional-download-center': 'download-center',
+  'admin-regional-pengaturan': 'pengaturan',
+  'admin-finance-verifikasi': 'verifikasi',
+  'admin-finance-laporan': 'laporan-keuangan',
+  'admin-finance-harga': 'harga',
+  'admin-finance-clearing': 'clearing',
+  'admin-finance-regional-monitoring': 'regional-monitoring',
+  'admin-finance-pengaturan': 'pengaturan',
+  'super-admin-user-management': 'user-management',
+  'super-admin-hierarchy': 'hierarchy',
+  'super-admin-hak-akses': 'hak-akses',
+  'super-admin-settings': 'pengaturan',
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -67,6 +111,44 @@ async function fetchMe(token: string): Promise<{ user: any } | null> {
   }
 
   return response.json();
+}
+
+function normalizeRole(rawRole: unknown): AppRole {
+  if (typeof rawRole !== 'string') {
+    return 'user';
+  }
+
+  return ROLE_MAP[rawRole.trim().toLowerCase()] ?? 'user';
+}
+
+function normalizeAkses(rawAkses: unknown): Record<string, AksesItem> {
+  if (!rawAkses || typeof rawAkses !== 'object' || Array.isArray(rawAkses)) {
+    return {};
+  }
+
+  const normalized: Record<string, AksesItem> = {};
+
+  for (const [rawKey, rawValue] of Object.entries(rawAkses)) {
+    if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+      continue;
+    }
+
+    const aksesItem: AksesItem = {
+      view: Boolean((rawValue as Partial<AksesItem>).view),
+      create: Boolean((rawValue as Partial<AksesItem>).create),
+      update: Boolean((rawValue as Partial<AksesItem>).update),
+      delete: Boolean((rawValue as Partial<AksesItem>).delete),
+    };
+
+    normalized[rawKey] = aksesItem;
+
+    const mappedKey = AKSES_KEY_MAP[rawKey];
+    if (mappedKey) {
+      normalized[mappedKey] = aksesItem;
+    }
+  }
+
+  return normalized;
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -102,8 +184,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser({ id: me.user.id, email: me.user.email });
       setProfile({
         id: me.user.id,
-        role: me.user.role ?? 'user',
-        akses: me.user.akses ?? [],
+        role: normalizeRole(me.user.role),
+        akses: normalizeAkses(me.user.akses),
         is_super_admin: me.user.isSuperAdmin ?? false,
         status_account: me.user.statusAccount ?? 'active',
         region_id: me.user.regionId ?? null,

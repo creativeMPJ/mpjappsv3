@@ -67,9 +67,9 @@ const EIDAsetPage = ({
   approvalDate,
   koordinator
 }: EIDAsetPageProps = {}) => {
-  const { profile } = useAuth();
-  const paymentStatus = profile?.status_payment ?? 'unpaid';
-  const profileLevel: ProfileLevel = profile?.profile_level ?? 'basic';
+  const { profile: authProfile } = useAuth();
+  const paymentStatus = authProfile?.status_payment ?? 'unpaid';
+  const profileLevel: ProfileLevel = authProfile?.profile_level ?? 'basic';
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -77,13 +77,13 @@ const EIDAsetPage = ({
   const charterRef = useRef<HTMLDivElement>(null);
 
   // Use realProfile first, then fall back to debugProfile for testing
-  const profile = realProfile || debugProfile;
+  const institutionProfile = realProfile || debugProfile;
 
   // Institution data (for Piagam) - prioritize real data
-  const displayNIP = profile?.nip || "";
-  const displayPesantrenName = profile?.nama_pesantren || "Pesantren Belum Terdaftar";
-  const displayAddress = profile?.alamat_singkat || "Alamat belum diisi";
-  const displayMediaName = profile?.nama_media || displayPesantrenName;
+  const displayNIP = institutionProfile?.nip || "";
+  const displayPesantrenName = institutionProfile?.nama_pesantren || "Pesantren Belum Terdaftar";
+  const displayAddress = institutionProfile?.alamat_singkat || "Alamat belum diisi";
+  const displayMediaName = institutionProfile?.nama_media || displayPesantrenName;
 
   // Koordinator data from crews table (for E-ID)
   const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
