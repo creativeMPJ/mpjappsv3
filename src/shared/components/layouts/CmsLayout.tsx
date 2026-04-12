@@ -95,6 +95,11 @@ function getActiveDashboardId(role: string, isSuperAdmin: boolean): string {
   return 'user-beranda';
 }
 
+function formatRoleLabel(role: string): string {
+  if (!role) return 'User';
+  return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 const CmsLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -103,6 +108,7 @@ const CmsLayout = () => {
   const akses = useMemo(() => profile?.akses ?? {}, [profile?.akses]);
   const isSuperAdmin = profile?.is_super_admin ?? false;
   const roleLabel = profile?.role ?? '';
+  const roleDisplayLabel = formatRoleLabel(roleLabel);
 
   const activeDashboardId = useMemo(
     () => getActiveDashboardId(roleLabel, isSuperAdmin),
@@ -112,7 +118,7 @@ const CmsLayout = () => {
   const isUserRole = activeDashboardId === 'user-beranda';
   const sidebarTitle = isUserRole
     ? (profile?.nama_pesantren ?? 'MPJ Media')
-    : `MPJ ${roleLabel.toUpperCase()}`;
+    : `MPJ ${roleDisplayLabel}`;
   const sidebarSubtitle = isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
 
   // Filter murni berdasarkan akses dari API — tidak ada section logic di frontend
@@ -184,7 +190,7 @@ const CmsLayout = () => {
             </Avatar>
             <div className="hidden sm:block">
               <p className="text-sm font-medium">{displayName}</p>
-              <p className="text-xs text-muted-foreground">{roleLabel}</p>
+              <p className="text-xs text-muted-foreground">{roleDisplayLabel}</p>
             </div>
           </div>
         </>

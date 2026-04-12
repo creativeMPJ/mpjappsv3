@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiRequest } from "@/lib/api-client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,13 +66,28 @@ const EIDAsetPage = ({
   debugProfile,
   realProfile,
   approvalDate,
-  koordinator
+  koordinator: koordinatorProp
 }: EIDAsetPageProps = {}) => {
   const { profile: authProfile } = useAuth();
   const paymentStatus = authProfile?.status_payment ?? 'unpaid';
   const profileLevel: ProfileLevel = authProfile?.profile_level ?? 'basic';
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [fetchedKoordinator, setFetchedKoordinator] = useState<KoordinatorData | undefined>(undefined);
+
+  useEffect(() => {
+    if (koordinatorProp) return;
+    apiRequest<{ crews: { nama: string; jabatan: string | null; niam: string | null; xp_level?: number }[] }>('/api/media/crew')
+      .then(data => {
+        const found = data.crews.find(c =>
+          c.jabatan?.toLowerCase() === 'koordinator' || c.jabatan?.toLowerCase() === 'ketua'
+        );
+        if (found) setFetchedKoordinator({ nama: found.nama, niam: found.niam, jabatan: found.jabatan || 'Koordinator', xp_level: found.xp_level });
+      })
+      .catch(() => {});
+  }, [koordinatorProp]);
+
+  const koordinator = koordinatorProp ?? fetchedKoordinator;
 
   // Refs for html2canvas capture
   const charterRef = useRef<HTMLDivElement>(null);
@@ -80,8 +96,8 @@ const EIDAsetPage = ({
   const institutionProfile = realProfile || debugProfile;
 
   // Institution data (for Piagam) - prioritize real data
-  const displayNIP = institutionProfile?.nip || "";
-  const displayPesantrenName = institutionProfile?.nama_pesantren || "Pesantren Belum Terdaftar";
+  const displayNIP = institutionProfile?.nip || authProfile?.nip || "";
+  const displayPesantrenName = institutionProfile?.nama_pesantren || authProfile?.nama_pesantren || "Pesantren Belum Terdaftar";
   const displayAddress = institutionProfile?.alamat_singkat || "Alamat belum diisi";
   const displayMediaName = institutionProfile?.nama_media || displayPesantrenName;
 
@@ -100,7 +116,7 @@ const EIDAsetPage = ({
   };
 
   const highestLevel = getHighestLevel();
-  const canAccessEID = paymentStatus === "paid" && (profileLevel === "gold" || profileLevel === "platinum");
+  const canAccessEID = paymentStatus === "paid";
   const hasKoordinator = koordinator && koordinator.niam;
 
   // Check if user is unpaid - for paywall logic

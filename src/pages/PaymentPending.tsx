@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Clock, CheckCircle, Home, MessageCircle, Loader2, XCircle, RefreshCw } from "lucide-react";
@@ -17,6 +18,7 @@ const POLL_INTERVAL = 10_000; // Poll every 10 seconds
 
 const PaymentPending = () => {
   const navigate = useNavigate();
+  const { refreshAuth } = useAuth();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending_verification");
   const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -38,7 +40,8 @@ const PaymentPending = () => {
 
         if (data.payment.status === "verified") {
           // Payment verified! Show success state then redirect
-          setTimeout(() => navigate("/user", { replace: true }), 2000);
+          await refreshAuth();
+          setTimeout(() => navigate("/cms", { replace: true }), 2000);
           return;
         }
 

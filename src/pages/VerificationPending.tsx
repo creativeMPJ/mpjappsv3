@@ -33,7 +33,7 @@ interface RegionData {
  */
 const VerificationPending = () => {
   const navigate = useNavigate();
-  const { signOut, user, profile } = useAuth();
+  const { signOut, user, profile, refreshAuth } = useAuth();
   const { toast } = useToast();
   
   const [claimData, setClaimData] = useState<ClaimData | null>(null);
@@ -51,14 +51,14 @@ const VerificationPending = () => {
       if (claim) {
         setClaimData(claim);
 
-        // If status changed to approved or regional_approved, redirect to dashboard
-        // pusat_approved dihilangkan — regional_approved sudah cukup untuk redirect
+        // approved atau regional_approved → akun aktif, masuk CMS
         if (claim.status === 'approved' || claim.status === 'regional_approved') {
+          await refreshAuth();
           toast({
             title: "Akun Terverifikasi! ✅",
             description: "Selamat! Akun Anda telah aktif.",
           });
-          navigate('/user', { replace: true });
+          navigate('/cms', { replace: true });
           return;
         }
 
