@@ -248,6 +248,8 @@ const InstitutionSubmission = () => {
           password: formData.password,
           namaPesantren: formData.namaPesantren,
           namaPengasuh: formData.namaPengasuh,
+          namaPengelola: formData.namaPengelola,
+          noWhatsapp: formData.noWhatsapp,
         }),
       });
 
@@ -394,7 +396,7 @@ const InstitutionSubmission = () => {
                       type="text"
                       placeholder="Masukkan nama pesantren"
                       value={formData.namaPesantren}
-                      onChange={(e) => handleChange("namaPesantren", e.target.value)}
+                      onChange={(e) => handleChange("namaPesantren", e.target.value.toUpperCase())}
                       className={`h-11 ${getFieldStatus('namaPesantren') === 'empty' ? 'border-amber-300' : ''}`}
                     />
                   </div>
@@ -409,7 +411,7 @@ const InstitutionSubmission = () => {
                       type="text"
                       placeholder="Masukkan nama pengasuh"
                       value={formData.namaPengasuh}
-                      onChange={(e) => handleChange("namaPengasuh", e.target.value)}
+                      onChange={(e) => handleChange("namaPengasuh", e.target.value.toUpperCase())}
                       className={`h-11 ${getFieldStatus('namaPengasuh') === 'empty' ? 'border-amber-300' : ''}`}
                     />
                   </div>
@@ -423,7 +425,7 @@ const InstitutionSubmission = () => {
                     <Textarea
                       placeholder="Jl. Raya No. 123, Desa/Kelurahan..."
                       value={formData.alamatLengkap}
-                      onChange={(e) => handleChange("alamatLengkap", e.target.value)}
+                      onChange={(e) => handleChange("alamatLengkap", e.target.value.toUpperCase())}
                       className={`min-h-[80px] resize-none ${getFieldStatus('alamatLengkap') === 'empty' ? 'border-amber-300' : ''}`}
                     />
                   </div>
@@ -461,7 +463,7 @@ const InstitutionSubmission = () => {
                       type="text"
                       placeholder="Masukkan nama kecamatan"
                       value={formData.kecamatan}
-                      onChange={(e) => handleChange("kecamatan", e.target.value)}
+                      onChange={(e) => handleChange("kecamatan", e.target.value.toUpperCase())}
                       className={`h-11 ${getFieldStatus('kecamatan') === 'empty' ? 'border-amber-300' : ''}`}
                     />
                   </div>
@@ -505,7 +507,7 @@ const InstitutionSubmission = () => {
                       type="text"
                       placeholder="Nama lengkap pengelola"
                       value={formData.namaPengelola}
-                      onChange={(e) => handleChange("namaPengelola", e.target.value)}
+                      onChange={(e) => handleChange("namaPengelola", e.target.value.toUpperCase())}
                       className={`h-11 ${getFieldStatus('namaPengelola') === 'empty' ? 'border-amber-300' : ''}`}
                     />
                   </div>
