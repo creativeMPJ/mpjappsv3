@@ -4,6 +4,7 @@ Platform manajemen registrasi, verifikasi, pembayaran aktivasi, dan pengelolaan 
 
 ## Stack
 
+halo 
 - Frontend: Vite + React + TypeScript + Tailwind + shadcn/ui
 - Backend API: Fastify + TypeScript
 - Database: PostgreSQL (local)
