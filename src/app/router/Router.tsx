@@ -24,6 +24,10 @@ const DebugView = Loadable(lazy(() => import('@/pages/DebugView')));
 const PublicPesantrenProfile = Loadable(lazy(() => import('@/pages/PublicPesantrenProfile')));
 const PublicCrewProfile = Loadable(lazy(() => import('@/pages/PublicCrewProfile')));
 const PublicDirektori = Loadable(lazy(() => import('@/pages/PublicDirektori')));
+const EventListing = Loadable(lazy(() => import('@/pages/EventListing')));
+const EventDetail = Loadable(lazy(() => import('@/pages/EventDetail')));
+const EventTicket = Loadable(lazy(() => import('@/pages/EventTicket')));
+const EventScan = Loadable(lazy(() => import('@/pages/EventScan')));
 
 // Error pages
 const VerificationPending = Loadable(lazy(() => import('@/pages/VerificationPending')));
@@ -46,6 +50,9 @@ const AdminPusatAdministrasi = Loadable(lazy(() => import('@/components/admin-pu
 const AdminPusatMasterData = Loadable(lazy(() => import('@/components/admin-pusat/AdminPusatMasterData')));
 const AdminPusatRegional = Loadable(lazy(() => import('@/components/admin-pusat/AdminPusatRegional')));
 const AdminPusatEvent = Loadable(lazy(() => import('@/components/admin-pusat/AdminPusatEvent')));
+const EventNarasumber = Loadable(lazy(() => import('@/components/admin-pusat/EventNarasumber')));
+const EventMasterPeserta = Loadable(lazy(() => import('@/components/admin-pusat/EventMasterPeserta')));
+const EventScanAbsensi = Loadable(lazy(() => import('@/components/admin-pusat/EventScanAbsensi')));
 const AdminRegionalDetail = Loadable(lazy(() => import('@/pages/AdminRegionalDetail')));
 
 // CMS - Admin Regional
@@ -92,6 +99,13 @@ const router = createBrowserRouter([
   { path: ROUTES.PUBLIC.PAYMENT_PENDING, element: <PaymentPending /> },
   { path: ROUTES.PUBLIC.DEBUG_VIEW, element: <DebugView /> },
 
+  // Event public routes
+  { path: '/events', element: <EventListing /> },
+  { path: '/events/:id', element: <EventDetail /> },
+  { path: '/ticket/:code', element: <EventTicket /> },
+  { path: '/ticket', element: <EventTicket /> },
+  { path: '/scan', element: <EventScan /> },
+
   // Public verification routes
   { path: ROUTES.VERIFICATION.DIREKTORI, element: <PublicDirektori /> },
   { path: ROUTES.VERIFICATION.PESANTREN_PROFILE, element: <PublicPesantrenProfile /> },
@@ -116,10 +130,14 @@ const router = createBrowserRouter([
       { path: 'administrasi',                 element: <AdminPusatAdministrasi /> },
       { path: 'master-data',                  element: <AdminPusatMasterData /> },
       { path: 'master-regional',              element: <AdminPusatRegional /> },
-      { path: 'admin-pusat-manajemen-event',  element: <AdminPusatEvent /> },           // skip (in progress)
-      { path: 'militansi',                    element: <ComingSoonOverlay title="Manajemen Militansi" description="Leaderboard dan sistem gamifikasi XP" /> },
-      { path: 'mpj-hub',                      element: <ComingSoonOverlay title="MPJ HUB" description="Pusat kolaborasi dan resource sharing" /> },
-      { path: 'admin-pusat/regional/:id',     element: <AdminRegionalDetail /> },
+      { path: 'admin-pusat-manajemen-event',        element: <AdminPusatEvent /> },
+      { path: 'admin-pusat-event-narasumber',         element: <EventNarasumber /> },
+      { path: 'admin-pusat-event-peserta',            element: <EventMasterPeserta /> },
+      { path: 'admin-pusat-event-master-data',        element: <AdminPusatMasterData /> },
+      { path: 'admin-pusat-event-scan',               element: <EventScanAbsensi /> },
+      { path: 'militansi',                            element: <ComingSoonOverlay title="Manajemen Militansi" description="Leaderboard dan sistem gamifikasi XP" /> },
+      { path: 'mpj-hub',                              element: <ComingSoonOverlay title="MPJ HUB" description="Pusat kolaborasi dan resource sharing" /> },
+      { path: 'admin-pusat/regional/:id',             element: <AdminRegionalDetail /> },
 
       // Admin Regional
       { path: 'admin-regional-dashboard',  element: <RegionalDashboardHome /> },   // dashboard → keep prefix

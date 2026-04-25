@@ -5,6 +5,7 @@ import {
   IdCard,
   ClipboardList,
   Users,
+  Users2,
   Image,
   CalendarDays,
   Globe,
@@ -24,6 +25,9 @@ import {
   MonitorDot,
   UserCog,
   Bell,
+  QrCode,
+  Database,
+  List,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Sidebar, { SidebarMenuItem } from '@/components/shared/Sidebar';
@@ -61,7 +65,18 @@ const ALL_MENUS: CmsMenuItem[] = [
   { id: 'administrasi',               aksesKey: 'administrasi',               label: 'ADMINISTRASI',        icon: ClipboardList },
   { id: 'master-data',                aksesKey: 'master-data',                label: 'MASTER DATA',         icon: BarChart3 },
   { id: 'master-regional',            aksesKey: 'master-regional',            label: 'MASTER REGIONAL',     icon: Map },
-  { id: 'admin-pusat-manajemen-event',aksesKey: 'admin-pusat-manajemen-event',label: 'KELOLA EVENT',        icon: CalendarDays },
+  {
+    id: 'admin-pusat-manajemen-event',
+    aksesKey: 'admin-pusat-manajemen-event',
+    label: 'MASTER EVENT',
+    icon: CalendarDays,
+    children: [
+      { id: 'admin-pusat-manajemen-event',         aksesKey: 'admin-pusat-manajemen-event',         label: 'Daftar Event',    icon: List },
+      { id: 'admin-pusat-event-narasumber',        aksesKey: 'admin-pusat-event-narasumber',        label: 'Narasumber',      icon: Users2 },
+      { id: 'admin-pusat-event-peserta',           aksesKey: 'admin-pusat-event-peserta',           label: 'Master Peserta',  icon: UserCheck },
+      { id: 'admin-pusat-event-scan',              aksesKey: 'admin-pusat-event-scan',              label: 'Scan Absensi',    icon: QrCode },
+    ],
+  },
   { id: 'militansi',                  aksesKey: 'militansi',                  label: 'MANAJEMEN MILITANSI', icon: Swords, soon: true },
   { id: 'mpj-hub',                    aksesKey: 'mpj-hub',                    label: 'MPJ HUB',             icon: Globe, soon: true },
 
@@ -121,11 +136,30 @@ const CmsLayout = () => {
     : `MPJ ${roleDisplayLabel}`;
   const sidebarSubtitle = isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
 
-  // Filter murni berdasarkan akses dari API — tidak ada section logic di frontend
-  const visibleMenus = useMemo(() => ALL_MENUS.filter((m) => {
-    if (DASHBOARD_IDS.has(m.id)) return m.id === activeDashboardId;
-    return akses[m.aksesKey]?.view === true;
-  }), [akses, activeDashboardId]);
+  // Filter menu berdasarkan akses dari API.
+  // Untuk menu grup (dengan children): tampil jika setidaknya 1 child punya akses.
+  // Children difilter secara individual.
+  const visibleMenus = useMemo(() => {
+    return ALL_MENUS
+      .filter((m) => {
+        if (DASHBOARD_IDS.has(m.id)) return m.id === activeDashboardId;
+        if (m.children && m.children.length > 0) {
+          // Group parent: tampil jika parent punya akses ATAU minimal 1 child punya akses
+          const parentAccess = akses[m.aksesKey]?.view === true;
+          const anyChildAccess = m.children.some((c) => akses[c.aksesKey]?.view === true);
+          return parentAccess || anyChildAccess;
+        }
+        return akses[m.aksesKey]?.view === true;
+      })
+      .map((m) => {
+        if (!m.children) return m;
+        // Filter children berdasarkan akses individual
+        const filteredChildren = m.children.filter(
+          (c) => akses[c.aksesKey]?.view === true || akses[m.aksesKey]?.view === true
+        );
+        return { ...m, children: filteredChildren };
+      });
+  }, [akses, activeDashboardId]);
 
   const activeSlug = pathname.replace('/cms', '').replace(/^\//, '');
 
