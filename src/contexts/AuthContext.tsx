@@ -69,6 +69,11 @@ const AKSES_KEY_MAP: Record<string, string> = {
   'admin-pusat-manajemen-militansi': 'militansi',
   'admin-pusat-mpj-hub': 'mpj-hub',
   'admin-pusat-pengaturan': 'pengaturan',
+  // Sub-menu Master Event
+  'admin-pusat-event-narasumber':   'admin-pusat-event-narasumber',
+  'admin-pusat-event-peserta':      'admin-pusat-event-peserta',
+  'admin-pusat-event-master-data':  'admin-pusat-event-master-data',
+  'admin-pusat-event-scan':         'admin-pusat-event-scan',
   'admin-regional-data-master': 'data-master',
   'admin-regional-validasi-pendaftar': 'validasi-pendaftar',
   'admin-regional-manajemen-event': 'admin-regional-manajemen-event',

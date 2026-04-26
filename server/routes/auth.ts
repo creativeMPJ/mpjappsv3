@@ -22,6 +22,62 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
+function generateRoleAkses(role: string): Record<string, any> {
+  const FULL = { view: true, create: true, update: true, delete: true };
+  const VIEW = { view: true, create: false, update: false, delete: false };
+
+  switch (role) {
+    case "admin_pusat":
+      return {
+        'admin-pusat-dashboard': VIEW,
+        'administrasi':                   FULL,
+        'master-data':                    FULL,
+        'master-regional':                FULL,
+        'admin-pusat-manajemen-event':    FULL,
+        'admin-pusat-event-narasumber':   FULL,
+        'admin-pusat-event-peserta':      FULL,
+        'admin-pusat-event-master-data':  FULL,
+        'admin-pusat-event-scan':         FULL,
+        'militansi': VIEW,
+        'mpj-hub':   VIEW,
+        'pengaturan': FULL,
+        'hak-akses':  FULL,
+      };
+    case "admin_regional":
+      return {
+        'admin-regional-dashboard': VIEW,
+        'data-master':              FULL,
+        'validasi-pendaftar':       FULL,
+        'admin-regional-manajemen-event': FULL,
+        'laporan':                  VIEW,
+        'late-payment':             FULL,
+        'download-center':          VIEW,
+        'pengaturan':               FULL,
+      };
+    case "admin_finance":
+      return {
+        'admin-finance-dashboard': VIEW,
+        'verifikasi':              FULL,
+        'laporan-keuangan':        VIEW,
+        'harga':                   FULL,
+        'clearing':                FULL,
+        'regional-monitoring':     VIEW,
+        'pengaturan':              FULL,
+      };
+    default:
+      return {
+        'user-beranda':  VIEW,
+        'identitas':     FULL,
+        'pembayaran':    VIEW,
+        'tim':           FULL,
+        'eid':           VIEW,
+        'user-event':    VIEW,
+        'hub':           VIEW,
+        'pengaturan':    FULL,
+      };
+  }
+}
+
 export async function authRoutes(app: FastifyInstance) {
   app.post("/register", async (request, reply) => {
     const body = registerSchema.parse(request.body);
@@ -94,10 +150,11 @@ export async function authRoutes(app: FastifyInstance) {
 
     const profile = await prisma.profile.findUnique({ where: { id: user.id } });
 
+    const role = profile?.role ?? AppRole.user;
     const token = app.jwt.sign({
       sub: user.id,
       email: user.email,
-      role: profile?.role ?? AppRole.user,
+      role: role,
     });
 
     return reply.send({
@@ -105,7 +162,8 @@ export async function authRoutes(app: FastifyInstance) {
       user: {
         id: user.id,
         email: user.email,
-        role: profile?.role ?? AppRole.user,
+        role: role,
+        akses: generateRoleAkses(role),
       },
     });
   });
@@ -122,11 +180,15 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(404).send({ message: "User not found" });
     }
 
+    const role = user.profile?.role ?? AppRole.user;
+
     return reply.send({
       user: {
         id: user.id,
         email: user.email,
-        role: user.profile?.role ?? AppRole.user,
+        role,
+        akses: generateRoleAkses(role),
+        isSuperAdmin: false,
         statusAccount: user.profile?.statusAccount ?? null,
         statusPayment: user.profile?.statusPayment ?? "unpaid",
         profileLevel: user.profile?.profileLevel ?? "basic",

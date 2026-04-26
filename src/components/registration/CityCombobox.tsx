@@ -38,7 +38,7 @@ export function CityCombobox({ value, onSelect, disabled }: CityComboboxProps) {
     const fetchCities = async () => {
       setIsLoading(true);
       try {
-        const data = await apiRequest<{ cities: City[] }>("/api/public/cities");
+        const data = await apiRequest<{ cities: City[] }>("/api/public/cities?province_id=35");
         setCities(data.cities || []);
       } catch (error) {
         console.error("Error fetching cities:", error);
