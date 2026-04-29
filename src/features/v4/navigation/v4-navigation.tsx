@@ -46,11 +46,11 @@ export const pusatNav: V4NavGroup[] = [
   {
     label: "Sekretariat",
     items: [
-      { label: "Ringkasan Surat", path: "/pusat/sekretariat", icon: FileText },
-      { label: "Surat Masuk", path: "/pusat/sekretariat/surat-masuk", icon: Archive },
-      { label: "Surat Keluar", path: "/pusat/sekretariat/surat-keluar", icon: FileSignature },
-      { label: "Asset TTD", path: "/pusat/sekretariat/asset-ttd", icon: Upload },
-      { label: "Pengaturan Template", path: "/pusat/sekretariat/pengaturan-template", icon: Settings },
+      { label: "Ringkasan Surat", path: "/pusat/sekretariat", icon: FileText, enabled: true },
+      { label: "Surat Masuk", path: "/pusat/sekretariat/surat-masuk", icon: Archive, enabled: true },
+      { label: "Surat Keluar", path: "/pusat/sekretariat/surat-keluar", icon: FileSignature, enabled: true },
+      { label: "Asset TTD", path: "/pusat/sekretariat/asset-ttd", icon: Upload, enabled: true },
+      { label: "Pengaturan Template", path: "/pusat/sekretariat/pengaturan-template", icon: Settings, enabled: true },
     ],
   },
   {
@@ -66,7 +66,7 @@ export const pusatNav: V4NavGroup[] = [
   {
     label: "Manajemen Event",
     items: [
-      { label: "Daftar Event", path: "/pusat/event/daftar", icon: CalendarDays },
+      { label: "Daftar Event", path: "/pusat/event/daftar", icon: CalendarDays, enabled: true },
       { label: "Narasumber", path: "/pusat/event/narasumber", icon: Users },
       { label: "Peserta", path: "/pusat/event/peserta", icon: Users },
       { label: "Scan", path: "/pusat/event/scan", icon: QrCode },
@@ -111,11 +111,11 @@ export const regionalNav: V4NavGroup[] = [
   {
     label: "Sekretariat",
     items: [
-      { label: "Ringkasan Surat", path: "/regional/sekretariat", icon: FileText },
-      { label: "Surat Masuk", path: "/regional/sekretariat/surat-masuk", icon: Archive },
-      { label: "Surat Keluar", path: "/regional/sekretariat/surat-keluar", icon: FileSignature },
-      { label: "Asset TTD", path: "/regional/sekretariat/asset-ttd", icon: Upload },
-      { label: "Pengaturan Template", path: "/regional/sekretariat/pengaturan-template", icon: Settings },
+      { label: "Ringkasan Surat", path: "/regional/sekretariat", icon: FileText, enabled: true },
+      { label: "Surat Masuk", path: "/regional/sekretariat/surat-masuk", icon: Archive, enabled: true },
+      { label: "Surat Keluar", path: "/regional/sekretariat/surat-keluar", icon: FileSignature, enabled: true },
+      { label: "Asset TTD", path: "/regional/sekretariat/asset-ttd", icon: Upload, enabled: true },
+      { label: "Pengaturan Template", path: "/regional/sekretariat/pengaturan-template", icon: Settings, enabled: true },
     ],
   },
   {
@@ -129,7 +129,7 @@ export const regionalNav: V4NavGroup[] = [
   {
     label: "Manajemen Event",
     items: [
-      { label: "Daftar Event", path: "/regional/event/daftar", icon: CalendarDays },
+      { label: "Daftar Event", path: "/regional/event/daftar", icon: CalendarDays, enabled: true },
       { label: "Peserta", path: "/regional/event/peserta", icon: Users },
       { label: "Scan", path: "/regional/event/scan", icon: QrCode },
     ],
