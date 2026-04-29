@@ -38,7 +38,7 @@ export const pusatNav: V4NavGroup[] = [
     label: "Administrasi",
     items: [
       { label: "Monitoring Regional", path: "/pusat/administrasi/monitoring-regional", icon: BarChart3 },
-      { label: "Verifikasi Payment", path: "/pusat/administrasi/verifikasi-payment", icon: WalletCards },
+      { label: "Verifikasi Payment", path: "/pusat/administrasi/verifikasi-payment", icon: WalletCards, enabled: true },
       { label: "Leveling", path: "/pusat/administrasi/leveling", icon: Medal },
       { label: "Kode Khodim", path: "/pusat/administrasi/kode-khodim", icon: IdCard },
     ],
@@ -56,9 +56,9 @@ export const pusatNav: V4NavGroup[] = [
   {
     label: "Master Data",
     items: [
-      { label: "Pesantren", path: "/pusat/master-data/pesantren", icon: Building2 },
-      { label: "Media", path: "/pusat/master-data/media", icon: Globe },
-      { label: "Kru", path: "/pusat/master-data/kru", icon: Users },
+      { label: "Pesantren", path: "/pusat/master-data/pesantren", icon: Building2, enabled: true },
+      { label: "Media", path: "/pusat/master-data/media", icon: Globe, enabled: true },
+      { label: "Kru", path: "/pusat/master-data/kru", icon: Users, enabled: true },
       { label: "Surat", path: "/pusat/master-data/surat", icon: FileText },
       { label: "Event", path: "/pusat/master-data/event", icon: CalendarDays },
     ],
@@ -103,7 +103,7 @@ export const regionalNav: V4NavGroup[] = [
   {
     label: "Administrasi",
     items: [
-      { label: "Monitoring Pendaftaran", path: "/regional/administrasi/monitoring-pendaftaran", icon: BarChart3 },
+      { label: "Monitoring Pendaftaran", path: "/regional/administrasi/monitoring-pendaftaran", icon: BarChart3, enabled: true },
       { label: "Monitoring Lembaga", path: "/regional/administrasi/monitoring-lembaga", icon: Building2 },
       { label: "Leveling Wilayah", path: "/regional/administrasi/leveling-wilayah", icon: Medal },
     ],
@@ -121,9 +121,9 @@ export const regionalNav: V4NavGroup[] = [
   {
     label: "Master Data",
     items: [
-      { label: "Pesantren", path: "/regional/master-data/pesantren", icon: Building2 },
-      { label: "Media", path: "/regional/master-data/media", icon: Globe },
-      { label: "Kru", path: "/regional/master-data/kru", icon: Users },
+      { label: "Pesantren", path: "/regional/master-data/pesantren", icon: Building2, enabled: true },
+      { label: "Media", path: "/regional/master-data/media", icon: Globe, enabled: true },
+      { label: "Kru", path: "/regional/master-data/kru", icon: Users, enabled: true },
     ],
   },
   {
