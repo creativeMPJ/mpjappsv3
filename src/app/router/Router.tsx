@@ -5,6 +5,7 @@ import { ROUTES } from '@/app/constants/router';
 import ComingSoonOverlay from '@/components/shared/ComingSoonOverlay';
 import CmsLayout from '@/shared/components/layouts/CmsLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { v4Routes } from '@/features/v4/routes/v4-routes';
 
 // Shared
 const PengaturanUnified = Loadable(lazy(() => import('@/components/shared/Pengaturan')));
@@ -96,6 +97,9 @@ const router = createBrowserRouter([
   { path: ROUTES.VERIFICATION.DIREKTORI, element: <PublicDirektori /> },
   { path: ROUTES.VERIFICATION.PESANTREN_PROFILE, element: <PublicPesantrenProfile /> },
   { path: ROUTES.VERIFICATION.CREW_PROFILE, element: <PublicCrewProfile /> },
+
+  // V4 dashboards - isolated from existing /cms routes
+  ...v4Routes,
 
   // CMS
   {
