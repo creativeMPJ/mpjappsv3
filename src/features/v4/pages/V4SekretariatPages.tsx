@@ -1,51 +1,24 @@
+import { useEffect, useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import {
+  getIncomingLetters,
+  getOutgoingLetters,
+  getSignatures,
+  getTemplates,
+  type V4LetterItem,
+  type V4SekretariatScope,
+  type V4SignatureItem,
+  type V4TemplatePositionItem,
+} from "../services/sekretariat.service";
 
-type SekretariatScope = "pusat" | "regional";
-
-interface SuratKeluarItem {
-  id: string;
-  nomorSurat: string | null;
-  perihal: string | null;
-  jenisNaskah: string | null;
-  penandatangan: string | null;
-  scope: string | null;
-  tanggal: string | null;
-  status: string | null;
-  fileFinal: string | null;
+interface SummaryItem {
+  modul: string;
+  total: number;
+  status: string;
 }
 
-interface SuratMasukItem {
-  id: string;
-  nomorSuratAsal: string | null;
-  pengirim: string | null;
-  perihal: string | null;
-  tanggalSurat: string | null;
-  tanggalDiterima: string | null;
-  fileScan: string | null;
-  status: string | null;
-}
-
-interface AssetTtdItem {
-  id: string;
-  namaPimpinan: string | null;
-  jabatan: string | null;
-  scope: string | null;
-  previewPng: string | null;
-  status: string | null;
-}
-
-interface TemplateSuratItem {
-  id: string;
-  jenisNaskah: string | null;
-  nomorPosition: string | null;
-  ttdPosition: string | null;
-  qrPosition: string | null;
-  ukuranFont: string | null;
-  halamanTarget: string | null;
-}
-
-function scopeLabel(scope: SekretariatScope) {
+function scopeLabel(scope: V4SekretariatScope) {
   return scope === "pusat" ? "Pusat" : "Regional";
 }
 
@@ -53,27 +26,66 @@ function formatText(value: string | null | undefined) {
   return value && value.trim() ? value : "-";
 }
 
-function V4SekretariatRingkasanPage({ scope }: { scope: SekretariatScope }) {
+function formatDate(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function formatPosition(x: number | string | null | undefined, y: number | string | null | undefined) {
+  if (x === null || x === undefined || y === null || y === undefined) return "-";
+  return `${x}/${y}`;
+}
+
+function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
   const label = scopeLabel(scope);
+  const [rows, setRows] = useState<SummaryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      getIncomingLetters(scope),
+      getOutgoingLetters(scope),
+      getSignatures(scope),
+      getTemplates(scope),
+    ]).then(([incoming, outgoing, signatures, templates]) => {
+      const nextError = [incoming.error, outgoing.error, signatures.error, templates.error].filter(Boolean).join(", ");
+      const nextRows = [
+        { modul: "Surat Masuk", total: incoming.data?.length ?? 0, status: "tersedia" },
+        { modul: "Surat Keluar", total: outgoing.data?.length ?? 0, status: "tersedia" },
+        { modul: "Asset TTD", total: signatures.data?.length ?? 0, status: "tersedia" },
+        { modul: "Template Surat", total: templates.data?.length ?? 0, status: "tersedia" },
+      ].filter((item) => item.total > 0);
+
+      setRows(nextRows);
+      setError(nextError || null);
+      setLoading(false);
+    });
+  }, [scope]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`Ringkasan Surat ${label}`}
-        description="Shell sekretariat untuk monitoring arsip surat. Data akan tampil setelah endpoint tersedia."
+        description="Ringkasan data sekretariat dari endpoint letters, signatures, dan templates."
       />
       <DataTableShell
         title="Aktivitas Surat"
         description="Ringkasan surat masuk, surat keluar, asset TTD, dan template."
-        columns={["Modul", "Terakhir Diperbarui", "Status"]}
-        rows={[]}
+        columns={["Modul", "Total Data", "Status"]}
+        rows={rows}
+        loading={loading}
+        error={error}
         renderRow={(row, index) => {
-          const item = row as { modul?: string; updatedAt?: string; status?: string };
+          const item = row as SummaryItem;
 
           return (
             <TableRow key={`${item.modul ?? "ringkasan"}-${index}`}>
               <TableCell className="font-medium">{formatText(item.modul)}</TableCell>
-              <TableCell>{formatText(item.updatedAt)}</TableCell>
+              <TableCell>{item.total}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
             </TableRow>
           );
@@ -83,8 +95,20 @@ function V4SekretariatRingkasanPage({ scope }: { scope: SekretariatScope }) {
   );
 }
 
-function V4SuratKeluarPage({ scope }: { scope: SekretariatScope }) {
+function V4SuratKeluarPage({ scope }: { scope: V4SekretariatScope }) {
   const label = scopeLabel(scope);
+  const [letters, setLetters] = useState<V4LetterItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    getOutgoingLetters(scope).then((result) => {
+      setLetters(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, [scope]);
 
   return (
     <div className="space-y-6">
@@ -94,22 +118,24 @@ function V4SuratKeluarPage({ scope }: { scope: SekretariatScope }) {
       />
       <DataTableShell
         title="Daftar Surat Keluar"
-        description="Data akan dihubungkan ke endpoint sekretariat setelah tersedia."
+        description="Data draft/final surat keluar dari endpoint /api/letters?type=outgoing."
         columns={["Nomor Surat", "Perihal", "Jenis Naskah", "Penandatangan", "Scope", "Tanggal", "Status", "File Final", "Aksi"]}
-        rows={[]}
+        rows={letters}
+        loading={loading}
+        error={error}
         renderRow={(row, index) => {
-          const item = row as SuratKeluarItem;
+          const item = row as V4LetterItem;
 
           return (
             <TableRow key={item.id || index}>
-              <TableCell className="font-medium">{formatText(item.nomorSurat)}</TableCell>
-              <TableCell>{formatText(item.perihal)}</TableCell>
-              <TableCell>{formatText(item.jenisNaskah)}</TableCell>
-              <TableCell>{formatText(item.penandatangan)}</TableCell>
+              <TableCell className="font-medium">{formatText(item.letterNumber)}</TableCell>
+              <TableCell>{formatText(item.subject)}</TableCell>
+              <TableCell>{formatText(item.documentType)}</TableCell>
+              <TableCell>{formatText(item.signerName)}</TableCell>
               <TableCell>{formatText(item.scope)}</TableCell>
-              <TableCell>{formatText(item.tanggal)}</TableCell>
+              <TableCell>{formatDate(item.letterDate)}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
-              <TableCell>{formatText(item.fileFinal)}</TableCell>
+              <TableCell>{formatText(item.finalFileUrl)}</TableCell>
               <TableCell>Detail</TableCell>
             </TableRow>
           );
@@ -119,8 +145,20 @@ function V4SuratKeluarPage({ scope }: { scope: SekretariatScope }) {
   );
 }
 
-function V4SuratMasukPage({ scope }: { scope: SekretariatScope }) {
+function V4SuratMasukPage({ scope }: { scope: V4SekretariatScope }) {
   const label = scopeLabel(scope);
+  const [letters, setLetters] = useState<V4LetterItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    getIncomingLetters(scope).then((result) => {
+      setLetters(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, [scope]);
 
   return (
     <div className="space-y-6">
@@ -130,20 +168,22 @@ function V4SuratMasukPage({ scope }: { scope: SekretariatScope }) {
       />
       <DataTableShell
         title="Daftar Surat Masuk"
-        description="Data akan tampil setelah endpoint sekretariat tersedia."
+        description="Data arsip surat masuk dari endpoint /api/letters?type=incoming."
         columns={["Nomor Surat Asal", "Pengirim", "Perihal", "Tanggal Surat", "Tanggal Diterima", "File Scan", "Status", "Aksi"]}
-        rows={[]}
+        rows={letters}
+        loading={loading}
+        error={error}
         renderRow={(row, index) => {
-          const item = row as SuratMasukItem;
+          const item = row as V4LetterItem;
 
           return (
             <TableRow key={item.id || index}>
-              <TableCell className="font-medium">{formatText(item.nomorSuratAsal)}</TableCell>
-              <TableCell>{formatText(item.pengirim)}</TableCell>
-              <TableCell>{formatText(item.perihal)}</TableCell>
-              <TableCell>{formatText(item.tanggalSurat)}</TableCell>
-              <TableCell>{formatText(item.tanggalDiterima)}</TableCell>
-              <TableCell>{formatText(item.fileScan)}</TableCell>
+              <TableCell className="font-medium">{formatText(item.originNumber)}</TableCell>
+              <TableCell>{formatText(item.senderName)}</TableCell>
+              <TableCell>{formatText(item.subject)}</TableCell>
+              <TableCell>{formatDate(item.letterDate)}</TableCell>
+              <TableCell>{formatDate(item.receivedAt)}</TableCell>
+              <TableCell>{formatText(item.scanFileUrl)}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
               <TableCell>Detail</TableCell>
             </TableRow>
@@ -154,8 +194,20 @@ function V4SuratMasukPage({ scope }: { scope: SekretariatScope }) {
   );
 }
 
-function V4AssetTtdPage({ scope }: { scope: SekretariatScope }) {
+function V4AssetTtdPage({ scope }: { scope: V4SekretariatScope }) {
   const label = scopeLabel(scope);
+  const [signatures, setSignatures] = useState<V4SignatureItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    getSignatures(scope).then((result) => {
+      setSignatures(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, [scope]);
 
   return (
     <div className="space-y-6">
@@ -165,19 +217,21 @@ function V4AssetTtdPage({ scope }: { scope: SekretariatScope }) {
       />
       <DataTableShell
         title="Daftar Asset TTD"
-        description="Preview PNG akan tampil setelah data asset tersedia."
+        description="Metadata asset tanda tangan dari endpoint /api/signatures."
         columns={["Nama Pimpinan", "Jabatan", "Scope", "Preview PNG", "Status Aktif", "Aksi"]}
-        rows={[]}
+        rows={signatures}
+        loading={loading}
+        error={error}
         renderRow={(row, index) => {
-          const item = row as AssetTtdItem;
+          const item = row as V4SignatureItem;
 
           return (
             <TableRow key={item.id || index}>
-              <TableCell className="font-medium">{formatText(item.namaPimpinan)}</TableCell>
-              <TableCell>{formatText(item.jabatan)}</TableCell>
+              <TableCell className="font-medium">{formatText(item.leaderName)}</TableCell>
+              <TableCell>{formatText(item.positionName)}</TableCell>
               <TableCell>{formatText(item.scope)}</TableCell>
-              <TableCell>{formatText(item.previewPng)}</TableCell>
-              <TableCell><StatusBadge status={item.status} /></TableCell>
+              <TableCell>{formatText(item.imageUrl)}</TableCell>
+              <TableCell><StatusBadge status={item.isActive ? "aktif" : "nonaktif"} /></TableCell>
               <TableCell>Detail</TableCell>
             </TableRow>
           );
@@ -187,8 +241,20 @@ function V4AssetTtdPage({ scope }: { scope: SekretariatScope }) {
   );
 }
 
-function V4TemplateSuratPage({ scope }: { scope: SekretariatScope }) {
+function V4TemplateSuratPage({ scope }: { scope: V4SekretariatScope }) {
   const label = scopeLabel(scope);
+  const [templates, setTemplates] = useState<V4TemplatePositionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    getTemplates(scope).then((result) => {
+      setTemplates(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, [scope]);
 
   return (
     <div className="space-y-6">
@@ -198,21 +264,23 @@ function V4TemplateSuratPage({ scope }: { scope: SekretariatScope }) {
       />
       <DataTableShell
         title="Daftar Template Surat"
-        description="Koordinat nomor, TTD, dan QR akan dikelola setelah endpoint tersedia."
+        description="Koordinat template dari endpoint /api/templates."
         columns={["Jenis Naskah", "Nomor X/Y", "TTD X/Y", "QR X/Y", "Ukuran Font", "Halaman Target", "Preview Posisi"]}
-        rows={[]}
+        rows={templates}
+        loading={loading}
+        error={error}
         renderRow={(row, index) => {
-          const item = row as TemplateSuratItem;
+          const item = row as V4TemplatePositionItem;
 
           return (
             <TableRow key={item.id || index}>
-              <TableCell className="font-medium">{formatText(item.jenisNaskah)}</TableCell>
-              <TableCell>{formatText(item.nomorPosition)}</TableCell>
-              <TableCell>{formatText(item.ttdPosition)}</TableCell>
-              <TableCell>{formatText(item.qrPosition)}</TableCell>
-              <TableCell>{formatText(item.ukuranFont)}</TableCell>
-              <TableCell>{formatText(item.halamanTarget)}</TableCell>
-              <TableCell>Preview</TableCell>
+              <TableCell className="font-medium">{formatText(item.documentType)}</TableCell>
+              <TableCell>{formatPosition(item.numberX, item.numberY)}</TableCell>
+              <TableCell>{formatPosition(item.signatureX, item.signatureY)}</TableCell>
+              <TableCell>{formatPosition(item.qrX, item.qrY)}</TableCell>
+              <TableCell>{item.fontSize}</TableCell>
+              <TableCell>{item.targetPage}</TableCell>
+              <TableCell><StatusBadge status={item.isActive ? "aktif" : "nonaktif"} /></TableCell>
             </TableRow>
           );
         }}
