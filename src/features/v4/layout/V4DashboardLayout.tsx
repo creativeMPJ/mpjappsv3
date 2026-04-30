@@ -4,19 +4,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { findV4NavItem, pusatNav, regionalNav, type V4Role } from "../navigation/v4-navigation";
-import { V4Sidebar } from "./V4Sidebar";
+import { DesktopSidebar, MobileSidebar } from "./V4Sidebar";
 
 function roleLabel(role: V4Role) {
   return role === "pusat" ? "Admin Pusat" : "Admin Regional";
 }
 
 export default function V4DashboardLayout({ role }: { role: V4Role }) {
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const groups = role === "pusat" ? pusatNav : regionalNav;
   const active = findV4NavItem(role, pathname);
-  const displayName = profile?.nama_pesantren || roleLabel(role);
+  const displayName = user?.name || profile?.nama_pesantren || roleLabel(role);
+  const displayRole = roleLabel(role);
+  const pageTitle = active?.label || "Beranda";
   const initials = displayName.substring(0, 2).toUpperCase();
 
   const handleLogout = async () => {
@@ -26,14 +28,14 @@ export default function V4DashboardLayout({ role }: { role: V4Role }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <V4Sidebar title={`MPJ ${roleLabel(role)}`} subtitle="Dashboard v4" groups={groups} onLogout={handleLogout} />
+      <DesktopSidebar title={`MPJ ${roleLabel(role)}`} subtitle="Dashboard v4" groups={groups} onLogout={handleLogout} />
       <div className="min-h-screen lg:pl-72">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm lg:px-6">
           <div className="flex items-center gap-3">
-            <V4Sidebar title={`MPJ ${roleLabel(role)}`} subtitle="Dashboard v4" groups={groups} onLogout={handleLogout} mobileOnly />
+            <MobileSidebar title={`MPJ ${roleLabel(role)}`} subtitle="Dashboard v4" groups={groups} onLogout={handleLogout} />
             <div>
               <p className="text-xs text-muted-foreground">{roleLabel(role)}</p>
-              <h2 className="text-base font-semibold text-emerald-800">{active?.label || "Dashboard v4"}</h2>
+              <h2 className="text-base font-semibold text-emerald-800">{pageTitle}</h2>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -45,6 +47,10 @@ export default function V4DashboardLayout({ role }: { role: V4Role }) {
               <AvatarImage src={profile?.logo_url || "/placeholder.svg"} />
               <AvatarFallback className="bg-emerald-700 text-white">{initials}</AvatarFallback>
             </Avatar>
+            <div className="hidden sm:block">
+              <p className="text-sm font-medium text-slate-900">{displayName}</p>
+              <p className="text-xs text-muted-foreground">{displayRole}</p>
+            </div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl space-y-6 p-4 lg:p-6">

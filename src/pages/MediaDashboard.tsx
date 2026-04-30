@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatNIP, getProfileLevelInfo } from "@/lib/id-utils";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
 import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
 import { apiRequest } from "@/lib/api-client";
 import MediaDashboardHome from "@/components/media-dashboard/MediaDashboardHome";
@@ -41,6 +42,12 @@ interface KoordinatorData {
   niam: string | null;
   jabatan: string;
   xp_level?: number;
+  status?: string | null;
+  paymentVerified?: boolean;
+  xpTotal?: number;
+  xp_total?: number;
+  transactionXpTotal?: number;
+  transaction_xp_total?: number;
   photoUrl?: string;
 }
 
@@ -122,9 +129,9 @@ const MediaDashboard = () => {
       if (isDebugMode && debugKoordinator) { setKoordinator(debugKoordinator); return; }
       if (!user?.id) return;
       try {
-        const data = await apiRequest<{ koordinator: { nama: string; niam: string | null; jabatan: string; xp_level: number } | null; }>("/api/media/dashboard-context");
+        const data = await apiRequest<{ koordinator: KoordinatorData | null; }>("/api/media/dashboard-context");
         if (data.koordinator) {
-          setKoordinator({ nama: data.koordinator.nama, niam: data.koordinator.niam, jabatan: data.koordinator.jabatan || 'Koordinator', xp_level: data.koordinator.xp_level || 0 });
+          setKoordinator({ ...data.koordinator, jabatan: data.koordinator.jabatan || 'Koordinator' });
         }
       } catch (error) {
         console.error('Error fetching koordinator:', error);
@@ -158,6 +165,7 @@ const MediaDashboard = () => {
   const displayNIP = profile?.nip ? formatNIP(profile.nip, true) : null;
   const showAktivasiMenu = paymentStatus === 'unpaid';
   const menuItems = getMenuItems(showAktivasiMenu);
+  const headerXP = getTransactionXPTotal(koordinator as unknown as Record<string, unknown>);
 
   const renderContent = () => {
     switch (activeView) {
@@ -288,10 +296,12 @@ const MediaDashboard = () => {
               <IdCard className="h-4 w-4" />
               <span className="hidden md:inline">E-ID</span>
             </div>
-            <div className="hidden sm:flex items-center gap-1 bg-[#f59e0b] text-slate-900 px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
-              <Zap className="h-4 w-4" />
-              <span>150 XP</span>
-            </div>
+            {headerXP > 0 && (
+              <div className="hidden sm:flex items-center gap-1 bg-[#f59e0b] text-slate-900 px-3 py-1.5 rounded-full text-sm font-bold shadow-sm">
+                <Zap className="h-4 w-4" />
+                <span>{headerXP} XP</span>
+              </div>
+            )}
             <Button variant="ghost" size="icon" className={cn("relative h-9 w-9", isPlatinum ? "text-white hover:bg-white/10" : "")}>
               <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />

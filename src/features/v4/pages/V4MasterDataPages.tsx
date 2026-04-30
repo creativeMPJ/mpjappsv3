@@ -1,28 +1,241 @@
-import { useEffect, useMemo, useState } from "react";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  getPusatMasterData,
-  getRegionalMasterData,
-  type V4MasterCrew,
-  type V4MasterProfile,
-} from "../services/master-data.service";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TableCell, TableRow } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import { formatText } from "../utils";
 
 type MasterScope = "pusat" | "regional";
 type MasterType = "pesantren" | "media" | "kru";
 
-interface MasterDataState {
-  profiles: V4MasterProfile[];
-  crews: V4MasterCrew[];
+interface V4Institution {
+  id: string;
+  nip: string;
+  name: string;
+  regional: string;
+  status: string;
+  profileLevel: string;
 }
 
-function formatText(value: string | number | null | undefined) {
-  if (typeof value === "number") return String(value);
-  return value && value.trim() ? value : "-";
+interface V4Crew {
+  id: string;
+  niam: string;
+  name: string;
+  roleCode: string;
+  jabatan: string;
+  status: string;
+  institutionId: string;
+  regional: string;
 }
+
+interface V4Media {
+  id: string;
+  name: string;
+  institutionId: string;
+  institutionName: string;
+  coordinatorCrewId: string;
+  status: string;
+  regional: string;
+}
+
+const ACTIVE_REGIONAL = "Jawa Timur 1";
+
+const institution: V4Institution[] = [
+  {
+    id: "inst-001",
+    nip: "3525010001",
+    name: "Pesantren Al Hikmah",
+    regional: "Jawa Timur 1",
+    status: "active",
+    profileLevel: "gold",
+  },
+  {
+    id: "inst-002",
+    nip: "3578010002",
+    name: "Pesantren Nurul Falah",
+    regional: "Jawa Timur 1",
+    status: "pending",
+    profileLevel: "silver",
+  },
+  {
+    id: "inst-003",
+    nip: "3204010003",
+    name: "Pesantren Darussalam",
+    regional: "Jawa Barat",
+    status: "active",
+    profileLevel: "platinum",
+  },
+  {
+    id: "inst-004",
+    nip: "3374010004",
+    name: "Pesantren Miftahul Ulum",
+    regional: "Jawa Tengah",
+    status: "inactive",
+    profileLevel: "basic",
+  },
+];
+
+const crew: V4Crew[] = [
+  {
+    id: "crew-001",
+    niam: "NIAM-352501-001",
+    name: "Ahmad Fauzi",
+    roleCode: "media_lead",
+    jabatan: "Koordinator Media",
+    status: "active",
+    institutionId: "inst-001",
+    regional: "Jawa Timur 1",
+  },
+  {
+    id: "crew-002",
+    niam: "NIAM-352501-002",
+    name: "Siti Aminah",
+    roleCode: "content_creator",
+    jabatan: "Kreator Konten",
+    status: "active",
+    institutionId: "inst-001",
+    regional: "Jawa Timur 1",
+  },
+  {
+    id: "crew-003",
+    niam: "NIAM-357801-003",
+    name: "Muhammad Rizqi",
+    roleCode: "editor",
+    jabatan: "Editor",
+    status: "pending",
+    institutionId: "inst-002",
+    regional: "Jawa Timur 1",
+  },
+  {
+    id: "crew-004",
+    niam: "NIAM-320401-004",
+    name: "Hasan Basri",
+    roleCode: "media_lead",
+    jabatan: "Koordinator Media",
+    status: "active",
+    institutionId: "inst-003",
+    regional: "Jawa Barat",
+  },
+];
+
+const media: V4Media[] = [
+  {
+    id: "media-001",
+    name: "Al Hikmah Media",
+    institutionId: "inst-001",
+    institutionName: "Pesantren Al Hikmah",
+    coordinatorCrewId: "crew-001",
+    status: "active",
+    regional: "Jawa Timur 1",
+  },
+  {
+    id: "media-002",
+    name: "Nurul Falah TV",
+    institutionId: "inst-002",
+    institutionName: "Pesantren Nurul Falah",
+    coordinatorCrewId: "crew-003",
+    status: "pending",
+    regional: "Jawa Timur 1",
+  },
+  {
+    id: "media-003",
+    name: "Darussalam Channel",
+    institutionId: "inst-003",
+    institutionName: "Pesantren Darussalam",
+    coordinatorCrewId: "crew-004",
+    status: "active",
+    regional: "Jawa Barat",
+  },
+];
+
+const statusOptions = ["all", "active", "pending", "inactive"];
 
 function normalizeLabel(value: string | null | undefined) {
   return formatText(value).replace(/_/g, " ");
+}
+
+function ActionCell() {
+  return (
+    <TableCell className="text-right">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" disabled>
+          Segera Hadir
+        </Button>
+      </div>
+    </TableCell>
+  );
+}
+
+function RelationLink({
+  scope,
+  id,
+  children,
+}: {
+  scope: MasterScope;
+  id: string;
+  children: string;
+}) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to={`/${scope}/master-data/kru?crew=${id}`}
+            className="font-medium text-primary underline-offset-4 transition-colors hover:text-primary/80 hover:underline"
+          >
+            {children}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent>Lihat profil kru</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function MasterFilterSelect({
+  value,
+  onValueChange,
+  options,
+  label,
+  placeholder,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: string[];
+  label: string;
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger className="h-9 w-full sm:w-44">
+          <SelectValue placeholder={label} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option === "all" ? placeholder : normalizeLabel(option)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 function getTitle(scope: MasterScope, type: MasterType) {
@@ -32,101 +245,221 @@ function getTitle(scope: MasterScope, type: MasterType) {
   return `Master Kru ${prefix}`;
 }
 
-function getDescription(scope: MasterScope, type: MasterType) {
-  const source = scope === "pusat" ? "/api/admin/master-data" : "/api/regional/master-data";
-  if (type === "pesantren") return `Data pesantren read-only dari ${source}.`;
-  if (type === "media") return `Data media read-only dari ${source}.`;
-  return `Data kru read-only dari ${source}.`;
+function getRows(scope: MasterScope, type: MasterType) {
+  const isRegional = scope === "regional";
+
+  if (type === "kru") {
+    return isRegional ? crew.filter((item) => item.regional === ACTIVE_REGIONAL) : crew;
+  }
+
+  if (type === "media") {
+    return isRegional ? [] : media;
+  }
+
+  return isRegional ? institution.filter((item) => item.regional === ACTIVE_REGIONAL) : institution;
+}
+
+function rowMatchesSearch(row: V4Institution | V4Crew | V4Media, search: string) {
+  if (!search) return true;
+
+  const normalizedSearch = search.toLowerCase();
+  return Object.values(row).some((value) => String(value).toLowerCase().includes(normalizedSearch));
+}
+
+function getRowStatus(row: V4Institution | V4Crew | V4Media) {
+  return row.status;
+}
+
+function getRowRegional(row: V4Institution | V4Crew | V4Media) {
+  return row.regional;
+}
+
+function getCrewById(id: string) {
+  return crew.find((item) => item.id === id) ?? null;
 }
 
 function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterType }) {
-  const [data, setData] = useState<MasterDataState>({ profiles: [], crews: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const activeCrewRowRef = useRef<HTMLTableRowElement | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [regionalFilter, setRegionalFilter] = useState("all");
+  const activeCrewId = searchParams.get("crew");
+  const isInactiveRegionalMedia = scope === "regional" && type === "media";
+  const title = getTitle(scope, type);
+
+  const baseRows = useMemo(() => getRows(scope, type), [scope, type]);
+  const regionalOptions = useMemo(
+    () => ["all", ...Array.from(new Set(institution.map((item) => item.regional)))],
+    [],
+  );
+  const rows = useMemo(
+    () =>
+      baseRows.filter((row) => {
+        const matchesSearch = rowMatchesSearch(row, search);
+        const matchesStatus = statusFilter === "all" || getRowStatus(row) === statusFilter;
+        const matchesRegional = scope !== "pusat" || regionalFilter === "all" || getRowRegional(row) === regionalFilter;
+
+        return matchesSearch && matchesStatus && matchesRegional;
+      }),
+    [baseRows, regionalFilter, scope, search, statusFilter],
+  );
 
   useEffect(() => {
-    const loader = scope === "pusat" ? getPusatMasterData : getRegionalMasterData;
+    if (type !== "kru" || !activeCrewId) {
+      return;
+    }
 
-    loader().then((result) => {
-      setData({
-        profiles: result.data?.profiles ?? [],
-        crews: result.data?.crews ?? [],
-      });
-      setError(result.error);
-      setLoading(false);
+    activeCrewRowRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
     });
-  }, [scope]);
+  }, [activeCrewId, rows, type]);
 
-  const rows = useMemo(() => {
-    if (type === "kru") return data.crews;
-    if (type === "media") return data.profiles.filter((profile) => Boolean(profile.nama_media));
-    return data.profiles;
-  }, [data.crews, data.profiles, type]);
+  const filters = (
+    <>
+      <MasterFilterSelect
+        value={statusFilter}
+        onValueChange={setStatusFilter}
+        options={statusOptions}
+        label="Filter Status"
+        placeholder="Semua"
+      />
+      {scope === "pusat" && (
+        <MasterFilterSelect
+          value={regionalFilter}
+          onValueChange={setRegionalFilter}
+          options={regionalOptions}
+          label="Filter Regional"
+          placeholder="Semua"
+        />
+      )}
+    </>
+  );
 
-  const title = getTitle(scope, type);
+  if (isInactiveRegionalMedia) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={title} description="Master Media Regional belum tersedia pada V4." />
+        <DataTableShell
+          title="Daftar Media"
+          description="Fitur ini belum aktif untuk admin regional."
+          columns={["Nama Media", "Pesantren", "Koordinator", "Status", "Aksi"]}
+          rows={[]}
+          emptyType="not_active"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <PageHeader title={title} description={getDescription(scope, type)} />
+      <PageHeader title={title} description="Data mock V4 read-only. Siap disambungkan ke backend." />
       {type === "kru" ? (
         <DataTableShell
           title="Daftar Kru"
-          description="Mode read-only. Create, edit, dan delete belum diaktifkan."
-          columns={["Nama", "NIAM", "Jabatan", "Pesantren", "Wilayah", "XP"]}
+          description="Source data: crew"
+          columns={["NIAM", "Nama", "RoleCode", "Jabatan", "Status", "Aksi"]}
           rows={rows}
-          loading={loading}
-          error={error}
+          enableSearch
+          searchPlaceholder="Cari kru"
+          searchValue={search}
+          onSearchChange={setSearch}
+          headerRight={filters}
+          emptyType="no_data"
           renderRow={(row, index) => {
-            const crew = row as V4MasterCrew;
+            const item = row as V4Crew;
+            const isActiveCrew = activeCrewId === item.id;
 
             return (
-              <TableRow key={crew.id || index}>
-                <TableCell className="font-medium">{formatText(crew.nama)}</TableCell>
-                <TableCell>{formatText(crew.niam)}</TableCell>
-                <TableCell>{formatText(crew.jabatan)}</TableCell>
-                <TableCell>{formatText(crew.pesantren_name)}</TableCell>
-                <TableCell>{formatText(crew.region_name)}</TableCell>
-                <TableCell>{formatText(crew.xp_level)}</TableCell>
+              <TableRow
+                ref={isActiveCrew ? activeCrewRowRef : undefined}
+                key={item.id || index}
+                className={isActiveCrew ? "bg-primary/10 ring-1 ring-inset ring-primary/20" : undefined}
+              >
+                <TableCell className="font-medium">{formatText(item.niam)}</TableCell>
+                <TableCell>
+                  <RelationLink scope={scope} id={item.id}>{formatText(item.name)}</RelationLink>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-muted/40 text-xs font-medium">
+                    {formatText(item.roleCode)}
+                  </Badge>
+                </TableCell>
+                <TableCell>{formatText(item.jabatan)}</TableCell>
+                <TableCell>
+                  <StatusBadge status={item.status} />
+                </TableCell>
+                <ActionCell />
+              </TableRow>
+            );
+          }}
+        />
+      ) : type === "media" ? (
+        <DataTableShell
+          title="Daftar Media"
+          description="Source data: media"
+          columns={["Nama Media", "Pesantren", "Koordinator", "Status", "Aksi"]}
+          rows={rows}
+          enableSearch
+          searchPlaceholder="Cari media"
+          searchValue={search}
+          onSearchChange={setSearch}
+          headerRight={filters}
+          emptyType="no_data"
+          renderRow={(row, index) => {
+            const item = row as V4Media;
+            const coordinator = getCrewById(item.coordinatorCrewId);
+
+            return (
+              <TableRow key={item.id || index}>
+                <TableCell className="font-medium text-muted-foreground">{formatText(item.name)}</TableCell>
+                <TableCell>{formatText(item.institutionName)}</TableCell>
+                <TableCell>
+                  {coordinator ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <RelationLink scope={scope} id={coordinator.id}>{formatText(coordinator.name)}</RelationLink>
+                      <Badge variant="outline" className="bg-primary/10 text-xs font-medium text-primary">
+                        Koordinator
+                      </Badge>
+                    </div>
+                  ) : (
+                    formatText(null)
+                  )}
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={item.status} />
+                </TableCell>
+                <ActionCell />
               </TableRow>
             );
           }}
         />
       ) : (
         <DataTableShell
-          title={type === "media" ? "Daftar Media" : "Daftar Pesantren"}
-          description="Mode read-only. Create, edit, dan delete belum diaktifkan."
-          columns={type === "media"
-            ? ["Nama Media", "Pesantren", "NIP", "Wilayah/Kota", "Status", "Kontak"]
-            : ["Nama Pesantren", "NIP", "Pengasuh", "Wilayah/Kota", "Level", "Status", "Kontak"]}
+          title="Daftar Pesantren"
+          description="Source data: institution"
+          columns={["NIP", "Nama", "Regional", "Status", "Level", "Aksi"]}
           rows={rows}
-          loading={loading}
-          error={error}
+          enableSearch
+          searchPlaceholder="Cari pesantren"
+          searchValue={search}
+          onSearchChange={setSearch}
+          headerRight={filters}
+          emptyType="no_data"
           renderRow={(row, index) => {
-            const profile = row as V4MasterProfile;
-            const location = [profile.region_name, profile.city_name].filter(Boolean).join(" / ");
-
-            if (type === "media") {
-              return (
-                <TableRow key={profile.id || index}>
-                  <TableCell className="font-medium">{formatText(profile.nama_media)}</TableCell>
-                  <TableCell>{formatText(profile.nama_pesantren)}</TableCell>
-                  <TableCell>{formatText(profile.nip)}</TableCell>
-                  <TableCell>{formatText(location)}</TableCell>
-                  <TableCell><StatusBadge status={profile.status_account} /></TableCell>
-                  <TableCell>{formatText(profile.no_wa_pendaftar)}</TableCell>
-                </TableRow>
-              );
-            }
+            const item = row as V4Institution;
 
             return (
-              <TableRow key={profile.id || index}>
-                <TableCell className="font-medium">{formatText(profile.nama_pesantren)}</TableCell>
-                <TableCell>{formatText(profile.nip)}</TableCell>
-                <TableCell>{formatText(profile.nama_pengasuh)}</TableCell>
-                <TableCell>{formatText(location)}</TableCell>
-                <TableCell className="capitalize">{normalizeLabel(profile.profile_level)}</TableCell>
-                <TableCell><StatusBadge status={profile.status_account} /></TableCell>
-                <TableCell>{formatText(profile.no_wa_pendaftar)}</TableCell>
+              <TableRow key={item.id || index}>
+                <TableCell>{formatText(item.nip)}</TableCell>
+                <TableCell className="font-medium">{formatText(item.name)}</TableCell>
+                <TableCell>{formatText(item.regional)}</TableCell>
+                <TableCell>
+                  <StatusBadge status={item.status} />
+                </TableCell>
+                <TableCell className="capitalize">{normalizeLabel(item.profileLevel)}</TableCell>
+                <ActionCell />
               </TableRow>
             );
           }}

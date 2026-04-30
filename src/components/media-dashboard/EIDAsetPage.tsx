@@ -12,6 +12,7 @@ import { VirtualCharter } from "@/components/shared/VirtualCharter";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
 import { formatNIP, formatNIAM } from "@/lib/id-utils";
 import { downloadElementAsJPG, generatePiagamFilename, generateEIDFilename } from "@/lib/charter-download";
+import { canAccessEID, canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
 
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
 
@@ -20,10 +21,18 @@ interface KoordinatorData {
   niam: string | null;
   jabatan: string;
   xp_level?: number;
+  status?: string | null;
+  paymentVerified?: boolean;
+  xpTotal?: number;
+  xp_total?: number;
+  transactionXpTotal?: number;
+  transaction_xp_total?: number;
   photoUrl?: string;
 }
 
 interface EIDAsetPageProps {
+  paymentStatus?: string;
+  profileLevel?: string;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
@@ -63,26 +72,28 @@ interface EIDAsetPageProps {
  * - QR Code: Links to public profile /pesantren/[NIP]
  */
 const EIDAsetPage = ({
+  paymentStatus: paymentStatusProp,
+  profileLevel: profileLevelProp,
   debugProfile,
   realProfile,
   approvalDate,
   koordinator: koordinatorProp
 }: EIDAsetPageProps = {}) => {
   const { profile: authProfile } = useAuth();
-  const paymentStatus = authProfile?.status_payment ?? 'unpaid';
-  const profileLevel: ProfileLevel = authProfile?.profile_level ?? 'basic';
+  const paymentStatus = paymentStatusProp ?? authProfile?.status_payment ?? 'unpaid';
+  const profileLevel: ProfileLevel = (profileLevelProp ?? authProfile?.profile_level ?? 'basic') as ProfileLevel;
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
   const [fetchedKoordinator, setFetchedKoordinator] = useState<KoordinatorData | undefined>(undefined);
 
   useEffect(() => {
     if (koordinatorProp) return;
-    apiRequest<{ crews: { nama: string; jabatan: string | null; niam: string | null; xp_level?: number }[] }>('/api/media/crew')
+    apiRequest<{ crews: KoordinatorData[] }>('/api/media/crew')
       .then(data => {
         const found = data.crews.find(c =>
           c.jabatan?.toLowerCase() === 'koordinator' || c.jabatan?.toLowerCase() === 'ketua'
         );
-        if (found) setFetchedKoordinator({ nama: found.nama, niam: found.niam, jabatan: found.jabatan || 'Koordinator', xp_level: found.xp_level });
+        if (found) setFetchedKoordinator({ ...found, jabatan: found.jabatan || 'Koordinator' });
       })
       .catch(() => {});
   }, [koordinatorProp]);
@@ -103,9 +114,14 @@ const EIDAsetPage = ({
 
   // Koordinator data from crews table (for E-ID)
   const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
-  const koordinatorNIAM = koordinator?.niam || null;
+  const koordinatorHasValidNIAM = canIssueNIAM({
+    crewStatus: koordinator?.status,
+    paymentStatus,
+    paymentVerified: koordinator?.paymentVerified,
+  });
+  const koordinatorNIAM = koordinatorHasValidNIAM ? koordinator?.niam || null : null;
   const koordinatorJabatan = koordinator?.jabatan || "Koordinator";
-  const koordinatorXP = koordinator?.xp_level || 0;
+  const koordinatorXP = getTransactionXPTotal(koordinator as unknown as Record<string, unknown>);
   const koordinatorPhoto = koordinator?.photoUrl;
 
   // Get highest achieved level
@@ -116,8 +132,11 @@ const EIDAsetPage = ({
   };
 
   const highestLevel = getHighestLevel();
-  const canAccessEID = paymentStatus === "paid";
-  const hasKoordinator = koordinator && koordinator.niam;
+  const canAccessCoordinatorEID = canAccessEID({
+    crewStatus: koordinator?.status,
+    profileLevel,
+  });
+  const hasKoordinator = Boolean(koordinator && koordinatorNIAM);
 
   // Check if user is unpaid - for paywall logic
   const isUnpaid = paymentStatus === "unpaid";
@@ -306,7 +325,7 @@ const EIDAsetPage = ({
 
         {/* Tab 2: E-ID Koordinator - Uses CREW data with NIAM */}
         <TabsContent value="eid" className="space-y-6">
-          {!canAccessEID ? (
+          {!canAccessCoordinatorEID ? (
             <Card className="bg-slate-100 relative overflow-hidden">
               <div className="blur-md opacity-50 pointer-events-none p-8">
                 <div className="aspect-[1.6/1] max-w-md mx-auto bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-xl" />
@@ -317,9 +336,7 @@ const EIDAsetPage = ({
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Fitur Terkunci</h3>
                 <p className="text-slate-300 text-center mb-4 px-8 max-w-md">
-                  {paymentStatus === "unpaid"
-                    ? "Lunasi administrasi untuk mengakses E-ID Card"
-                    : "Lengkapi profil ke level Gold untuk mengakses E-ID Card"}
+                  E-ID valid hanya untuk kru aktif dari pesantren level Silver atau lebih tinggi.
                 </p>
               </div>
             </Card>

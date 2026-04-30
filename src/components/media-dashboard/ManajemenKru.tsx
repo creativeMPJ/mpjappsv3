@@ -11,16 +11,21 @@ import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { useNavigate } from "react-router-dom";
 
 interface KoordinatorData {
   nama: string;
   niam: string | null;
   jabatan: string;
   xp_level?: number;
+  status?: string | null;
+  xpTotal?: number;
   photoUrl?: string;
 }
 
 interface ManajemenKruProps {
+  paymentStatus?: string;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
@@ -36,6 +41,12 @@ interface Crew {
   xp_level?: number;
   jabatan_code_id?: string | null;
   is_pic?: boolean;
+  status?: string | null;
+  paymentVerified?: boolean;
+  xp_total?: number;
+  xpTotal?: number;
+  transaction_xp_total?: number;
+  transactionXpTotal?: number;
 }
 
 const DEFAULT_FREE_SLOT = 3; // fallback before API loads
@@ -50,10 +61,11 @@ const JABATAN_OPTIONS = [
   { value: "admin", label: "Admin" },
 ];
 
-const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
+const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }: ManajemenKruProps = {}) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { profile } = useAuth();
-  const paymentStatus = profile?.status_payment ?? 'unpaid';
+  const paymentStatus = paymentStatusProp ?? profile?.status_payment ?? 'unpaid';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [crews, setCrews] = useState<Crew[]>([]);
@@ -83,9 +95,13 @@ const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
         koordinator
           ? {
             nama: koordinator.nama,
-            niam: koordinator.niam,
+            niam: canIssueNIAM({ crewStatus: koordinator.status, paymentStatus, paymentVerified: koordinator.paymentVerified })
+              ? koordinator.niam
+              : null,
             jabatan: koordinator.jabatan || "Koordinator",
-            xp_level: koordinator.xp_level || 0,
+            xp_level: getTransactionXPTotal(koordinator as unknown as Record<string, unknown>),
+            status: koordinator.status,
+            xpTotal: getTransactionXPTotal(koordinator as unknown as Record<string, unknown>),
           }
           : undefined
       );
@@ -226,10 +242,7 @@ const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
               variant="outline"
               size="sm"
               className="border-amber-300 text-amber-700 hover:bg-amber-50"
-              onClick={() => toast({
-                title: "Slot Tambahan",
-                description: `Harga: Rp ${slotConfig.addonSlotPrice.toLocaleString("id-ID")}/slot. Hubungi Admin Pusat untuk menambah slot.`,
-              })}
+              onClick={() => navigate("/payment")}
             >
               <Users className="h-3 w-3 mr-1.5" />
               Beli Slot (Rp {slotConfig.addonSlotPrice.toLocaleString("id-ID")}/slot)
@@ -255,6 +268,15 @@ const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {crews.map((crew, index) => (
+            (() => {
+              const hasValidNIAM = canIssueNIAM({
+                crewStatus: crew.status,
+                paymentStatus,
+                paymentVerified: crew.paymentVerified,
+              });
+              const xpTotal = getTransactionXPTotal(crew as unknown as Record<string, unknown>);
+
+              return (
             <Card
               key={crew.id}
               className={cn(
@@ -287,7 +309,7 @@ const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
                     <p className="text-sm text-slate-600">{crew.jabatan || "-"}</p>
 
                     {/* NIAM Badge */}
-                    {crew.niam && (
+                    {crew.niam && hasValidNIAM && (
                       <Badge
                         variant="outline"
                         className="mt-2 font-mono text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
@@ -297,10 +319,10 @@ const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
                     )}
 
                     {/* XP */}
-                    {(crew.xp_level ?? 0) > 0 && (
+                    {xpTotal > 0 && (
                       <div className="flex items-center gap-1 mt-1.5 text-amber-600 text-xs font-medium">
                         <Zap className="h-3 w-3" />
-                        <span>{crew.xp_level} XP</span>
+                        <span>{xpTotal} XP</span>
                       </div>
                     )}
                   </div>
@@ -319,6 +341,8 @@ const ManajemenKru = ({ onKoordinatorChange }: ManajemenKruProps = {}) => {
                 </div>
               </CardContent>
             </Card>
+              );
+            })()
           ))}
         </div>
       )}

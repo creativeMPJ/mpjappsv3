@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { IS_DEV_AUTH_BYPASS_ENABLED } from '@/config/devAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,6 +14,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 
   const locationState = location.state as { isDebugMode?: boolean } | null;
   const isDebugMode = locationState?.isDebugMode === true;
+
+  if (IS_DEV_AUTH_BYPASS_ENABLED) {
+    return <>{children}</>;
+  }
 
   if (isDebugMode) {
     return <>{children}</>;

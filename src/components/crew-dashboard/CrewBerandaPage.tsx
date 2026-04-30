@@ -10,6 +10,7 @@ import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -19,6 +20,12 @@ interface CrewData {
   niam?: string;
   jabatan?: string;
   xp_level?: number;
+  xpTotal?: number;
+  xp_total?: number;
+  transactionXpTotal?: number;
+  transaction_xp_total?: number;
+  status?: string | null;
+  paymentVerified?: boolean;
   skill?: string[];
   institution_name?: string;
   institution_nip?: string;
@@ -59,14 +66,19 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
   
   const isDebugMode = (location.state as any)?.isDebugMode;
 
   // Use debug data or fallback to defaults
   const crewName = debugCrew?.nama || "Ahmad Fauzi";
-  const crewNIAM = debugCrew?.niam || "";
-  const currentXP = debugCrew?.xp_level || 150;
+  const hasValidNIAM = canIssueNIAM({
+    crewStatus: debugCrew?.status,
+    paymentStatus: profile?.status_payment,
+    paymentVerified: debugCrew?.paymentVerified,
+  });
+  const crewNIAM = hasValidNIAM ? debugCrew?.niam || "" : "";
+  const currentXP = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
   const jabatan = debugCrew?.jabatan || "Kru Media";
   const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah";
   

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { canAccessEID, canAccessRestrictedCrewFeature } from "@/lib/v4-core-rules";
 import CrewBerandaPage from "@/components/crew-dashboard/CrewBerandaPage";
 import CrewEIDCardPage from "@/components/crew-dashboard/CrewEIDCardPage";
 import CrewProfilPage from "@/components/crew-dashboard/CrewProfilPage";
@@ -34,13 +35,20 @@ const CrewDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
   const [activeView, setActiveView] = useState<ViewType>("beranda");
-  const [institutionPaid, setInstitutionPaid] = useState(true);
 
   // Support debug mode via location.state
   const debugCrew = (location.state as any)?.debugCrew;
   const isDebugMode = (location.state as any)?.isDebugMode;
+  const crewStatus = debugCrew?.status;
+  const institutionProfileLevel =
+    debugCrew?.institution_profile_level ??
+    debugCrew?.profile_level ??
+    profile?.profile_level;
+  const canUseRestrictedFeature = canAccessRestrictedCrewFeature({ crewStatus });
+  const canUseEID = canAccessEID({ crewStatus, profileLevel: institutionProfileLevel });
+  const restrictedViews = new Set<ViewType>(["leaderboard", "hub", "event", "eid"]);
 
   const handleLogout = async () => {
     if (isDebugMode) {
@@ -56,6 +64,15 @@ const CrewDashboard = () => {
   };
 
   const handleNavClick = (item: NavItem) => {
+    if (restrictedViews.has(item.id) && !canUseRestrictedFeature) {
+      toast({
+        title: "Akses Ditutup",
+        description: "Status alumni tidak dapat mengakses fitur terbatas atau mendaftar event.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (item.isComingSoon) {
       setActiveView(item.id);
     } else {
@@ -64,6 +81,15 @@ const CrewDashboard = () => {
   };
 
   const renderContent = () => {
+    if (restrictedViews.has(activeView) && !canUseRestrictedFeature) {
+      return (
+        <ComingSoonOverlay
+          title="Akses Ditutup"
+          description="Status alumni tidak dapat mengakses fitur terbatas atau mendaftar event."
+        />
+      );
+    }
+
     // Check if Coming Soon
     const currentNav = navItems.find(n => n.id === activeView);
     if (currentNav?.isComingSoon) {
@@ -89,7 +115,7 @@ const CrewDashboard = () => {
       case "beranda":
         return <CrewBerandaPage onNavigate={setActiveView} debugCrew={debugCrew} />;
       case "eid":
-        return <CrewEIDCardPage isGold={institutionPaid} onBack={() => setActiveView("profil")} debugCrew={debugCrew} />;
+        return <CrewEIDCardPage canAccessEID={canUseEID} onBack={() => setActiveView("profil")} debugCrew={debugCrew} />;
       case "profil":
         return <CrewProfilPage onNavigate={setActiveView} debugCrew={debugCrew} />;
       default:
@@ -179,20 +205,6 @@ const CrewDashboard = () => {
           })}
         </div>
       </nav>
-
-      {/* Testing Toggle (Debug only) */}
-      {isDebugMode && (
-        <div className="fixed bottom-24 right-4 z-50">
-          <Button
-            size="sm"
-            variant={institutionPaid ? "default" : "secondary"}
-            onClick={() => setInstitutionPaid(!institutionPaid)}
-            className="shadow-lg text-xs"
-          >
-            {institutionPaid ? "🏅 Gold" : "🔒 Basic"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

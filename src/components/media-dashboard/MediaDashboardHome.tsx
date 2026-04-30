@@ -62,10 +62,10 @@ const MediaDashboardHome = () => {
 
   // Mission items for daily tasks
   const missionItems = [
-    { label: "Data Dasar Lengkap", completed: profileLevel !== "basic", points: 100 },
-    { label: "Logo & Dokumen Terunggah", completed: profileLevel === "gold" || profileLevel === "platinum", points: 150 },
-    { label: "Profil Ensiklopedia", completed: profileLevel === "platinum", points: 200 },
-    { label: "Administrasi Lunas", completed: paymentStatus === "paid", points: 100 },
+    { label: "Data Dasar Lengkap", completed: profileLevel !== "basic" },
+    { label: "Logo & Dokumen Terunggah", completed: profileLevel === "gold" || profileLevel === "platinum" },
+    { label: "Profil Ensiklopedia", completed: profileLevel === "platinum" },
+    { label: "Administrasi Lunas", completed: paymentStatus === "paid" },
   ];
 
   const getLevelInfo = () => {
@@ -208,12 +208,6 @@ const MediaDashboardHome = () => {
                     {mission.label}
                   </p>
                 </div>
-                <Badge variant="outline" className={cn(
-                  "text-xs shadow-sm",
-                  mission.completed ? "border-emerald-300 text-emerald-700 bg-emerald-50" : "border-slate-300 text-slate-600 bg-white"
-                )}>
-                  +{mission.points} XP
-                </Badge>
               </div>
             ))}
           </div>

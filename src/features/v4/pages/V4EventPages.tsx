@@ -1,20 +1,11 @@
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
 import { getEventList, type V4EventItem } from "../services/event.service";
+import { formatDate, formatText } from "../utils";
 
 type EventScope = "pusat" | "regional";
-
-function formatText(value: string | null | undefined) {
-  return value && value.trim() ? value : "-";
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 function V4EventListPage({ scope }: { scope: EventScope }) {
   const [events, setEvents] = useState<V4EventItem[]>([]);
@@ -39,7 +30,7 @@ function V4EventListPage({ scope }: { scope: EventScope }) {
       <DataTableShell
         title="Daftar Event"
         description="Mode read-only. Create, edit, dan delete belum diaktifkan."
-        columns={["Nama Event", "Deskripsi", "Tanggal", "Lokasi", "Status"]}
+        columns={["Nama Event", "Deskripsi", "Tanggal", "Lokasi", "Status", "Aksi"]}
         rows={events}
         loading={loading}
         error={error}
@@ -53,6 +44,13 @@ function V4EventListPage({ scope }: { scope: EventScope }) {
               <TableCell>{formatDate(event.date)}</TableCell>
               <TableCell>{formatText(event.location)}</TableCell>
               <TableCell><StatusBadge status={event.status} /></TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" disabled>
+                    Segera Hadir
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           );
         }}

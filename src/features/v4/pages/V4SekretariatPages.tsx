@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
 import {
@@ -11,6 +12,7 @@ import {
   type V4SignatureItem,
   type V4TemplatePositionItem,
 } from "../services/sekretariat.service";
+import { FileLink, formatDate, formatText } from "../utils";
 
 interface SummaryItem {
   modul: string;
@@ -22,20 +24,21 @@ function scopeLabel(scope: V4SekretariatScope) {
   return scope === "pusat" ? "Pusat" : "Regional";
 }
 
-function formatText(value: string | null | undefined) {
-  return value && value.trim() ? value : "-";
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
-}
-
 function formatPosition(x: number | string | null | undefined, y: number | string | null | undefined) {
   if (x === null || x === undefined || y === null || y === undefined) return "-";
   return `${x}/${y}`;
+}
+
+function ActionCell() {
+  return (
+    <TableCell className="text-right">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" disabled>
+          Segera Hadir
+        </Button>
+      </div>
+    </TableCell>
+  );
 }
 
 function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
@@ -75,7 +78,7 @@ function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
       <DataTableShell
         title="Aktivitas Surat"
         description="Ringkasan surat masuk, surat keluar, asset TTD, dan template."
-        columns={["Modul", "Total Data", "Status"]}
+        columns={["Modul", "Total Data", "Status", "Aksi"]}
         rows={rows}
         loading={loading}
         error={error}
@@ -87,6 +90,7 @@ function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell className="font-medium">{formatText(item.modul)}</TableCell>
               <TableCell>{item.total}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
+              <ActionCell />
             </TableRow>
           );
         }}
@@ -135,8 +139,8 @@ function V4SuratKeluarPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{formatText(item.scope)}</TableCell>
               <TableCell>{formatDate(item.letterDate)}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
-              <TableCell>{formatText(item.finalFileUrl)}</TableCell>
-              <TableCell>Detail</TableCell>
+              <TableCell><FileLink href={item.finalFileUrl} label="Unduh" /></TableCell>
+              <ActionCell />
             </TableRow>
           );
         }}
@@ -183,9 +187,9 @@ function V4SuratMasukPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{formatText(item.subject)}</TableCell>
               <TableCell>{formatDate(item.letterDate)}</TableCell>
               <TableCell>{formatDate(item.receivedAt)}</TableCell>
-              <TableCell>{formatText(item.scanFileUrl)}</TableCell>
+              <TableCell><FileLink href={item.scanFileUrl} label="Unduh" /></TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
-              <TableCell>Detail</TableCell>
+              <ActionCell />
             </TableRow>
           );
         }}
@@ -230,9 +234,9 @@ function V4AssetTtdPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell className="font-medium">{formatText(item.leaderName)}</TableCell>
               <TableCell>{formatText(item.positionName)}</TableCell>
               <TableCell>{formatText(item.scope)}</TableCell>
-              <TableCell>{formatText(item.imageUrl)}</TableCell>
+              <TableCell><FileLink href={item.imageUrl} label="Unduh" /></TableCell>
               <TableCell><StatusBadge status={item.isActive ? "aktif" : "nonaktif"} /></TableCell>
-              <TableCell>Detail</TableCell>
+              <ActionCell />
             </TableRow>
           );
         }}
@@ -265,7 +269,7 @@ function V4TemplateSuratPage({ scope }: { scope: V4SekretariatScope }) {
       <DataTableShell
         title="Daftar Template Surat"
         description="Koordinat template dari endpoint /api/templates."
-        columns={["Jenis Naskah", "Nomor X/Y", "TTD X/Y", "QR X/Y", "Ukuran Font", "Halaman Target", "Preview Posisi"]}
+        columns={["Jenis Naskah", "Nomor X/Y", "TTD X/Y", "QR X/Y", "Ukuran Font", "Halaman Target", "Preview Posisi", "Aksi"]}
         rows={templates}
         loading={loading}
         error={error}
@@ -281,6 +285,7 @@ function V4TemplateSuratPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{item.fontSize}</TableCell>
               <TableCell>{item.targetPage}</TableCell>
               <TableCell><StatusBadge status={item.isActive ? "aktif" : "nonaktif"} /></TableCell>
+              <ActionCell />
             </TableRow>
           );
         }}

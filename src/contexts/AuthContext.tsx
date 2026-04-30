@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { IS_DEV_AUTH_BYPASS_ENABLED, mockProfile, mockUser } from '@/config/devAuth';
 
 export type AppRole = 'user' | 'admin_regional' | 'admin_pusat' | 'admin_finance';
 export type AccountStatus = 'pending' | 'active' | 'rejected';
@@ -15,6 +16,8 @@ export interface AksesItem {
 export interface AuthUser {
   id: string;
   email: string;
+  role?: AppRole;
+  name?: string;
 }
 
 export interface AuthProfile {
@@ -152,12 +155,21 @@ function normalizeAkses(rawAkses: unknown): Record<string, AksesItem> {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<{ access_token: string } | null>(null);
-  const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(IS_DEV_AUTH_BYPASS_ENABLED ? mockUser : null);
+  const [session, setSession] = useState<{ access_token: string } | null>(
+    IS_DEV_AUTH_BYPASS_ENABLED ? { access_token: 'dev-bypass-token' } : null
+  );
+  const [profile, setProfile] = useState<AuthProfile | null>(IS_DEV_AUTH_BYPASS_ENABLED ? mockProfile : null);
+  const [isLoading, setIsLoading] = useState(!IS_DEV_AUTH_BYPASS_ENABLED);
 
   const signOut = async () => {
+    if (IS_DEV_AUTH_BYPASS_ENABLED) {
+      setUser(mockUser);
+      setSession({ access_token: 'dev-bypass-token' });
+      setProfile(mockProfile);
+      return;
+    }
+
     localStorage.removeItem(TOKEN_KEY);
     setUser(null);
     setSession(null);
@@ -165,6 +177,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshAuth = async () => {
+    if (IS_DEV_AUTH_BYPASS_ENABLED) {
+      setUser(mockUser);
+      setSession({ access_token: 'dev-bypass-token' });
+      setProfile(mockProfile);
+      return;
+    }
+
     try {
       const token = localStorage.getItem(TOKEN_KEY);
       if (!token) {
@@ -201,10 +220,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const setAuthToken = (token: string) => {
+    if (IS_DEV_AUTH_BYPASS_ENABLED) {
+      setUser(mockUser);
+      setSession({ access_token: 'dev-bypass-token' });
+      setProfile(mockProfile);
+      return;
+    }
+
     localStorage.setItem(TOKEN_KEY, token);
   };
 
   useEffect(() => {
+    if (IS_DEV_AUTH_BYPASS_ENABLED) {
+      setUser(mockUser);
+      setSession({ access_token: 'dev-bypass-token' });
+      setProfile(mockProfile);
+      setIsLoading(false);
+      return;
+    }
+
     refreshAuth().finally(() => {
       setIsLoading(false);
     });

@@ -9,9 +9,11 @@ import { toast } from "@/hooks/use-toast";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
+import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CrewEIDCardPageProps {
-  isGold: boolean;
+  canAccessEID: boolean;
   onBack: () => void;
   // Crew data from crews table - required for proper E-ID card generation
   debugCrew?: {
@@ -19,6 +21,12 @@ interface CrewEIDCardPageProps {
     niam?: string | null;
     jabatan?: string;
     xp_level?: number;
+    xpTotal?: number;
+    xp_total?: number;
+    transactionXpTotal?: number;
+    transaction_xp_total?: number;
+    status?: string | null;
+    paymentVerified?: boolean;
     skill?: string[];
     photoUrl?: string;
     // Institution context
@@ -28,22 +36,28 @@ interface CrewEIDCardPageProps {
   };
 }
 
-const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCardPageProps) => {
+const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: CrewEIDCardPageProps) => {
   const location = useLocation();
+  const { profile } = useAuth();
 
   // Support debug mode via location.state OR props
   const stateDebugCrew = (location.state as any)?.debugCrew;
   const isDebugMode = (location.state as any)?.isDebugMode || !!propDebugCrew;
   const debugCrew = propDebugCrew || stateDebugCrew;
+  const hasValidNIAM = canIssueNIAM({
+    crewStatus: debugCrew?.status,
+    paymentStatus: profile?.status_payment,
+    paymentVerified: debugCrew?.paymentVerified,
+  });
 
   // Build crew data - ALL fields from crews table
   const crewData = isDebugMode && debugCrew ? {
     name: debugCrew.nama || "Nama Kru",
-    noId: debugCrew.niam ? formatNIAM(debugCrew.niam, true) : "—",
+    noId: debugCrew.niam && hasValidNIAM ? formatNIAM(debugCrew.niam, true) : "—",
     asalMedia: debugCrew.institution_name || debugCrew.pesantren_asal || "Media Pesantren",
     alamatPesantren: debugCrew.alamat_asal || "Alamat Pesantren",
     role: debugCrew.jabatan || "Kru Media",
-    xp: debugCrew.xp_level || 0,
+    xp: getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>),
     skills: debugCrew.skill || [],
     photoUrl: debugCrew.photoUrl,
     socialMedia: {
@@ -57,7 +71,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
     asalMedia: "PP. Nurul Huda",
     alamatPesantren: "Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur",
     role: "Kru Media",
-    xp: 150,
+    xp: 0,
     skills: ["Fotografer", "Editor", "Desainer"],
     photoUrl: undefined,
     socialMedia: {
@@ -75,7 +89,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
     });
   };
 
-  if (!isGold && !isDebugMode) {
+  if (!canAccessEID) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] p-4">
         <Card className="w-full max-w-sm bg-muted relative overflow-hidden">
@@ -105,11 +119,11 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             </div>
             <h3 className="text-lg font-bold text-primary-foreground mb-2">Fitur Terkunci</h3>
             <p className="text-primary-foreground/80 text-center text-sm mb-6 px-8">
-              Upgrade ke status Gold untuk mengakses E-Kartu Anggota
+              E-ID valid hanya untuk kru aktif dari pesantren level Silver atau lebih tinggi.
             </p>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
               <Shield className="h-4 w-4 mr-2" />
-              Upgrade to Gold
+              Lengkapi Syarat E-ID
             </Button>
           </div>
         </Card>

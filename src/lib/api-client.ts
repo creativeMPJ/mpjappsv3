@@ -1,3 +1,5 @@
+import { IS_DEV_AUTH_BYPASS_ENABLED } from "@/config/devAuth";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:3001";
 
 function getToken(): string | null {
@@ -26,7 +28,7 @@ export async function apiRequest<T = any>(path: string, init?: RequestInit): Pro
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !IS_DEV_AUTH_BYPASS_ENABLED) {
       localStorage.removeItem("mpj_auth_token");
       window.location.href = "/login";
     }

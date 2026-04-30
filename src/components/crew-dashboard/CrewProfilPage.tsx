@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
+import { useAuth } from "@/contexts/AuthContext";
+import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -22,6 +24,12 @@ interface CrewProfilPageProps {
     niam?: string;
     jabatan?: string;
     xp_level?: number;
+    xpTotal?: number;
+    xp_total?: number;
+    transactionXpTotal?: number;
+    transaction_xp_total?: number;
+    status?: string | null;
+    paymentVerified?: boolean;
     skill?: string[];
     institution_name?: string;
     pesantren_asal?: string;
@@ -45,11 +53,16 @@ const teamMembers = [
 ];
 
 const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
+  const { profile } = useAuth();
   // Use debug data if available
   const [namaLengkap, setNamaLengkap] = useState(debugCrew?.nama || "Ahmad Fauzi");
   const [namaPanggilan, setNamaPanggilan] = useState(debugCrew?.nama_panggilan || "Fauzi");
-  const niam = debugCrew?.niam || null;
-  const xpLevel = debugCrew?.xp_level || 150;
+  const niam = canIssueNIAM({
+    crewStatus: debugCrew?.status,
+    paymentStatus: profile?.status_payment,
+    paymentVerified: debugCrew?.paymentVerified,
+  }) ? debugCrew?.niam || null : null;
+  const xpLevel = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
   const [whatsapp, setWhatsapp] = useState(debugCrew?.whatsapp || "081234567890");
   const [pesantrenAsal, setPesantrenAsal] = useState(debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah");
   const [alamatAsal, setAlamatAsal] = useState(debugCrew?.alamat_asal || "Jl. Raya Pesantren No. 45, Malang");
