@@ -12,14 +12,13 @@ import {
   UserCog,
   CreditCard,
   AlertTriangle,
-  Layers,
   Award,
   CheckCircle2,
   IdCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNIP } from "@/lib/id-utils";
-import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
+import { VerifiedBadge } from "@/components/shared/LevelBadge";
 import { getPaymentStateLabel, isPaymentActive } from "@/features/v4/utils";
 
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
@@ -65,8 +64,7 @@ const MediaDashboardHome = ({
 
   const isPlatinum = profileLevel === 'platinum';
   const displayNIP = sourceProfile?.nip ? formatNIP(sourceProfile.nip, true) : null;
-  const displayName = profile?.nama_pesantren || "Media Pesantren";
-  const jumlahSantri = 0;
+  const displayName = sourceProfile?.nama_pesantren || "Media Pesantren";
 
   // Calculate profile completion based on level
   const getProfileCompletion = () => {
@@ -90,10 +88,10 @@ const MediaDashboardHome = ({
 
   const getLevelInfo = () => {
     switch (profileLevel) {
-      case "silver": return { color: "bg-slate-400", label: "Silver", icon: "🥈" };
-      case "gold": return { color: "bg-[#f59e0b]", label: "Gold", icon: "🥇" };
-      case "platinum": return { color: "bg-gradient-to-r from-cyan-500 to-blue-500", label: "Platinum", icon: "💎" };
-      default: return { color: "bg-slate-500", label: "Basic", icon: "🏅" };
+      case "silver": return { color: "bg-slate-400", label: "Silver" };
+      case "gold": return { color: "bg-[#f59e0b]", label: "Gold" };
+      case "platinum": return { color: "bg-gradient-to-r from-cyan-500 to-blue-500", label: "Platinum" };
+      default: return { color: "bg-slate-500", label: "Basic" };
     }
   };
 
@@ -177,7 +175,7 @@ const MediaDashboardHome = ({
               profileLevel === "gold" && "shadow-amber-300/50",
               profileLevel === "silver" && "shadow-slate-300/50"
             )}>
-              {levelInfo.icon} {levelInfo.label}
+              {levelInfo.label}
             </Badge>
             <Badge className={cn(
               "shadow-sm",
@@ -185,7 +183,7 @@ const MediaDashboardHome = ({
                 ? "bg-green-500 text-white shadow-green-200/50"
                 : "bg-red-500 text-white shadow-red-200/50"
             )}>
-              {paymentActive ? "ACTIVE" : paymentLabel}
+              {paymentActive ? "Akun aktif" : paymentLabel}
             </Badge>
           </div>
         </CardContent>
@@ -234,13 +232,11 @@ const MediaDashboardHome = ({
         </CardContent>
       </Card>
 
-      {/* Stats Grid - 2 Cards Only (MVP) */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Total Santri */}
         <Card className="bg-white border border-slate-200 shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">Total Santri</h3>
+              <h3 className="font-semibold text-slate-900">Data Santri</h3>
               <Users className="h-5 w-5 text-emerald-600" />
             </div>
             <div className="flex items-center gap-4">
@@ -248,14 +244,13 @@ const MediaDashboardHome = ({
                 <Users className="h-7 w-7 text-emerald-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-slate-900">{jumlahSantri}</p>
-                <p className="text-sm text-slate-600">Santri terdaftar</p>
+                <p className="text-base font-semibold text-slate-900">Belum ada data</p>
+                <p className="text-sm text-slate-600">Data akan tampil setelah tersedia</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Total Kru */}
         <Card
           className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
           onClick={() => onNavigate("tim")}
@@ -270,8 +265,8 @@ const MediaDashboardHome = ({
                 <UserCog className="h-7 w-7 text-emerald-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-slate-900">3</p>
-                <p className="text-sm text-slate-600">Anggota aktif (3/3 slot)</p>
+                <p className="text-base font-semibold text-slate-900">Belum ada data</p>
+                <p className="text-sm text-slate-600">Data akan tampil setelah tersedia</p>
               </div>
             </div>
           </CardContent>
@@ -293,20 +288,9 @@ const MediaDashboardHome = ({
                 <Calendar className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 truncate">Pelatihan Videografi</p>
-                <p className="text-sm text-slate-600">28 Januari 2026 - 09:00 WIB</p>
+                <p className="font-medium text-slate-900 truncate">Belum ada data</p>
+                <p className="text-sm text-slate-600">Data akan tampil setelah tersedia</p>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-700 shadow-sm hidden sm:inline-flex">Upcoming</Badge>
-            </div>
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Award className="h-6 w-6 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 truncate">Lomba Konten Digital</p>
-                <p className="text-sm text-slate-600">5 Februari 2026 - 08:00 WIB</p>
-              </div>
-              <Badge className="bg-amber-100 text-amber-700 shadow-sm hidden sm:inline-flex">Upcoming</Badge>
             </div>
           </div>
         </CardContent>

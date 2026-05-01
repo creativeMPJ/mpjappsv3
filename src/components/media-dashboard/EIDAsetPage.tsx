@@ -63,7 +63,7 @@ interface EIDAsetPageProps {
  * - E-ID Koordinator: Virtual and Physical Member Card - uses CREW data (NIAM)
  * 
  * DATA BINDING:
- * - NIP: From profiles.nip (generated on payment approval)
+ * - NIP: From profiles.nip after payment approval
  * - Nama Pesantren: From profiles.nama_pesantren
  * - Tanggal Terbit: From pesantren_claims.approved_at
  * - QR Code: Links to public profile /pesantren/[NIP]
@@ -106,12 +106,12 @@ const EIDAsetPage = ({
 
   // Institution data (for Piagam) - prioritize real data
   const displayNIP = institutionProfile?.nip || authProfile?.nip || "";
-  const displayPesantrenName = institutionProfile?.nama_pesantren || authProfile?.nama_pesantren || "Pesantren Belum Terdaftar";
-  const displayAddress = institutionProfile?.alamat_singkat || "Alamat belum diisi";
+  const displayPesantrenName = institutionProfile?.nama_pesantren || authProfile?.nama_pesantren || "-";
+  const displayAddress = institutionProfile?.alamat_singkat || "-";
   const displayMediaName = institutionProfile?.nama_media || displayPesantrenName;
 
   // Koordinator data from crews table (for E-ID)
-  const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
+  const koordinatorName = koordinator?.nama || "-";
   const koordinatorNIAM = koordinator?.niam ?? null;
   const koordinatorJabatan = koordinator?.jabatan || "Koordinator";
   const koordinatorXP = getTransactionXPTotal(koordinator as unknown as Record<string, unknown>);
@@ -157,7 +157,7 @@ const EIDAsetPage = ({
     if (!hasValidNIP) {
       toast({
         title: "NIP Belum Tersedia",
-        description: "NIP akan diterbitkan setelah pembayaran diverifikasi oleh Admin Pusat.",
+        description: "Identitas resmi akan tampil setelah pembayaran terverifikasi.",
         variant: "destructive",
       });
       return;
@@ -256,9 +256,9 @@ const EIDAsetPage = ({
                   <div className="flex items-start gap-2">
                     <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-amber-800">NIP Belum Diterbitkan</p>
+                      <p className="text-sm font-medium text-amber-800">Identitas belum aktif</p>
                       <p className="text-xs text-amber-700">
-                        Nomor Induk Pesantren (NIP) akan diterbitkan otomatis setelah pembayaran Anda diverifikasi oleh Admin Pusat.
+                        Identitas resmi akan tampil setelah pembayaran terverifikasi.
                       </p>
                     </div>
                   </div>
@@ -304,7 +304,7 @@ const EIDAsetPage = ({
                     {(isUnpaid || !hasValidNIP) && (
                       <TooltipContent>
                         <p className="max-w-xs">
-                          {isUnpaid ? lockedTooltipMessage : "NIP belum diterbitkan. Tunggu verifikasi pembayaran."}
+                          {isUnpaid ? lockedTooltipMessage : "Identitas resmi akan tampil setelah pembayaran terverifikasi."}
                         </p>
                       </TooltipContent>
                     )}
@@ -367,20 +367,16 @@ const EIDAsetPage = ({
                     alamat={displayAddress}
                     role={koordinatorJabatan}
                     xp={koordinatorXP}
-                    socialMedia={{
-                      instagram: "@mpj_jatim",
-                      youtube: "Media Pondok Jatim"
-                    }}
                   />
                 </CardContent>
               </Card>
 
-              {/* Physical Card Preview - Uses NIAM and crew photo */}
+              {/* Physical card uses NIAM and crew photo */}
               <Card className="bg-white">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <IdCard className="h-4 w-4 text-[#166534]" />
-                    Pratinjau Fisik (Portrait)
+                    Kartu Fisik (Portrait)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -392,10 +388,6 @@ const EIDAsetPage = ({
                     role={koordinatorJabatan}
                     xp={koordinatorXP}
                     photoUrl={koordinatorPhoto}
-                    socialMedia={{
-                      instagram: "@mpj_jatim",
-                      youtube: "Media Pondok Jatim"
-                    }}
                   />
                 </CardContent>
               </Card>

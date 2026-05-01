@@ -31,11 +31,11 @@ const EventPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Manajemen Event</h1>
-          <p className="text-slate-500">Sequential Engine untuk pengelolaan event pesantren</p>
+          <p className="text-slate-500">Fitur event akan segera tersedia</p>
         </div>
         <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
           <Construction className="h-3 w-3" />
-          Coming Soon
+          Segera Hadir
         </Badge>
       </div>
 
@@ -59,7 +59,7 @@ const EventPage = () => {
               <CardContent className="p-0">
                 <ComingSoonOverlay 
                   title={`Modul ${tab.label}`}
-                  description={`Fitur ${tab.label} Event sedang dalam pengembangan dan akan segera tersedia.`}
+                  description={`Fitur ${tab.label} event akan segera tersedia.`}
                 />
               </CardContent>
             </Card>
@@ -72,32 +72,14 @@ const EventPage = () => {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Calendar className="h-5 w-5 text-[#166534]" />
-            Agenda Event Mendatang
+            Agenda Event
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-4 border border-slate-200 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center z-10">
-                <Badge className="bg-amber-500 text-white">Coming Soon</Badge>
-              </div>
-              <p className="text-3xl font-bold text-slate-300">0</p>
-              <p className="text-sm text-slate-400">Event Terdaftar</p>
-            </div>
-            <div className="bg-white rounded-lg p-4 border border-slate-200 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center z-10">
-                <Badge className="bg-amber-500 text-white">Coming Soon</Badge>
-              </div>
-              <p className="text-3xl font-bold text-slate-300">0</p>
-              <p className="text-sm text-slate-400">Sertifikat Diklaim</p>
-            </div>
-            <div className="bg-white rounded-lg p-4 border border-slate-200 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-slate-900/50 flex items-center justify-center z-10">
-                <Badge className="bg-amber-500 text-white">Coming Soon</Badge>
-              </div>
-              <p className="text-3xl font-bold text-slate-300">0</p>
-              <p className="text-sm text-slate-400">Laporan Selesai</p>
-            </div>
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
+            <Calendar className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+            <p className="font-medium text-slate-700">Belum ada data</p>
+            <p className="text-sm text-slate-500">Data akan tampil setelah tersedia</p>
           </div>
         </CardContent>
       </Card>

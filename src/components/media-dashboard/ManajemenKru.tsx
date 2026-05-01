@@ -50,8 +50,6 @@ interface Crew {
   transactionXpTotal?: number;
 }
 
-const DEFAULT_FREE_SLOT = 3; // fallback before API loads
-
 // Fixed jabatan options as dropdown
 const JABATAN_OPTIONS = [
   { value: "ketua", label: "Ketua" },
@@ -65,6 +63,15 @@ const JABATAN_OPTIONS = [
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Terjadi kesalahan";
 
+const getCrewStatusMeta = (status?: string | null) => {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "active") return { label: "Aktif", className: "bg-emerald-100 text-emerald-700 border-emerald-200" };
+  if (normalized === "pending") return { label: "Pending", className: "bg-amber-100 text-amber-700 border-amber-200" };
+  if (normalized === "inactive") return { label: "Inactive", className: "bg-slate-100 text-slate-700 border-slate-200" };
+  if (normalized === "alumni") return { label: "Alumni", className: "bg-blue-100 text-blue-700 border-blue-200" };
+  return { label: "-", className: "bg-slate-100 text-slate-600 border-slate-200" };
+};
+
 const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }: ManajemenKruProps = {}) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -76,19 +83,19 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
   const [crews, setCrews] = useState<Crew[]>([]);
   const [nama, setNama] = useState("");
   const [jabatan, setJabatan] = useState("");
-  const [slotConfig, setSlotConfig] = useState({ freeSlotQuantity: DEFAULT_FREE_SLOT, addonSlotPrice: 10000 });
+  const [slotConfig, setSlotConfig] = useState<{ freeSlotQuantity: number; addonSlotPrice: number } | null>(null);
 
-  const FREE_SLOT_LIMIT = slotConfig.freeSlotQuantity;
+  const FREE_SLOT_LIMIT = slotConfig?.freeSlotQuantity ?? 0;
   const totalCrew = crews.length;
-  const isFreeSlotFull = totalCrew >= FREE_SLOT_LIMIT;
-  const canAddCrew = payment.isActive && !isFreeSlotFull;
+  const isFreeSlotFull = Boolean(slotConfig && totalCrew >= FREE_SLOT_LIMIT);
+  const canAddCrew = payment.isActive && Boolean(slotConfig) && !isFreeSlotFull;
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [crewData, config] = await Promise.all([
         apiRequest<{ crews: Crew[] }>("/api/media/crew"),
-        apiRequest<{ freeSlotQuantity: number; addonSlotPrice: number }>("/api/media/slot-config").catch(() => ({ freeSlotQuantity: DEFAULT_FREE_SLOT, addonSlotPrice: 10000 })),
+        apiRequest<{ freeSlotQuantity: number; addonSlotPrice: number }>("/api/media/slot-config").catch(() => null),
       ]);
       setSlotConfig(config);
       setCrews(crewData.crews ?? []);
@@ -132,6 +139,14 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
       toast({
         title: payment.label,
         description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!slotConfig) {
+      toast({
+        title: "Data slot belum tersedia",
+        description: "Coba refresh halaman sebelum menambah kru.",
         variant: "destructive",
       });
       return;
@@ -205,7 +220,7 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900">Tim Media</h1>
           <p className="text-sm text-slate-600">
-            Kelola anggota tim media pesantren ({totalCrew}/{FREE_SLOT_LIMIT} slot gratis)
+            Kelola anggota tim media pesantren ({totalCrew}/{slotConfig?.freeSlotQuantity ?? "-"} slot gratis)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -230,6 +245,11 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
               <>
                 <Lock className="h-4 w-4 mr-2" />
                 Aktifkan akun terlebih dahulu
+              </>
+            ) : !slotConfig ? (
+              <>
+                <Lock className="h-4 w-4 mr-2" />
+                Data slot belum tersedia
               </>
             ) : isFreeSlotFull ? (
               <>
@@ -262,7 +282,7 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
       )}
 
       {/* Slot Full Alert */}
-      {isFreeSlotFull && (
+      {isFreeSlotFull && slotConfig && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
@@ -301,6 +321,7 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
           {crews.map((crew, index) => (
             (() => {
               const xpTotal = getTransactionXPTotal(crew as unknown as Record<string, unknown>);
+              const statusMeta = getCrewStatusMeta(crew.status);
 
               return (
             <Card
@@ -331,6 +352,9 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
                           PIC
                         </Badge>
                       )}
+                      <Badge variant="outline" className={cn("text-[10px] px-1.5", statusMeta.className)}>
+                        {statusMeta.label}
+                      </Badge>
                     </div>
                     <p className="text-sm text-slate-600">{crew.jabatan || "-"}</p>
 
@@ -365,8 +389,17 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDelete(crew.id)}
-                      className="text-red-400 hover:text-red-600 hover:bg-red-50 h-8 w-8 flex-shrink-0"
+                      onClick={() => {
+                        if (!payment.isActive) return;
+                        handleDelete(crew.id);
+                      }}
+                      disabled={!payment.isActive}
+                      className={cn(
+                        "h-8 w-8 flex-shrink-0",
+                        payment.isActive
+                          ? "text-red-400 hover:text-red-600 hover:bg-red-50"
+                          : "text-slate-300 cursor-not-allowed"
+                      )}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -416,13 +449,13 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
               <div className="flex items-end">
                 <Button
                   onClick={handleAdd}
-                  disabled={saving || !payment.isActive}
+                  disabled={saving || !canAddCrew}
                   className={cn(
                     "w-full h-11 text-white",
-                    payment.isActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed",
+                    canAddCrew ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed",
                   )}
                 >
-                  {!payment.isActive ? "Aktifkan akun terlebih dahulu" : saving ? "Menyimpan..." : "Tambah Kru"}
+                  {!payment.isActive ? "Aktifkan akun terlebih dahulu" : !slotConfig ? "Data slot belum tersedia" : saving ? "Menyimpan..." : "Tambah Kru"}
                 </Button>
               </div>
             </div>

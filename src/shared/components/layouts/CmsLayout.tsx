@@ -33,7 +33,7 @@ interface CmsMenuItem extends SidebarMenuItem {
   aksesKey: string;
 }
 
-// Dashboard IDs — ditampilkan berdasarkan role, bukan akses
+// Dashboard IDs ditampilkan berdasarkan role, bukan akses.
 const DASHBOARD_IDS = new Set([
   '',
   'user-beranda',
@@ -43,14 +43,14 @@ const DASHBOARD_IDS = new Set([
 ]);
 
 const ALL_MENUS: CmsMenuItem[] = [
-  // Dashboards — satu per role, dipilih berdasarkan role
+  // Dashboards, satu per role, dipilih berdasarkan role.
   { id: 'user-beranda',             aksesKey: 'user-beranda',             label: 'BERANDA',   icon: LayoutDashboard },
   { id: 'admin-pusat-dashboard',    aksesKey: 'admin-pusat-dashboard',    label: 'DASHBOARD', icon: LayoutDashboard },
   { id: 'admin-regional-dashboard', aksesKey: 'admin-regional-dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
   { id: 'admin-finance-dashboard',  aksesKey: 'admin-finance-dashboard',  label: 'DASHBOARD', icon: LayoutDashboard },
   { id: '',                         aksesKey: '',                         label: 'DASHBOARD', icon: LayoutDashboard },
 
-  // Feature menus — tampil jika akses[aksesKey].view === true (dari API)
+  // Feature menus tampil jika akses[aksesKey].view === true dari API.
   { id: 'identitas',    aksesKey: 'identitas',   label: 'PROFIL PESANTREN', icon: IdCard },
   { id: 'pembayaran',   aksesKey: 'pembayaran',  label: 'ADMINISTRASI',     icon: ClipboardList },
   { id: 'tim',          aksesKey: 'tim',         label: 'KELOLA CREW',      icon: Users },
@@ -83,7 +83,7 @@ const ALL_MENUS: CmsMenuItem[] = [
   { id: 'finance',         aksesKey: 'finance',         label: 'FINANCE',         icon: DollarSign, soon: true },
   { id: 'hak-akses',       aksesKey: 'hak-akses',       label: 'HAK AKSES',       icon: Shield },
 
-  // Shared — satu route, semua role
+  // Shared, satu route untuk semua role.
   { id: 'pengaturan', aksesKey: 'pengaturan', label: 'PENGATURAN', icon: Settings },
 ];
 
@@ -121,7 +121,7 @@ const CmsLayout = () => {
     : `MPJ ${roleDisplayLabel}`;
   const sidebarSubtitle = isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
 
-  // Filter murni berdasarkan akses dari API — tidak ada section logic di frontend
+  // Filter murni berdasarkan akses dari API.
   const visibleMenus = useMemo(() => ALL_MENUS.filter((m) => {
     if (DASHBOARD_IDS.has(m.id)) return m.id === activeDashboardId;
     return akses[m.aksesKey]?.view === true;
@@ -171,7 +171,7 @@ const CmsLayout = () => {
         <div>
           <p className="text-sm text-muted-foreground">Selamat datang kembali,</p>
           <h2 className="text-lg font-bold text-emerald-700">
-            Halo, {displayName} 👋
+            Halo, {displayName}
           </h2>
         </div>
       }

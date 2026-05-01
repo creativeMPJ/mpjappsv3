@@ -57,6 +57,8 @@ const Sidebar = ({
   const sidebarWidth = collapsible && collapsed ? "w-20" : "w-64";
 
   const handleViewChange = (id: string) => {
+    const item = menuItems.find((menuItem) => menuItem.id === id);
+    if (item?.soon) return;
     onViewChange(id);
     setMobileOpen(false);
   };
@@ -68,13 +70,17 @@ const Sidebar = ({
         return (
           <button
             key={item.id}
+            type="button"
+            disabled={item.soon}
             onClick={() => handleViewChange(item.id)}
+            aria-disabled={item.soon}
             className={cn(
               "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 text-left min-h-[44px]",
               isActive
                 ? "bg-black/20 text-white border-l-4 border-amber-500 pl-[8px]"
                 : "text-white/80 hover:bg-white/10 hover:text-white",
-              item.highlight && !isActive && "bg-amber-500/20 text-amber-200 border-l-4 border-amber-400 pl-[8px]"
+              item.highlight && !isActive && "bg-amber-500/20 text-amber-200 border-l-4 border-amber-400 pl-[8px]",
+              item.soon && "opacity-60 cursor-not-allowed hover:bg-transparent hover:text-white/80"
             )}
           >
             <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -83,7 +89,7 @@ const Sidebar = ({
                 <span className="flex-1 text-sm font-medium">{item.label}</span>
                 {item.soon && (
                   <Badge className="bg-amber-500/80 text-white text-[10px] px-1.5">
-                    Soon
+                    Segera Hadir
                   </Badge>
                 )}
                 {item.badge !== undefined && item.badge > 0 && (

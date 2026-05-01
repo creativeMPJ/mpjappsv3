@@ -64,7 +64,6 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── VERIFIED ──────────────────────────────────────────────────────────────
   if (normalizedStatus === "verified") {
     return (
       <div className="space-y-4">
@@ -74,12 +73,12 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
               <PartyPopper className="h-8 w-8 text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-emerald-700">Pembayaran Lunas!</h3>
-              <p className="text-sm text-muted-foreground mt-1">Akun Anda aktif penuh. Nikmati semua fitur MPJ Apps.</p>
+              <h3 className="text-lg font-bold text-emerald-700">Pembayaran terverifikasi</h3>
+              <p className="text-sm text-muted-foreground mt-1">Akun aktif.</p>
             </div>
             <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Lunas & Terverifikasi
+              Terverifikasi
             </Badge>
           </CardContent>
         </Card>
@@ -110,7 +109,6 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── PENDING VERIFICATION ──────────────────────────────────────────────────
   if (normalizedStatus === "pending") {
     return (
       <div className="space-y-4">
@@ -120,12 +118,12 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
               <Clock3 className="h-8 w-8 text-amber-500 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-amber-700">Menunggu Verifikasi</h3>
-              <p className="text-sm text-muted-foreground mt-1">Bukti pembayaran Anda sedang diproses admin. Estimasi 1×24 jam kerja.</p>
+              <h3 className="text-lg font-bold text-amber-700">Menunggu verifikasi pembayaran</h3>
+              <p className="text-sm text-muted-foreground mt-1">Bukti pembayaran Anda sedang diproses.</p>
             </div>
             <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
               <Clock3 className="h-3.5 w-3.5 mr-1" />
-              Dalam Proses
+              Menunggu verifikasi pembayaran
             </Badge>
           </CardContent>
         </Card>
@@ -161,7 +159,6 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── REJECTED ──────────────────────────────────────────────────────────────
   if (normalizedStatus === "rejected") {
     return (
       <div className="space-y-4">
@@ -194,7 +191,6 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── PENDING PAYMENT (belum bayar) ─────────────────────────────────────────
   return (
     <div className="space-y-4">
       <Card className="border-slate-200 bg-gradient-to-br from-slate-50 to-white">

@@ -39,14 +39,14 @@ const AktivasiNIPNIAM = () => {
 
     if (normalizedStatus === "verified") {
       return {
-        label: "Aktivasi Selesai",
+        label: "Akun aktif",
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
         tone: "bg-emerald-100 text-emerald-700 border-emerald-200",
       };
     }
     if (normalizedStatus === "pending") {
       return {
-        label: "Menunggu verifikasi",
+        label: "Menunggu verifikasi pembayaran",
         icon: <Clock3 className="h-4 w-4 text-amber-600" />,
         tone: "bg-amber-100 text-amber-700 border-amber-200",
       };
@@ -92,7 +92,7 @@ const AktivasiNIPNIAM = () => {
         )}
 
         <p className="text-sm text-muted-foreground">
-          Klik tombol di bawah untuk lanjut upload bukti pembayaran dan verifikasi.
+          Aktivasi diproses oleh sistem setelah pembayaran disetujui.
         </p>
         <Button
           className="gap-2"

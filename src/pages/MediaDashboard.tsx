@@ -268,10 +268,10 @@ const MediaDashboard = () => {
               Ahlan wa Sahlan<br />Khodim MPJ!
             </h2>
             <p className="text-gray-500 text-sm mb-8">
-              Status Akun: <strong>BASIC</strong>. ID Card terkunci.
+              Status akun: <strong>Belum aktif</strong>. ID Card terkunci.
             </p>
             <button onClick={handleActivateFromWelcome} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-4 rounded-xl text-base transition-colors mb-4">
-              Aktifkan Keanggoatan
+              Aktifkan Akun
             </button>
             <button onClick={handleDismissWelcome} className="text-gray-500 hover:text-gray-700 text-sm underline transition-colors">
               Nanti Saja
@@ -292,7 +292,7 @@ const MediaDashboard = () => {
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
                 <span className="text-red-700 text-sm">
-                  <strong>Masa Aktif Habis.</strong> Lunasi tagihan di menu Administrasi.
+                  <strong>Belum aktif.</strong> Selesaikan pembayaran di menu Administrasi.
                 </span>
                 <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => handleMenuClick("administrasi")}>
                   Bayar Sekarang
