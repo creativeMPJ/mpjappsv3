@@ -140,7 +140,7 @@ const FinanceVerifikasi = () => {
       );
       toast({
         title: "Pembayaran terverifikasi",
-        description: `${result.pesantrenName ?? selectedPayment.pesantren_claims.pesantren_name} diproses oleh sistem.`,
+        description: `${result.pesantrenName ?? selectedPayment.pesantren_claims.pesantren_name} menunggu proses aktivasi sistem.`,
       });
       setShowApproveDialog(false);
       fetchPayments();
@@ -333,7 +333,7 @@ const FinanceVerifikasi = () => {
           <DialogHeader>
             <DialogTitle>Konfirmasi Verifikasi Pembayaran</DialogTitle>
             <DialogDescription>
-              Setujui pembayaran ini? Aktivasi akun akan diproses oleh sistem.
+              Setujui pembayaran ini? Akun akan diproses sesuai alur aktivasi sistem setelah pembayaran terverifikasi.
             </DialogDescription>
           </DialogHeader>
           {selectedPayment && (

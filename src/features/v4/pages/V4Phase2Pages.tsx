@@ -22,11 +22,11 @@ export function PusatVerifikasiPaymentPage() {
     <div className="space-y-6">
       <PageHeader
         title="Verifikasi Payment"
-        description="Daftar pembayaran untuk review pusat."
+        description="Monitoring read-only pembayaran untuk review pusat."
       />
       <DataTableShell
         title="Daftar Pembayaran"
-        description="Aksi lanjutan akan segera tersedia."
+        description="Aksi dilakukan di dashboard operasional yang sudah tersedia."
         columns={["Pesantren", "Pengelola", "Jenis Pengajuan", "Total", "Status", "Bukti", "Tanggal", "Aksi"]}
         rows={payments}
         loading={loading}
@@ -43,7 +43,7 @@ export function PusatVerifikasiPaymentPage() {
               <TableCell><StatusBadge status={payment.status} /></TableCell>
               <TableCell><FileLink href={payment.proof_file_url} label="Unduh" /></TableCell>
               <TableCell>{formatDate(payment.created_at)}</TableCell>
-              <DisabledActionCell />
+              <DisabledActionCell label="Segera Hadir" />
             </TableRow>
           );
         }}
@@ -69,11 +69,11 @@ export function RegionalMonitoringPendaftaranPage() {
     <div className="space-y-6">
       <PageHeader
         title="Monitoring Pendaftaran"
-        description="Daftar klaim atau pendaftaran yang menunggu tindak lanjut."
+        description="Monitoring read-only klaim atau pendaftaran yang menunggu tindak lanjut regional."
       />
       <DataTableShell
-        title="Pendaftaran Pending"
-        description="Aksi lanjutan akan segera tersedia."
+        title="Pengajuan Menunggu Tindak Lanjut"
+        description="Aksi dilakukan di dashboard operasional yang sudah tersedia."
         columns={["Pesantren", "Pengelola", "Jenis Pengajuan", "Kecamatan", "Kontak", "Status", "Dokumen", "Tanggal", "Aksi"]}
         rows={registrations}
         loading={loading}
@@ -91,7 +91,7 @@ export function RegionalMonitoringPendaftaranPage() {
               <TableCell><StatusBadge status={registration.status} /></TableCell>
               <TableCell><FileLink href={registration.dokumen_bukti_url} label="Unduh" /></TableCell>
               <TableCell>{formatDate(registration.created_at)}</TableCell>
-              <DisabledActionCell />
+              <DisabledActionCell label="Segera Hadir" />
             </TableRow>
           );
         }}
