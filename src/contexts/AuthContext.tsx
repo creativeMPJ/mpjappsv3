@@ -1,7 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { IS_DEV_AUTH_BYPASS_ENABLED, mockProfile, mockUser } from '@/config/devAuth';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  DEV_ROLE_PREVIEW_EVENT,
+  IS_DEV_AUTH_BYPASS_ENABLED,
+  getDevAuthState,
+  getDevPreviewRole,
+  getDevPreviewRoleForPath,
+} from '@/config/devAuth';
 
-export type AppRole = 'user' | 'admin_regional' | 'admin_pusat' | 'admin_finance';
+export type AppRole = 'user' | 'crew' | 'admin_regional' | 'admin_pusat' | 'admin_finance';
 export type AccountStatus = 'pending' | 'active' | 'rejected';
 export type ProfileLevel = 'basic' | 'silver' | 'gold' | 'platinum';
 export type PaymentStatus = 'paid' | 'unpaid';
@@ -49,6 +56,7 @@ const TOKEN_KEY = 'mpj_auth_token';
 
 const ROLE_MAP: Record<string, AppRole> = {
   user: 'user',
+  crew: 'crew',
   admin_regional: 'admin_regional',
   admin_pusat: 'admin_pusat',
   admin_finance: 'admin_finance',
@@ -101,7 +109,11 @@ export const useAuth = () => {
   return context;
 };
 
-async function fetchMe(token: string): Promise<{ user: any } | null> {
+interface FetchMeResponse {
+  user: Record<string, unknown>;
+}
+
+async function fetchMe(token: string): Promise<FetchMeResponse | null> {
   const response = await fetch(`${API_BASE}/api/auth/me`, {
     method: 'GET',
     headers: {
@@ -114,6 +126,18 @@ async function fetchMe(token: string): Promise<{ user: any } | null> {
   }
 
   return response.json();
+}
+
+function applyDevAuthState(setUser: (value: AuthUser | null) => void, setSession: (value: { access_token: string } | null) => void, setProfile: (value: AuthProfile | null) => void) {
+  const role = getDevPreviewRoleForPath(typeof window !== 'undefined' ? window.location.pathname : undefined);
+  const devState = getDevAuthState(role);
+
+  setUser(devState.user);
+  if (typeof window !== 'undefined' && !localStorage.getItem(TOKEN_KEY)) {
+    localStorage.setItem(TOKEN_KEY, `dev-${role}-token`);
+  }
+  setSession({ access_token: localStorage.getItem(TOKEN_KEY) ?? `dev-${role}-token` });
+  setProfile(devState.profile);
 }
 
 function normalizeRole(rawRole: unknown): AppRole {
@@ -155,18 +179,16 @@ function normalizeAkses(rawAkses: unknown): Record<string, AksesItem> {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(IS_DEV_AUTH_BYPASS_ENABLED ? mockUser : null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<{ access_token: string } | null>(
-    IS_DEV_AUTH_BYPASS_ENABLED ? { access_token: 'dev-bypass-token' } : null
+    null
   );
-  const [profile, setProfile] = useState<AuthProfile | null>(IS_DEV_AUTH_BYPASS_ENABLED ? mockProfile : null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [isLoading, setIsLoading] = useState(!IS_DEV_AUTH_BYPASS_ENABLED);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     if (IS_DEV_AUTH_BYPASS_ENABLED) {
-      setUser(mockUser);
-      setSession({ access_token: 'dev-bypass-token' });
-      setProfile(mockProfile);
+      applyDevAuthState(setUser, setSession, setProfile);
       return;
     }
 
@@ -174,13 +196,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setSession(null);
     setProfile(null);
-  };
+  }, []);
 
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     if (IS_DEV_AUTH_BYPASS_ENABLED) {
-      setUser(mockUser);
-      setSession({ access_token: 'dev-bypass-token' });
-      setProfile(mockProfile);
+      applyDevAuthState(setUser, setSession, setProfile);
       return;
     }
 
@@ -200,49 +220,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setSession({ access_token: token });
-      setUser({ id: me.user.id, email: me.user.email });
+      setUser({ id: String(me.user.id), email: String(me.user.email) });
       setProfile({
-        id: me.user.id,
+        id: String(me.user.id),
         role: normalizeRole(me.user.role),
         akses: normalizeAkses(me.user.akses),
-        is_super_admin: me.user.isSuperAdmin ?? false,
-        status_account: me.user.statusAccount ?? 'active',
-        region_id: me.user.regionId ?? null,
-        profile_level: me.user.profileLevel ?? 'basic',
-        status_payment: me.user.statusPayment ?? 'unpaid',
-        nip: me.user.nip ?? null,
-        nama_pesantren: me.user.namaPesantren ?? null,
-        logo_url: me.user.logoUrl ?? null,
+        is_super_admin: Boolean(me.user.isSuperAdmin ?? false),
+        status_account: (me.user.statusAccount as AccountStatus) ?? 'active',
+        region_id: (me.user.regionId as string | null) ?? null,
+        profile_level: (me.user.profileLevel as ProfileLevel) ?? 'basic',
+        status_payment: (me.user.statusPayment as PaymentStatus) ?? 'unpaid',
+        nip: (me.user.nip as string | null) ?? null,
+        nama_pesantren: (me.user.namaPesantren as string | null) ?? null,
+        logo_url: (me.user.logoUrl as string | null) ?? null,
       });
     } catch {
       await signOut();
     }
-  };
+  }, [signOut]);
 
-  const setAuthToken = (token: string) => {
+  const setAuthToken = useCallback((token: string) => {
     if (IS_DEV_AUTH_BYPASS_ENABLED) {
-      setUser(mockUser);
-      setSession({ access_token: 'dev-bypass-token' });
-      setProfile(mockProfile);
+      localStorage.setItem(TOKEN_KEY, token);
+      applyDevAuthState(setUser, setSession, setProfile);
       return;
     }
 
     localStorage.setItem(TOKEN_KEY, token);
-  };
+  }, []);
 
   useEffect(() => {
     if (IS_DEV_AUTH_BYPASS_ENABLED) {
-      setUser(mockUser);
-      setSession({ access_token: 'dev-bypass-token' });
-      setProfile(mockProfile);
+      applyDevAuthState(setUser, setSession, setProfile);
       setIsLoading(false);
-      return;
+
+      const handlePreviewChange = () => {
+        applyDevAuthState(setUser, setSession, setProfile);
+      };
+
+      window.addEventListener(DEV_ROLE_PREVIEW_EVENT, handlePreviewChange as EventListener);
+      return () => {
+        window.removeEventListener(DEV_ROLE_PREVIEW_EVENT, handlePreviewChange as EventListener);
+      };
     }
 
     refreshAuth().finally(() => {
       setIsLoading(false);
     });
-  }, []);
+  }, [refreshAuth]);
 
   return (
     <AuthContext.Provider value={{ user, session, profile, isLoading, signOut, setAuthToken, refreshAuth }}>

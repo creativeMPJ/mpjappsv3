@@ -15,6 +15,27 @@ Update ini merupakan refinement besar pada layer frontend V4, meliputi:
 - Penguatan validasi identitas (NIAM)
 - Enforcement core rules sistem
 
+Tambahan final:
+- Manajemen Kru ditetapkan sebagai Management Layer
+- Master Data tetap Source of Truth identitas final
+- Tambah Kru menghasilkan status `pending` dengan `NIAM = null`
+- Aktivasi Kru berjalan melalui invoice `crew_activation`
+- NIAM hanya muncul setelah payment `verified`
+- `slotUsed = pending + active`
+- Alumni tidak makan slot
+- `/media/tim` sudah disiapkan sebagai dashboard Admin Media untuk Kelola Crew
+- FE tidak generate NIAM
+- FE hanya menampilkan state, guard, dan CTA
+- Form Tambah Kru disiapkan untuk:
+  - Nama Lengkap
+  - Email
+  - WhatsApp
+  - Jabatan / Role Khodim
+  - Posisi / Jabatan Media
+  - Catatan Opsional
+- Action Aktivasi / Boyong / Handover yang belum backend-ready tetap `Segera Hadir`
+- Role dev media sudah diperbaiki agar tidak terbaca `admin_pusat`
+
 ---
 
 ## 🎯 UI SYSTEM IMPROVEMENT
@@ -128,8 +149,10 @@ Crew → Event → XP → Leaderboard
 
 ## 🔄 NEXT PHASE
 
-Phase 2: Payment Core  
-- Payment → generate NIP  
-- Payment → generate NIAM  
-- Activation lifecycle  
+Phase 2: Backend Crew Activation
+- Backend `crew_activation`
+- Backend `slot_addon`
+- Sync active crew ke Master Data
+- Boyong + alumni backend
+- Handover PIC
 

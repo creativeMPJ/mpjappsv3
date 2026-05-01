@@ -30,6 +30,11 @@ interface MasterDataResponse {
   crews?: V4MasterCrew[];
 }
 
+export interface V4MasterDataPreviewSnapshot {
+  profiles: V4MasterProfile[];
+  crews: V4MasterCrew[];
+}
+
 async function getMasterData(path: string, fallbackMessage: string): Promise<V4RequestState<MasterDataResponse>> {
   try {
     const response = await apiRequest<MasterDataResponse>(path);
@@ -54,4 +59,30 @@ export function getPusatMasterData() {
 
 export function getRegionalMasterData() {
   return getMasterData("/api/regional/master-data", "Gagal memuat master data regional");
+}
+
+function mergeUniqueById<T extends { id: string }>(items: T[]) {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
+export async function getMasterDataPreviewSnapshot(): Promise<V4RequestState<V4MasterDataPreviewSnapshot>> {
+  const [pusat, regional] = await Promise.all([getPusatMasterData(), getRegionalMasterData()]);
+  const profiles = mergeUniqueById([...(pusat.data?.profiles ?? []), ...(regional.data?.profiles ?? [])]);
+  const crews = mergeUniqueById([...(pusat.data?.crews ?? []), ...(regional.data?.crews ?? [])]);
+  const hasAnySuccess = Boolean(pusat.data || regional.data);
+  const errorMessage = [pusat.error, regional.error].filter(Boolean).join(" · ");
+
+  return {
+    data: { profiles, crews },
+    error: hasAnySuccess ? null : errorMessage || null,
+  };
 }

@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Lock,
   Building2,
+  IdCard,
   Image,
   Globe,
   History,
@@ -39,6 +40,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/api-client";
 import { useCurrentPaymentStatus } from "@/features/v4/utils";
+import { useNavigate } from "react-router-dom";
 
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
 
@@ -116,6 +118,7 @@ const IdentitasPesantren = ({
   onProfileLevelChange,
 }: IdentitasPesantrenProps = {}) => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const paymentStatus = paymentStatusProp ?? profile?.status_payment ?? 'unpaid';
   const payment = useCurrentPaymentStatus(paymentStatus);
   const [profileLevel, setProfileLevel] = useState<ProfileLevel>(profileLevelProp ?? profile?.profile_level ?? 'basic');
@@ -347,6 +350,7 @@ const IdentitasPesantren = ({
   };
 
   const isPlatinum = profileLevel === "platinum";
+  const canOpenEid = payment.isActive && Boolean(profile?.nip);
 
   if (isLoading) {
     return (
@@ -382,6 +386,48 @@ const IdentitasPesantren = ({
             <span className="text-sm font-bold text-primary">{calculateProgress()}%</span>
           </div>
           <Progress value={calculateProgress()} className="h-3" />
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardContent className="p-4 md:p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <IdCard className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">E-ID Card Pesantren</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Identitas digital akan tampil setelah akun aktif dan NIP tersedia.
+                </p>
+              </div>
+            </div>
+            <Badge className={cn(
+              "shrink-0",
+              canOpenEid ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-200"
+            )}>
+              {canOpenEid ? "Tersedia" : "Aktifkan akun terlebih dahulu"}
+            </Badge>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => navigate("/media/eid")}
+              disabled={!canOpenEid}
+              className={cn(
+                "gap-2",
+                canOpenEid ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"
+              )}
+            >
+              <IdCard className="h-4 w-4" />
+              {canOpenEid ? "Lihat E-ID Card" : "Aktifkan akun terlebih dahulu"}
+            </Button>
+            {!canOpenEid && (
+              <p className="text-xs text-slate-500">
+                Identitas resmi akan tampil setelah pembayaran terverifikasi.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 

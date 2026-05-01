@@ -24,6 +24,26 @@ import {
   RegionalSuratKeluarPage,
   RegionalSuratMasukPage,
 } from "../pages/V4SekretariatPages";
+import {
+  CrewBerandaPageView,
+  CrewEIDPageView,
+  CrewEventPageView,
+  CrewHubPageView,
+  CrewMilitansiPageView,
+  CrewProfilPageView,
+  CrewSertifikatPageView,
+  FinanceBerandaPage,
+  FinanceLaporanPage,
+  FinanceVerifikasiPage,
+  MediaBerandaPage,
+  MediaAdministrasiPage,
+  MediaEIDPage,
+  MediaEventPage,
+  MediaHubPage,
+  MediaIdentitasPage,
+  MediaPengaturanPage,
+  MediaTimPage,
+} from "../pages/V4RoleDashboardPages";
 
 const pusatChildren: RouteObject[] = [
   { index: true, element: <Navigate to="/pusat/beranda" replace /> },
@@ -55,6 +75,38 @@ const regionalChildren: RouteObject[] = [
   { path: "event/daftar", element: <RegionalEventDaftarPage /> },
 ];
 
+const financeChildren: RouteObject[] = [
+  { index: true, element: <Navigate to="/finance/beranda" replace /> },
+  { path: "beranda", element: <FinanceBerandaPage /> },
+  { path: "verifikasi", element: <FinanceVerifikasiPage /> },
+  { path: "laporan", element: <FinanceLaporanPage /> },
+];
+
+const mediaChildren: RouteObject[] = [
+  { index: true, element: <Navigate to="/media/beranda" replace /> },
+  { path: "beranda", element: <MediaBerandaPage /> },
+  { path: "administrasi", element: <MediaAdministrasiPage /> },
+  { path: "pembayaran", element: <Navigate to="/media/administrasi" replace /> },
+  { path: "identitas", element: <MediaIdentitasPage /> },
+  { path: "profil", element: <Navigate to="/media/identitas" replace /> },
+  { path: "tim", element: <MediaTimPage /> },
+  { path: "eid", element: <MediaEIDPage /> },
+  { path: "event", element: <MediaEventPage /> },
+  { path: "hub", element: <MediaHubPage /> },
+  { path: "pengaturan", element: <MediaPengaturanPage /> },
+];
+
+const crewChildren: RouteObject[] = [
+  { index: true, element: <Navigate to="/crew/beranda" replace /> },
+  { path: "beranda", element: <CrewBerandaPageView /> },
+  { path: "profil", element: <CrewProfilPageView /> },
+  { path: "eid", element: <CrewEIDPageView /> },
+  { path: "event", element: <CrewEventPageView /> },
+  { path: "militansi", element: <CrewMilitansiPageView /> },
+  { path: "hub", element: <CrewHubPageView /> },
+  { path: "sertifikat", element: <CrewSertifikatPageView /> },
+];
+
 export const v4Routes: RouteObject[] = [
   {
     path: "/pusat",
@@ -73,5 +125,32 @@ export const v4Routes: RouteObject[] = [
       </ProtectedRoute>
     ),
     children: regionalChildren,
+  },
+  {
+    path: "/finance",
+    element: (
+      <ProtectedRoute allowedRoles={["admin_finance"]}>
+        <V4DashboardLayout role="finance" />
+      </ProtectedRoute>
+    ),
+    children: financeChildren,
+  },
+  {
+    path: "/media",
+    element: (
+      <ProtectedRoute allowedRoles={["user"]}>
+        <V4DashboardLayout role="media" />
+      </ProtectedRoute>
+    ),
+    children: mediaChildren,
+  },
+  {
+    path: "/crew",
+    element: (
+      <ProtectedRoute allowedRoles={["crew"]}>
+        <V4DashboardLayout role="crew" />
+      </ProtectedRoute>
+    ),
+    children: crewChildren,
   },
 ];

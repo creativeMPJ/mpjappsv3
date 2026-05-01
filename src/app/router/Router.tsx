@@ -71,6 +71,17 @@ const UserManagement = Loadable(lazy(() => import('@/components/super-admin/User
 const MajelisOverview = Loadable(lazy(() => import('@/components/majelis-dashboard/MajelisOverview')));
 const HakAkses = Loadable(lazy(() => import('@/pages/HakAkses')));
 
+const legacyMediaRouteMap = {
+  beranda: "/cms/user-beranda",
+  identitas: "/cms/identitas",
+  administrasi: "/cms/pembayaran",
+  tim: "/cms/tim",
+  event: "/cms/user-event",
+  eid: "/cms/eid",
+  hub: "/cms/hub",
+  pengaturan: "/cms/pengaturan",
+} as const;
+
 const router = createBrowserRouter([
   // Error pages
   { path: ROUTES.ERROR.FORBIDDEN, element: <Forbidden /> },
@@ -116,7 +127,7 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><CmsLayout /></ProtectedRoute>,
     children: [
       // User (Media Pesantren)
-      { path: 'user-beranda',   element: <MediaDashboardHome /> },         // dashboard, keep prefix
+      { path: 'user-beranda',   element: <MediaDashboardHome routeMap={legacyMediaRouteMap} /> },         // dashboard, keep prefix
       { path: 'identitas',      element: <IdentitasPesantren /> },
       { path: 'pembayaran',     element: <Administrasi /> },
       { path: 'tim',            element: <ManajemenKru /> },

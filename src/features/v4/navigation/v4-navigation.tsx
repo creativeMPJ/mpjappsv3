@@ -13,12 +13,13 @@ import {
   QrCode,
   Settings,
   ShieldCheck,
-  Upload,
+  User,
   Users,
   WalletCards,
+  Upload,
 } from "lucide-react";
 
-export type V4Role = "pusat" | "regional";
+export type V4Role = "pusat" | "regional" | "finance" | "media" | "crew";
 
 export interface NavItem {
   label: string;
@@ -254,13 +255,109 @@ export const regionalNav: V4NavGroup[] = [
   },
 ];
 
+export const financeNav: V4NavGroup[] = [
+  {
+    label: "Utama",
+    items: [{ label: "Beranda", path: "/finance/beranda", icon: Home, enabled: true }],
+  },
+  {
+    label: "Verifikasi",
+    items: [
+      {
+        label: "Verifikasi Pembayaran",
+        path: "/finance/verifikasi",
+        icon: WalletCards,
+        enabled: true,
+      },
+    ],
+  },
+  {
+    label: "Laporan",
+    items: [
+      {
+        label: "Laporan Keuangan",
+        path: "/finance/laporan",
+        icon: FileText,
+        enabled: true,
+      },
+    ],
+  },
+];
+
+export const mediaNav: V4NavGroup[] = [
+  {
+    label: "Utama",
+    items: [{ label: "Dashboard", path: "/media/beranda", icon: Home, enabled: true }],
+  },
+  {
+    label: "Administrasi",
+    items: [{ label: "Administrasi", path: "/media/administrasi", icon: WalletCards, enabled: true }],
+  },
+  {
+    label: "Profil Pesantren",
+    items: [{ label: "Profil Pesantren", path: "/media/identitas", icon: Building2, enabled: true }],
+  },
+  {
+    label: "Kelola Crew",
+    items: [{ label: "Kelola Crew", path: "/media/tim", icon: Users, enabled: true }],
+  },
+  {
+    label: "Event",
+    items: [{ label: "Event", path: "/media/event", icon: CalendarDays, enabled: true }],
+  },
+  {
+    label: "MPJ Hub",
+    items: [{ label: "MPJ Hub", path: "/media/hub", icon: FolderOpen, enabled: true }],
+  },
+  {
+    label: "Pengaturan",
+    items: [{ label: "Pengaturan", path: "/media/pengaturan", icon: Settings, enabled: true }],
+  },
+];
+
+export const crewNav: V4NavGroup[] = [
+  {
+    label: "Utama",
+    items: [{ label: "Beranda", path: "/crew/beranda", icon: Home, enabled: true }],
+  },
+  {
+    label: "Profil",
+    items: [{ label: "Profil", path: "/crew/profil", icon: User, enabled: true }],
+  },
+  {
+    label: "Kegiatan",
+    items: [
+      { label: "Event", path: "/crew/event", icon: CalendarDays, enabled: true },
+    ],
+  },
+  {
+    label: "Militansi",
+    items: [
+      { label: "Militansi", path: "/crew/militansi", icon: ShieldCheck, enabled: true },
+    ],
+  },
+  {
+    label: "MPJ-Hub",
+    items: [
+      { label: "MPJ-Hub", path: "/crew/hub", icon: FolderOpen, enabled: true },
+    ],
+  },
+];
+
 export function isV4NavItemActive(item: NavItem, pathname: string): boolean {
   const selfActive = item.path ? pathname === item.path || pathname.startsWith(`${item.path}/`) : false;
   return selfActive || Boolean(item.children?.some((child) => isV4NavItemActive(child, pathname)));
 }
 
 export function findV4NavItem(role: V4Role, pathname: string): NavItem | undefined {
-  const groups = role === "pusat" ? pusatNav : regionalNav;
+  const navByRole: Record<V4Role, V4NavGroup[]> = {
+    pusat: pusatNav,
+    regional: regionalNav,
+    finance: financeNav,
+    media: mediaNav,
+    crew: crewNav,
+  };
+  const groups = navByRole[role];
   const matches = groups
     .flatMap((group) => group.items)
     .flatMap((item) => findMatchingItems(item, pathname));

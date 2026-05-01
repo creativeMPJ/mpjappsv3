@@ -5,7 +5,6 @@ import {
   IdCard,
   ClipboardList,
   Users,
-  Image,
   CalendarDays,
   Globe,
   Settings,
@@ -28,6 +27,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Sidebar, { SidebarMenuItem } from '@/components/shared/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { IS_DEV_AUTH_BYPASS_ENABLED } from '@/config/devAuth';
 
 interface CmsMenuItem extends SidebarMenuItem {
   aksesKey: string;
@@ -54,7 +54,6 @@ const ALL_MENUS: CmsMenuItem[] = [
   { id: 'identitas',    aksesKey: 'identitas',   label: 'PROFIL PESANTREN', icon: IdCard },
   { id: 'pembayaran',   aksesKey: 'pembayaran',  label: 'ADMINISTRASI',     icon: ClipboardList },
   { id: 'tim',          aksesKey: 'tim',         label: 'KELOLA CREW',      icon: Users },
-  { id: 'eid',          aksesKey: 'eid',         label: 'E-ID CARD',        icon: Image },
   { id: 'user-event',   aksesKey: 'user-event',  label: 'EVENT',               icon: CalendarDays },
   { id: 'hub',          aksesKey: 'hub',         label: 'MPJ HUB',             icon: Globe },
 
@@ -108,7 +107,6 @@ const CmsLayout = () => {
   const akses = useMemo(() => profile?.akses ?? {}, [profile?.akses]);
   const isSuperAdmin = profile?.is_super_admin ?? false;
   const roleLabel = profile?.role ?? '';
-  const roleDisplayLabel = formatRoleLabel(roleLabel);
 
   const activeDashboardId = useMemo(
     () => getActiveDashboardId(roleLabel, isSuperAdmin),
@@ -116,10 +114,17 @@ const CmsLayout = () => {
   );
 
   const isUserRole = activeDashboardId === 'user-beranda';
-  const sidebarTitle = isUserRole
-    ? (profile?.nama_pesantren ?? 'MPJ Media')
-    : `MPJ ${roleDisplayLabel}`;
-  const sidebarSubtitle = isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
+  const isCrewPreview = IS_DEV_AUTH_BYPASS_ENABLED && roleLabel === 'crew';
+  const isMediaPreview = IS_DEV_AUTH_BYPASS_ENABLED && roleLabel === 'user';
+  const roleDisplayLabel = isMediaPreview ? 'Dev Koordinator' : formatRoleLabel(roleLabel);
+  const sidebarTitle = isCrewPreview
+    ? (profile?.nama_pesantren ?? 'Dev Kru')
+    : isMediaPreview
+      ? (profile?.nama_pesantren ?? 'Dev Koordinator')
+      : isUserRole
+        ? (profile?.nama_pesantren ?? 'MPJ Media')
+      : `MPJ ${roleDisplayLabel}`;
+  const sidebarSubtitle = isCrewPreview ? 'Preview Kru' : isMediaPreview ? 'Preview Media' : isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
 
   // Filter murni berdasarkan akses dari API.
   const visibleMenus = useMemo(() => ALL_MENUS.filter((m) => {

@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   Award,
   CheckCircle2,
-  IdCard
+  Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatNIP } from "@/lib/id-utils";
@@ -28,6 +28,7 @@ interface MediaDashboardHomeProps {
   paymentStatus?: string;
   profileLevel?: ProfileLevel;
   onNavigate?: (view: ViewType) => void;
+  routeMap?: Partial<Record<ViewType, string>>;
   debugProfile?: {
     nip?: string | null;
     profile_level?: ProfileLevel;
@@ -35,21 +36,22 @@ interface MediaDashboardHomeProps {
   };
 }
 
-const VIEW_ROUTES: Record<ViewType, string> = {
-  beranda:       '/cms/user-beranda',
-  identitas:     '/cms/identitas',
-  administrasi:  '/cms/pembayaran',
-  tim:           '/cms/tim',
-  event:         '/cms/user-event',
-  eid:           '/cms/eid',
-  hub:           '/cms/hub',
-  pengaturan:    '/cms/pengaturan',
+const DEFAULT_VIEW_ROUTES: Record<ViewType, string> = {
+  beranda:       '/media/beranda',
+  identitas:     '/media/identitas',
+  administrasi:  '/media/administrasi',
+  tim:           '/media/tim',
+  event:         '/media/event',
+  eid:           '/media/eid',
+  hub:           '/media/hub',
+  pengaturan:    '/media/pengaturan',
 };
 
 const MediaDashboardHome = ({
   paymentStatus: paymentStatusProp,
   profileLevel: profileLevelProp,
   onNavigate: onNavigateProp,
+  routeMap,
   debugProfile,
 }: MediaDashboardHomeProps = {}) => {
   const navigate = useNavigate();
@@ -60,7 +62,8 @@ const MediaDashboardHome = ({
   const paymentActive = isPaymentActive(paymentStatus);
   const paymentLabel = getPaymentStateLabel(paymentStatus);
   const profileLevel: ProfileLevel = profileLevelProp ?? sourceProfile?.profile_level ?? 'basic';
-  const onNavigate = (view: ViewType) => onNavigateProp?.(view) ?? navigate(VIEW_ROUTES[view]);
+  const viewRoutes: Record<ViewType, string> = { ...DEFAULT_VIEW_ROUTES, ...routeMap };
+  const onNavigate = (view: ViewType) => onNavigateProp?.(view) ?? navigate(viewRoutes[view]);
 
   const isPlatinum = profileLevel === 'platinum';
   const displayNIP = sourceProfile?.nip ? formatNIP(sourceProfile.nip, true) : null;
@@ -298,7 +301,7 @@ const MediaDashboardHome = ({
 
       {/* Quick Menu Grid */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Identitas Pesantren */}
+        {/* Profil Pesantren */}
         <Card
           className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("identitas")}
@@ -307,15 +310,15 @@ const MediaDashboardHome = ({
             <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors shadow-sm">
               <Building2 className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Identitas</h3>
-            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Profil Pesantren</p>
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Profil Pesantren</h3>
+            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Identitas & E-ID</p>
             <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-sm">
               Kelola
             </Button>
           </CardContent>
         </Card>
 
-        {/* Tim Media */}
+        {/* Kelola Crew */}
         <Card
           className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
           onClick={() => onNavigate("tim")}
@@ -324,8 +327,8 @@ const MediaDashboardHome = ({
             <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-emerald-100 rounded-full flex items-center justify-center group-hover:bg-emerald-200 transition-colors shadow-sm">
               <UserCog className="h-6 w-6 md:h-8 md:w-8 text-emerald-600" />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Tim Media</h3>
-            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Kelola Kru</p>
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Kelola Crew</h3>
+            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Manajemen anggota</p>
             <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow-sm">
               Kelola
             </Button>
@@ -362,22 +365,22 @@ const MediaDashboardHome = ({
           </CardContent>
         </Card>
 
-        {/* E-ID & Aset */}
+        {/* MPJ Hub */}
         <Card
           className={cn(
             "bg-white border transition-all group shadow-sm",
             paymentActive ? "border-slate-200 hover:shadow-lg cursor-pointer" : "border-slate-200 opacity-75",
           )}
           onClick={() => {
-            if (paymentActive) onNavigate("eid");
+            if (paymentActive) onNavigate("hub");
           }}
         >
           <CardContent className="p-4 md:p-6 text-center">
             <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors shadow-sm">
-              <IdCard className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
+              <Globe className="h-6 w-6 md:h-8 md:w-8 text-purple-600" />
             </div>
-            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">E-ID & Aset</h3>
-            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Piagam & Kartu</p>
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">MPJ Hub</h3>
+            <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Resource & publikasi</p>
             <Button
               disabled={!paymentActive}
               className={cn(

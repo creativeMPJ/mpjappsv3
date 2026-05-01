@@ -1,25 +1,72 @@
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { findV4NavItem, pusatNav, regionalNav, type V4Role } from "../navigation/v4-navigation";
+import { IS_DEV_AUTH_BYPASS_ENABLED, getDevPreviewRole, setDevPreviewRole } from "@/config/devAuth";
+import { findV4NavItem, financeNav, crewNav, mediaNav, pusatNav, regionalNav, type V4NavGroup, type V4Role } from "../navigation/v4-navigation";
 import { DesktopSidebar, MobileSidebar } from "./V4Sidebar";
 
 function roleLabel(role: V4Role) {
-  return role === "pusat" ? "Admin Pusat" : "Admin Regional";
+  switch (role) {
+    case "pusat":
+      return "Admin Pusat";
+    case "regional":
+      return "Admin Regional";
+    case "finance":
+      return "Finance";
+    case "media":
+      return "Koordinator Media";
+    case "crew":
+      return "Kru";
+    default:
+      return "Dashboard";
+  }
 }
+
+const crewLegacyTitleByPath: Record<string, string> = {
+  "/crew/eid": "E-ID",
+  "/crew/sertifikat": "Sertifikat",
+};
+
+const mediaLegacyTitleByPath: Record<string, string> = {
+  "/media/eid": "E-ID Card",
+  "/media/pembayaran": "Administrasi",
+  "/media/profil": "Profil Pesantren",
+};
 
 export default function V4DashboardLayout({ role }: { role: V4Role }) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const groups = role === "pusat" ? pusatNav : regionalNav;
+  const navByRole: Record<V4Role, V4NavGroup[]> = {
+    pusat: pusatNav,
+    regional: regionalNav,
+    finance: financeNav,
+    media: mediaNav,
+    crew: crewNav,
+  };
+  const groups = navByRole[role];
   const active = findV4NavItem(role, pathname);
   const displayName = user?.name || profile?.nama_pesantren || roleLabel(role);
   const displayRole = roleLabel(role);
-  const pageTitle = active?.label || "Beranda";
+  const pageTitle =
+    active?.label ||
+    (role === "crew" ? crewLegacyTitleByPath[pathname] : undefined) ||
+    (role === "media" ? mediaLegacyTitleByPath[pathname] : undefined) ||
+    "Beranda";
   const initials = displayName.substring(0, 2).toUpperCase();
+
+  useEffect(() => {
+    if (!IS_DEV_AUTH_BYPASS_ENABLED) return;
+    if (role === "media" && getDevPreviewRole() !== "user") {
+      setDevPreviewRole("user");
+    }
+    if (role === "crew" && getDevPreviewRole() !== "crew") {
+      setDevPreviewRole("crew");
+    }
+  }, [role]);
 
   const handleLogout = async () => {
     await signOut();
@@ -44,7 +91,7 @@ export default function V4DashboardLayout({ role }: { role: V4Role }) {
               <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
             </Button>
             <Avatar className="h-9 w-9 border border-emerald-700">
-              <AvatarImage src={profile?.logo_url || "/placeholder.svg"} />
+              <AvatarImage src={profile?.logo_url || undefined} />
               <AvatarFallback className="bg-emerald-700 text-white">{initials}</AvatarFallback>
             </Avatar>
             <div className="hidden sm:block">
