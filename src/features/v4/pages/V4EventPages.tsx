@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import { DataTableShell, DisabledActionCell, PageHeader, StatusBadge } from "../components/v4-components";
 import { getEventList, type V4EventItem } from "../services/event.service";
 import { formatDate, formatText } from "../utils";
 
@@ -25,11 +24,11 @@ function V4EventListPage({ scope }: { scope: EventScope }) {
     <div className="space-y-6">
       <PageHeader
         title={`Daftar Event ${label}`}
-        description="Daftar event read-only dari endpoint existing /api/events."
+        description="Daftar event untuk monitoring kegiatan."
       />
       <DataTableShell
         title="Daftar Event"
-        description="Mode read-only. Create, edit, dan delete belum diaktifkan."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Nama Event", "Deskripsi", "Tanggal", "Lokasi", "Status", "Aksi"]}
         rows={events}
         loading={loading}
@@ -44,13 +43,7 @@ function V4EventListPage({ scope }: { scope: EventScope }) {
               <TableCell>{formatDate(event.date)}</TableCell>
               <TableCell>{formatText(event.location)}</TableCell>
               <TableCell><StatusBadge status={event.status} /></TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" disabled>
-                    Segera Hadir
-                  </Button>
-                </div>
-              </TableCell>
+              <DisabledActionCell />
             </TableRow>
           );
         }}

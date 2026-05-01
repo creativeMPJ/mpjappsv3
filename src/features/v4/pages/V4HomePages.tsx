@@ -38,7 +38,7 @@ export function PusatBerandaPage() {
       </div>
       <DataTableShell
         title="Aktivitas Terkini"
-        description="Mengikuti data dari endpoint dashboard pusat existing."
+        description="Ringkasan aktivitas terbaru."
         columns={["Aktivitas"]}
         rows={summary?.recentUsers ?? []}
         loading={loading}
@@ -75,7 +75,7 @@ export function RegionalBerandaPage() {
       </div>
       <DataTableShell
         title="Ringkasan Wilayah"
-        description="Data performa regional dari endpoint existing."
+        description="Ringkasan performa regional."
         columns={["Metrik"]}
         rows={performance ? [performance] : []}
         loading={loading}

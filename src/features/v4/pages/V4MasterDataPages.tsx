@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -16,168 +15,57 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import { DataTableShell, DisabledActionCell, PageHeader, StatusBadge } from "../components/v4-components";
+import {
+  getPusatMasterData,
+  getRegionalMasterData,
+  type V4MasterCrew,
+  type V4MasterProfile,
+} from "../services/master-data.service";
 import { formatText } from "../utils";
 
 type MasterScope = "pusat" | "regional";
 type MasterType = "pesantren" | "media" | "kru";
 
-interface V4Institution {
+interface V4InstitutionRow {
   id: string;
-  nip: string;
-  name: string;
-  regional: string;
-  status: string;
-  profileLevel: string;
+  nip: string | null;
+  name: string | null;
+  regional: string | null;
+  city: string | null;
+  status: string | null;
+  paymentStatus: string | null;
+  profileLevel: string | null;
 }
 
-interface V4Crew {
+interface V4CrewRow {
   id: string;
-  niam: string;
-  name: string;
-  roleCode: string;
-  jabatan: string;
-  status: string;
-  institutionId: string;
-  regional: string;
+  niam: string | null;
+  name: string | null;
+  roleCode: string | null;
+  jabatan: string | null;
+  xpLevel: number | null;
+  institutionName: string | null;
+  regional: string | null;
+  status: string | null;
 }
 
-interface V4Media {
+interface V4MediaRow {
   id: string;
-  name: string;
-  institutionId: string;
-  institutionName: string;
-  coordinatorCrewId: string;
-  status: string;
-  regional: string;
+  name: string | null;
+  institutionName: string | null;
+  coordinatorCrewId: string | null;
+  coordinatorName: string | null;
+  regional: string | null;
+  status: string | null;
 }
 
-const ACTIVE_REGIONAL = "Jawa Timur 1";
+type MasterRow = V4InstitutionRow | V4CrewRow | V4MediaRow;
 
-const institution: V4Institution[] = [
-  {
-    id: "inst-001",
-    nip: "3525010001",
-    name: "Pesantren Al Hikmah",
-    regional: "Jawa Timur 1",
-    status: "active",
-    profileLevel: "gold",
-  },
-  {
-    id: "inst-002",
-    nip: "3578010002",
-    name: "Pesantren Nurul Falah",
-    regional: "Jawa Timur 1",
-    status: "pending",
-    profileLevel: "silver",
-  },
-  {
-    id: "inst-003",
-    nip: "3204010003",
-    name: "Pesantren Darussalam",
-    regional: "Jawa Barat",
-    status: "active",
-    profileLevel: "platinum",
-  },
-  {
-    id: "inst-004",
-    nip: "3374010004",
-    name: "Pesantren Miftahul Ulum",
-    regional: "Jawa Tengah",
-    status: "inactive",
-    profileLevel: "basic",
-  },
-];
+const statusOptions = ["all", "active", "pending", "inactive", "verified", "paid"];
 
-const crew: V4Crew[] = [
-  {
-    id: "crew-001",
-    niam: "NIAM-352501-001",
-    name: "Ahmad Fauzi",
-    roleCode: "media_lead",
-    jabatan: "Koordinator Media",
-    status: "active",
-    institutionId: "inst-001",
-    regional: "Jawa Timur 1",
-  },
-  {
-    id: "crew-002",
-    niam: "NIAM-352501-002",
-    name: "Siti Aminah",
-    roleCode: "content_creator",
-    jabatan: "Kreator Konten",
-    status: "active",
-    institutionId: "inst-001",
-    regional: "Jawa Timur 1",
-  },
-  {
-    id: "crew-003",
-    niam: "NIAM-357801-003",
-    name: "Muhammad Rizqi",
-    roleCode: "editor",
-    jabatan: "Editor",
-    status: "pending",
-    institutionId: "inst-002",
-    regional: "Jawa Timur 1",
-  },
-  {
-    id: "crew-004",
-    niam: "NIAM-320401-004",
-    name: "Hasan Basri",
-    roleCode: "media_lead",
-    jabatan: "Koordinator Media",
-    status: "active",
-    institutionId: "inst-003",
-    regional: "Jawa Barat",
-  },
-];
-
-const media: V4Media[] = [
-  {
-    id: "media-001",
-    name: "Al Hikmah Media",
-    institutionId: "inst-001",
-    institutionName: "Pesantren Al Hikmah",
-    coordinatorCrewId: "crew-001",
-    status: "active",
-    regional: "Jawa Timur 1",
-  },
-  {
-    id: "media-002",
-    name: "Nurul Falah TV",
-    institutionId: "inst-002",
-    institutionName: "Pesantren Nurul Falah",
-    coordinatorCrewId: "crew-003",
-    status: "pending",
-    regional: "Jawa Timur 1",
-  },
-  {
-    id: "media-003",
-    name: "Darussalam Channel",
-    institutionId: "inst-003",
-    institutionName: "Pesantren Darussalam",
-    coordinatorCrewId: "crew-004",
-    status: "active",
-    regional: "Jawa Barat",
-  },
-];
-
-const statusOptions = ["all", "active", "pending", "inactive"];
-
-function normalizeLabel(value: string | null | undefined) {
+function normalizeLabel(value: string | number | null | undefined) {
   return formatText(value).replace(/_/g, " ");
-}
-
-function ActionCell() {
-  return (
-    <TableCell className="text-right">
-      <div className="flex justify-end gap-2">
-        <Button size="sm" disabled>
-          Segera Hadir
-        </Button>
-      </div>
-    </TableCell>
-  );
 }
 
 function RelationLink({
@@ -245,53 +133,133 @@ function getTitle(scope: MasterScope, type: MasterType) {
   return `Master Kru ${prefix}`;
 }
 
-function getRows(scope: MasterScope, type: MasterType) {
-  const isRegional = scope === "regional";
-
-  if (type === "kru") {
-    return isRegional ? crew.filter((item) => item.regional === ACTIVE_REGIONAL) : crew;
-  }
-
-  if (type === "media") {
-    return isRegional ? [] : media;
-  }
-
-  return isRegional ? institution.filter((item) => item.regional === ACTIVE_REGIONAL) : institution;
+function mapInstitution(profile: V4MasterProfile): V4InstitutionRow {
+  return {
+    id: profile.id,
+    nip: profile.nip,
+    name: profile.nama_pesantren,
+    regional: profile.region_name ?? null,
+    city: profile.city_name ?? null,
+    status: profile.status_account,
+    paymentStatus: profile.status_payment ?? null,
+    profileLevel: profile.profile_level,
+  };
 }
 
-function rowMatchesSearch(row: V4Institution | V4Crew | V4Media, search: string) {
+function mapCrew(crew: V4MasterCrew): V4CrewRow {
+  return {
+    id: crew.id,
+    niam: crew.niam,
+    name: crew.nama,
+    roleCode: crew.jabatan,
+    jabatan: crew.jabatan,
+    xpLevel: crew.xp_level,
+    institutionName: crew.pesantren_name,
+    regional: crew.region_name ?? null,
+    status: crew.niam ? "active" : "pending",
+  };
+}
+
+function findCoordinator(profile: V4MasterProfile, crews: V4MasterCrew[]) {
+  const pesantrenName = profile.nama_pesantren?.toLowerCase();
+  if (!pesantrenName) return null;
+
+  return (
+    crews.find((crew) => {
+      const sameInstitution = crew.pesantren_name?.toLowerCase() === pesantrenName;
+      const isCoordinator = crew.jabatan?.toLowerCase().includes("koordinator") ?? false;
+      return sameInstitution && isCoordinator;
+    }) ?? null
+  );
+}
+
+function mapMedia(profile: V4MasterProfile, crews: V4MasterCrew[]): V4MediaRow | null {
+  if (!profile.nama_media) return null;
+
+  const coordinator = findCoordinator(profile, crews);
+
+  return {
+    id: profile.id,
+    name: profile.nama_media,
+    institutionName: profile.nama_pesantren,
+    coordinatorCrewId: coordinator?.id ?? null,
+    coordinatorName: coordinator?.nama ?? null,
+    regional: profile.region_name ?? null,
+    status: profile.status_account,
+  };
+}
+
+function rowMatchesSearch(row: MasterRow, search: string) {
   if (!search) return true;
 
   const normalizedSearch = search.toLowerCase();
-  return Object.values(row).some((value) => String(value).toLowerCase().includes(normalizedSearch));
+  return Object.values(row).some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
 }
 
-function getRowStatus(row: V4Institution | V4Crew | V4Media) {
+function getRowStatus(row: MasterRow) {
   return row.status;
 }
 
-function getRowRegional(row: V4Institution | V4Crew | V4Media) {
+function getRowRegional(row: MasterRow) {
   return row.regional;
 }
 
-function getCrewById(id: string) {
-  return crew.find((item) => item.id === id) ?? null;
+function getRows(type: MasterType, profiles: V4MasterProfile[], crews: V4MasterCrew[]) {
+  if (type === "kru") {
+    return crews.map(mapCrew);
+  }
+
+  if (type === "media") {
+    return profiles.map((profile) => mapMedia(profile, crews)).filter((row): row is V4MediaRow => Boolean(row));
+  }
+
+  return profiles.map(mapInstitution);
 }
 
 function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterType }) {
   const [searchParams] = useSearchParams();
   const activeCrewRowRef = useRef<HTMLTableRowElement | null>(null);
+  const [profiles, setProfiles] = useState<V4MasterProfile[]>([]);
+  const [crews, setCrews] = useState<V4MasterCrew[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [regionalFilter, setRegionalFilter] = useState("all");
   const activeCrewId = searchParams.get("crew");
-  const isInactiveRegionalMedia = scope === "regional" && type === "media";
   const title = getTitle(scope, type);
 
-  const baseRows = useMemo(() => getRows(scope, type), [scope, type]);
+  const loadData = useCallback(() => {
+    setLoading(true);
+    setError(null);
+
+    const request = scope === "pusat" ? getPusatMasterData() : getRegionalMasterData();
+
+    request.then((result) => {
+      setProfiles(result.data?.profiles ?? []);
+      setCrews(result.data?.crews ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, [scope]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const baseRows = useMemo(() => getRows(type, profiles, crews), [crews, profiles, type]);
   const regionalOptions = useMemo(
-    () => ["all", ...Array.from(new Set(institution.map((item) => item.regional)))],
-    [],
+    () => [
+      "all",
+      ...Array.from(
+        new Set(
+          profiles
+            .map((profile) => profile.region_name)
+            .filter((region): region is string => Boolean(region)),
+        ),
+      ),
+    ],
+    [profiles],
   );
   const rows = useMemo(
     () =>
@@ -337,30 +305,18 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
     </>
   );
 
-  if (isInactiveRegionalMedia) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title={title} description="Master Media Regional belum tersedia pada V4." />
-        <DataTableShell
-          title="Daftar Media"
-          description="Fitur ini belum aktif untuk admin regional."
-          columns={["Nama Media", "Pesantren", "Koordinator", "Status", "Aksi"]}
-          rows={[]}
-          emptyType="not_active"
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <PageHeader title={title} description="Data mock V4 read-only. Siap disambungkan ke backend." />
+      <PageHeader title={title} description="Data master untuk monitoring dan validasi." />
       {type === "kru" ? (
         <DataTableShell
           title="Daftar Kru"
-          description="Source data: crew"
-          columns={["NIAM", "Nama", "RoleCode", "Jabatan", "Status", "Aksi"]}
+          description="Aksi lanjutan akan segera tersedia."
+          columns={["NIAM", "Nama", "Jabatan", "Pesantren", "Regional", "XP", "Status", "Aksi"]}
           rows={rows}
+          loading={loading}
+          error={error}
+          onRetry={loadData}
           enableSearch
           searchPlaceholder="Cari kru"
           searchValue={search}
@@ -368,7 +324,7 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
           headerRight={filters}
           emptyType="no_data"
           renderRow={(row, index) => {
-            const item = row as V4Crew;
+            const item = row as V4CrewRow;
             const isActiveCrew = activeCrewId === item.id;
 
             return (
@@ -386,11 +342,13 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
                     {formatText(item.roleCode)}
                   </Badge>
                 </TableCell>
-                <TableCell>{formatText(item.jabatan)}</TableCell>
+                <TableCell>{formatText(item.institutionName)}</TableCell>
+                <TableCell>{formatText(item.regional)}</TableCell>
+                <TableCell>{formatText(item.xpLevel)}</TableCell>
                 <TableCell>
                   <StatusBadge status={item.status} />
                 </TableCell>
-                <ActionCell />
+                <DisabledActionCell />
               </TableRow>
             );
           }}
@@ -398,9 +356,12 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
       ) : type === "media" ? (
         <DataTableShell
           title="Daftar Media"
-          description="Source data: media"
-          columns={["Nama Media", "Pesantren", "Koordinator", "Status", "Aksi"]}
+          description="Aksi lanjutan akan segera tersedia."
+          columns={["Nama Media", "Pesantren", "Koordinator", "Regional", "Status", "Aksi"]}
           rows={rows}
+          loading={loading}
+          error={error}
+          onRetry={loadData}
           enableSearch
           searchPlaceholder="Cari media"
           searchValue={search}
@@ -408,17 +369,16 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
           headerRight={filters}
           emptyType="no_data"
           renderRow={(row, index) => {
-            const item = row as V4Media;
-            const coordinator = getCrewById(item.coordinatorCrewId);
+            const item = row as V4MediaRow;
 
             return (
               <TableRow key={item.id || index}>
-                <TableCell className="font-medium text-muted-foreground">{formatText(item.name)}</TableCell>
+                <TableCell className="font-medium">{formatText(item.name)}</TableCell>
                 <TableCell>{formatText(item.institutionName)}</TableCell>
                 <TableCell>
-                  {coordinator ? (
+                  {item.coordinatorCrewId ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <RelationLink scope={scope} id={coordinator.id}>{formatText(coordinator.name)}</RelationLink>
+                      <RelationLink scope={scope} id={item.coordinatorCrewId}>{formatText(item.coordinatorName)}</RelationLink>
                       <Badge variant="outline" className="bg-primary/10 text-xs font-medium text-primary">
                         Koordinator
                       </Badge>
@@ -427,10 +387,11 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
                     formatText(null)
                   )}
                 </TableCell>
+                <TableCell>{formatText(item.regional)}</TableCell>
                 <TableCell>
                   <StatusBadge status={item.status} />
                 </TableCell>
-                <ActionCell />
+                <DisabledActionCell />
               </TableRow>
             );
           }}
@@ -438,9 +399,12 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
       ) : (
         <DataTableShell
           title="Daftar Pesantren"
-          description="Source data: institution"
-          columns={["NIP", "Nama", "Regional", "Status", "Level", "Aksi"]}
+          description="Aksi lanjutan akan segera tersedia."
+          columns={["NIP", "Nama", "Regional", "Kota", "Status Akun", "Status Payment", "Level", "Aksi"]}
           rows={rows}
+          loading={loading}
+          error={error}
+          onRetry={loadData}
           enableSearch
           searchPlaceholder="Cari pesantren"
           searchValue={search}
@@ -448,18 +412,22 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
           headerRight={filters}
           emptyType="no_data"
           renderRow={(row, index) => {
-            const item = row as V4Institution;
+            const item = row as V4InstitutionRow;
 
             return (
               <TableRow key={item.id || index}>
                 <TableCell>{formatText(item.nip)}</TableCell>
                 <TableCell className="font-medium">{formatText(item.name)}</TableCell>
                 <TableCell>{formatText(item.regional)}</TableCell>
+                <TableCell>{formatText(item.city)}</TableCell>
                 <TableCell>
                   <StatusBadge status={item.status} />
                 </TableCell>
+                <TableCell>
+                  <StatusBadge status={item.paymentStatus} />
+                </TableCell>
                 <TableCell className="capitalize">{normalizeLabel(item.profileLevel)}</TableCell>
-                <ActionCell />
+                <DisabledActionCell />
               </TableRow>
             );
           }}

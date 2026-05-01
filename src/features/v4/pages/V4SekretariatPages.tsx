@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import { DataTableShell, DisabledActionCell, PageHeader, StatusBadge } from "../components/v4-components";
 import {
   getIncomingLetters,
   getOutgoingLetters,
@@ -27,18 +26,6 @@ function scopeLabel(scope: V4SekretariatScope) {
 function formatPosition(x: number | string | null | undefined, y: number | string | null | undefined) {
   if (x === null || x === undefined || y === null || y === undefined) return "-";
   return `${x}/${y}`;
-}
-
-function ActionCell() {
-  return (
-    <TableCell className="text-right">
-      <div className="flex justify-end gap-2">
-        <Button size="sm" disabled>
-          Segera Hadir
-        </Button>
-      </div>
-    </TableCell>
-  );
 }
 
 function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
@@ -73,7 +60,7 @@ function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
     <div className="space-y-6">
       <PageHeader
         title={`Ringkasan Surat ${label}`}
-        description="Ringkasan data sekretariat dari endpoint letters, signatures, dan templates."
+        description="Ringkasan aktivitas sekretariat."
       />
       <DataTableShell
         title="Aktivitas Surat"
@@ -90,7 +77,7 @@ function V4SekretariatRingkasanPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell className="font-medium">{formatText(item.modul)}</TableCell>
               <TableCell>{item.total}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
-              <ActionCell />
+              <DisabledActionCell />
             </TableRow>
           );
         }}
@@ -118,11 +105,11 @@ function V4SuratKeluarPage({ scope }: { scope: V4SekretariatScope }) {
     <div className="space-y-6">
       <PageHeader
         title={`Surat Keluar ${label}`}
-        description="Shell read-only untuk daftar surat keluar. PDF stamping dan QR validasi belum diaktifkan."
+        description="Daftar surat keluar untuk monitoring sekretariat."
       />
       <DataTableShell
         title="Daftar Surat Keluar"
-        description="Data draft/final surat keluar dari endpoint /api/letters?type=outgoing."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Nomor Surat", "Perihal", "Jenis Naskah", "Penandatangan", "Scope", "Tanggal", "Status", "File Final", "Aksi"]}
         rows={letters}
         loading={loading}
@@ -140,7 +127,7 @@ function V4SuratKeluarPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{formatDate(item.letterDate)}</TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
               <TableCell><FileLink href={item.finalFileUrl} label="Unduh" /></TableCell>
-              <ActionCell />
+              <DisabledActionCell />
             </TableRow>
           );
         }}
@@ -168,11 +155,11 @@ function V4SuratMasukPage({ scope }: { scope: V4SekretariatScope }) {
     <div className="space-y-6">
       <PageHeader
         title={`Surat Masuk ${label}`}
-        description="Shell read-only untuk arsip surat masuk. Upload scan real belum diaktifkan."
+        description="Arsip surat masuk untuk monitoring sekretariat."
       />
       <DataTableShell
         title="Daftar Surat Masuk"
-        description="Data arsip surat masuk dari endpoint /api/letters?type=incoming."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Nomor Surat Asal", "Pengirim", "Perihal", "Tanggal Surat", "Tanggal Diterima", "File Scan", "Status", "Aksi"]}
         rows={letters}
         loading={loading}
@@ -189,7 +176,7 @@ function V4SuratMasukPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{formatDate(item.receivedAt)}</TableCell>
               <TableCell><FileLink href={item.scanFileUrl} label="Unduh" /></TableCell>
               <TableCell><StatusBadge status={item.status} /></TableCell>
-              <ActionCell />
+              <DisabledActionCell />
             </TableRow>
           );
         }}
@@ -217,11 +204,11 @@ function V4AssetTtdPage({ scope }: { scope: V4SekretariatScope }) {
     <div className="space-y-6">
       <PageHeader
         title={`Asset TTD ${label}`}
-        description="Shell read-only untuk asset tanda tangan. Upload asset real belum diaktifkan."
+        description="Daftar asset tanda tangan sekretariat."
       />
       <DataTableShell
         title="Daftar Asset TTD"
-        description="Metadata asset tanda tangan dari endpoint /api/signatures."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Nama Pimpinan", "Jabatan", "Scope", "Preview PNG", "Status Aktif", "Aksi"]}
         rows={signatures}
         loading={loading}
@@ -236,7 +223,7 @@ function V4AssetTtdPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{formatText(item.scope)}</TableCell>
               <TableCell><FileLink href={item.imageUrl} label="Unduh" /></TableCell>
               <TableCell><StatusBadge status={item.isActive ? "aktif" : "nonaktif"} /></TableCell>
-              <ActionCell />
+              <DisabledActionCell />
             </TableRow>
           );
         }}
@@ -264,11 +251,11 @@ function V4TemplateSuratPage({ scope }: { scope: V4SekretariatScope }) {
     <div className="space-y-6">
       <PageHeader
         title={`Pengaturan Template ${label}`}
-        description="Shell read-only untuk koordinat template surat. Preview PDF dan QR belum diaktifkan."
+        description="Pengaturan posisi template surat."
       />
       <DataTableShell
         title="Daftar Template Surat"
-        description="Koordinat template dari endpoint /api/templates."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Jenis Naskah", "Nomor X/Y", "TTD X/Y", "QR X/Y", "Ukuran Font", "Halaman Target", "Preview Posisi", "Aksi"]}
         rows={templates}
         loading={loading}
@@ -285,7 +272,7 @@ function V4TemplateSuratPage({ scope }: { scope: V4SekretariatScope }) {
               <TableCell>{item.fontSize}</TableCell>
               <TableCell>{item.targetPage}</TableCell>
               <TableCell><StatusBadge status={item.isActive ? "aktif" : "nonaktif"} /></TableCell>
-              <ActionCell />
+              <DisabledActionCell />
             </TableRow>
           );
         }}

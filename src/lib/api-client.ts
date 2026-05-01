@@ -6,7 +6,7 @@ function getToken(): string | null {
   return localStorage.getItem("mpj_auth_token");
 }
 
-export async function apiRequest<T = any>(path: string, init?: RequestInit): Promise<T> {
+export async function apiRequest<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const token = getToken();
   const headers = new Headers(init?.headers ?? {});
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;

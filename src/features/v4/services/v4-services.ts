@@ -31,7 +31,7 @@ export interface PusatHomeSummary {
     gold?: number;
     platinum?: number;
   };
-  recentUsers?: unknown[];
+  recentUsers?: Record<string, unknown>[];
 }
 
 export interface RegionalPerformance {
@@ -43,22 +43,8 @@ export interface RegionalPerformance {
 
 export const v4AdminService = {
   homeSummary: () => safeRequest<PusatHomeSummary>("/api/admin/home-summary"),
-  payments: () => safeRequest<{ payments?: unknown[] }>("/api/admin/payments"),
-  claims: () => safeRequest<{ claims?: unknown[] }>("/api/admin/claims"),
-  masterData: () => safeRequest<{ profiles?: unknown[]; crews?: unknown[]; regions?: unknown[] }>("/api/admin/master-data"),
-  pricingPackages: () => safeRequest<{ packages?: unknown[] }>("/api/admin/pricing-packages"),
-  jabatanCodes: () => safeRequest<{ jabatan_codes?: unknown[] }>("/api/admin/jabatan-codes"),
 };
 
 export const v4RegionalService = {
-  masterData: () => safeRequest<{ profiles?: unknown[]; crews?: unknown[] }>("/api/regional/master-data"),
-  pendingClaims: () => safeRequest<{ claims?: unknown[] }>("/api/regional/pending-claims"),
   performance: () => safeRequest<RegionalPerformance>("/api/regional/performance"),
-  leaderboard: () => safeRequest<{ leaderboard?: unknown[] }>("/api/regional/leaderboard"),
-  latePayments: () => safeRequest<{ claims?: unknown[] }>("/api/regional/late-payments"),
-};
-
-export const v4EventService = {
-  pusatEvents: () => safeRequest<unknown[]>("/api/events"),
-  regionalEvents: () => safeRequest<{ events?: unknown[] }>("/api/events/regional"),
 };

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { DataTableShell, PageHeader, StatusBadge } from "../components/v4-components";
+import { DataTableShell, DisabledActionCell, PageHeader, StatusBadge } from "../components/v4-components";
 import { getPaymentList, type V4PaymentItem } from "../services/payment.service";
 import { getPendingRegistrations, type V4PendingRegistrationItem } from "../services/regional.service";
 import { FileLink, formatCurrency, formatDate, formatText } from "../utils";
@@ -23,11 +22,11 @@ export function PusatVerifikasiPaymentPage() {
     <div className="space-y-6">
       <PageHeader
         title="Verifikasi Payment"
-        description="Daftar pembayaran dari endpoint existing untuk review pusat. Aksi approve/reject belum diaktifkan di fase ini."
+        description="Daftar pembayaran untuk review pusat."
       />
       <DataTableShell
         title="Daftar Pembayaran"
-        description="Data real dari /api/admin/payments."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Pesantren", "Pengelola", "Jenis Pengajuan", "Total", "Status", "Bukti", "Tanggal", "Aksi"]}
         rows={payments}
         loading={loading}
@@ -44,13 +43,7 @@ export function PusatVerifikasiPaymentPage() {
               <TableCell><StatusBadge status={payment.status} /></TableCell>
               <TableCell><FileLink href={payment.proof_file_url} label="Unduh" /></TableCell>
               <TableCell>{formatDate(payment.created_at)}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" disabled>
-                    Segera Hadir
-                  </Button>
-                </div>
-              </TableCell>
+              <DisabledActionCell />
             </TableRow>
           );
         }}
@@ -76,11 +69,11 @@ export function RegionalMonitoringPendaftaranPage() {
     <div className="space-y-6">
       <PageHeader
         title="Monitoring Pendaftaran"
-        description="Daftar klaim atau pendaftaran pending dari endpoint existing regional."
+        description="Daftar klaim atau pendaftaran yang menunggu tindak lanjut."
       />
       <DataTableShell
         title="Pendaftaran Pending"
-        description="Data real dari /api/regional/pending-claims."
+        description="Aksi lanjutan akan segera tersedia."
         columns={["Pesantren", "Pengelola", "Jenis Pengajuan", "Kecamatan", "Kontak", "Status", "Dokumen", "Tanggal", "Aksi"]}
         rows={registrations}
         loading={loading}
@@ -98,13 +91,7 @@ export function RegionalMonitoringPendaftaranPage() {
               <TableCell><StatusBadge status={registration.status} /></TableCell>
               <TableCell><FileLink href={registration.dokumen_bukti_url} label="Unduh" /></TableCell>
               <TableCell>{formatDate(registration.created_at)}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" disabled>
-                    Segera Hadir
-                  </Button>
-                </div>
-              </TableCell>
+              <DisabledActionCell />
             </TableRow>
           );
         }}

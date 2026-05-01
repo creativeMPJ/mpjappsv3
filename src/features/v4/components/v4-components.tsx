@@ -70,7 +70,7 @@ export function MetricCard({
 
 export function EmptyState({
   title = "Belum ada data",
-  description = "Data akan tampil di sini setelah endpoint tersedia atau data dibuat.",
+  description = "Data akan muncul setelah tersedia.",
   action,
 }: {
   title?: string;
@@ -105,6 +105,18 @@ export function StatusBadge({ status }: { status?: string | null }) {
     <Badge variant="outline" className={cn("capitalize", className)}>
       {label}
     </Badge>
+  );
+}
+
+export function DisabledActionCell({ label = "Segera Hadir" }: { label?: string }) {
+  return (
+    <TableCell className="text-right">
+      <div className="flex justify-end gap-2">
+        <Button size="sm" disabled>
+          {label}
+        </Button>
+      </div>
+    </TableCell>
   );
 }
 
@@ -256,13 +268,13 @@ function getDataTableEmptyState(type: DataTableEmptyType, error?: string | null)
 
   if (type === "not_active") {
     return {
-      title: "Fitur belum tersedia",
-      description: "Fitur ini akan segera hadir",
+      title: "Fitur akan segera tersedia",
+      description: "Segera Hadir",
     };
   }
 
   return {
     title: "Belum ada data",
-    description: "Data akan muncul setelah tersedia",
+    description: "Data akan muncul setelah tersedia.",
   };
 }
