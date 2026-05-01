@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
+import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
