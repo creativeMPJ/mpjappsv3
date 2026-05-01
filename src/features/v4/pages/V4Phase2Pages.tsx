@@ -3,7 +3,7 @@ import { TableCell, TableRow } from "@/components/ui/table";
 import { DataTableShell, DisabledActionCell, PageHeader, StatusBadge } from "../components/v4-components";
 import { getPaymentList, type V4PaymentItem } from "../services/payment.service";
 import { getPendingRegistrations, type V4PendingRegistrationItem } from "../services/regional.service";
-import { FileLink, formatCurrency, formatDate, formatText } from "../utils";
+import { FileLink, formatCurrency, formatDate, formatText, getPaymentStateLabel } from "../utils";
 
 export function PusatVerifikasiPaymentPage() {
   const [payments, setPayments] = useState<V4PaymentItem[]>([]);
@@ -22,7 +22,7 @@ export function PusatVerifikasiPaymentPage() {
     <div className="space-y-6">
       <PageHeader
         title="Verifikasi Payment"
-        description="Monitoring read-only pembayaran untuk review pusat."
+        description="Monitoring pembayaran untuk review pusat."
       />
       <DataTableShell
         title="Daftar Pembayaran"
@@ -40,7 +40,7 @@ export function PusatVerifikasiPaymentPage() {
               <TableCell>{formatText(payment.pesantren_claims?.nama_pengelola)}</TableCell>
               <TableCell className="capitalize">{formatText(payment.pesantren_claims?.jenis_pengajuan)?.replace(/_/g, " ")}</TableCell>
               <TableCell>{formatCurrency(payment.total_amount)}</TableCell>
-              <TableCell><StatusBadge status={payment.status} /></TableCell>
+              <TableCell><StatusBadge status={getPaymentStateLabel(payment.status)} /></TableCell>
               <TableCell><FileLink href={payment.proof_file_url} label="Unduh" /></TableCell>
               <TableCell>{formatDate(payment.created_at)}</TableCell>
               <DisabledActionCell label="Segera Hadir" />
@@ -69,7 +69,7 @@ export function RegionalMonitoringPendaftaranPage() {
     <div className="space-y-6">
       <PageHeader
         title="Monitoring Pendaftaran"
-        description="Monitoring read-only klaim atau pendaftaran yang menunggu tindak lanjut regional."
+        description="Monitoring klaim atau pendaftaran yang menunggu tindak lanjut regional."
       />
       <DataTableShell
         title="Pengajuan Menunggu Tindak Lanjut"

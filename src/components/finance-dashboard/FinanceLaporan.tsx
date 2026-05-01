@@ -14,7 +14,7 @@ const FinanceLaporan = () => {
               </div>
               <div>
                 <h2 className="text-xl font-bold">Laporan Keuangan</h2>
-                <p className="text-white/80 text-sm">Ringkasan performa keuangan MPJ</p>
+                <p className="text-white/80 text-sm">Laporan transaksi MPJ</p>
               </div>
             </div>
             <Button
@@ -34,9 +34,9 @@ const FinanceLaporan = () => {
           <div className="flex items-center gap-3">
             <Lock className="w-5 h-5 text-amber-600" />
             <div>
-              <p className="font-medium text-amber-800 dark:text-amber-200">Fitur akan segera tersedia</p>
+              <p className="font-medium text-amber-800 dark:text-amber-200">Belum ada data</p>
               <p className="text-sm text-amber-700 dark:text-amber-300">
-                Laporan keuangan akan tampil setelah data tersedia.
+                Data laporan akan tampil setelah transaksi tersedia.
               </p>
             </div>
           </div>
@@ -47,7 +47,7 @@ const FinanceLaporan = () => {
         <CardContent className="py-14 text-center">
           <BarChart3 className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
           <p className="font-medium text-foreground">Belum ada data</p>
-          <p className="mt-1 text-sm text-muted-foreground">Data akan tampil setelah tersedia</p>
+          <p className="mt-1 text-sm text-muted-foreground">Data laporan akan tampil setelah transaksi tersedia.</p>
         </CardContent>
       </Card>
     </div>

@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const MAX_FILE_SIZE = 350 * 1024;
+const DASHBOARD_ROUTE = "/cms/user-beranda";
 
 interface CurrentPaymentResponse {
   redirectTo?: string;
@@ -76,7 +77,7 @@ const Payment = () => {
         const data = await apiRequest<CurrentPaymentResponse>("/api/payments/current");
 
         if (data.redirectTo) {
-          navigate(data.redirectTo, { replace: true });
+          navigate(data.redirectTo === "/user" ? DASHBOARD_ROUTE : data.redirectTo, { replace: true });
           return;
         }
 
@@ -171,7 +172,7 @@ const Payment = () => {
     if (!paymentId || !user || !hasPaymentData || !hasBankInfo) {
       toast({
         title: "Belum ada data",
-        description: "Data pembayaran akan tampil setelah tersedia",
+        description: "Data pembayaran akan tampil setelah tagihan tersedia.",
         variant: "destructive",
       });
       return;
@@ -192,7 +193,7 @@ const Payment = () => {
 
       toast({
         title: "Bukti pembayaran terkirim",
-        description: "Menunggu verifikasi",
+        description: "Menunggu verifikasi pembayaran.",
       });
       navigate("/payment-pending");
     } catch (error) {
@@ -229,7 +230,7 @@ const Payment = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-3">Pembayaran belum tersedia</h1>
           <p className="text-muted-foreground mb-6 leading-relaxed">{accessDeniedReason}</p>
-          <Button onClick={() => navigate("/cms/user-beranda")} className="w-full">
+          <Button onClick={() => navigate(DASHBOARD_ROUTE)} className="w-full">
             Kembali ke Dashboard
           </Button>
         </div>
@@ -240,7 +241,7 @@ const Payment = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary/90 to-primary">
       <div className="flex-shrink-0 pt-6 pb-3 px-4">
-        <Link to="/cms/user-beranda" className="inline-flex items-center text-primary-foreground/80 text-sm mb-3">
+        <Link to={DASHBOARD_ROUTE} className="inline-flex items-center text-primary-foreground/80 text-sm mb-3">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Kembali
         </Link>
@@ -264,7 +265,7 @@ const Payment = () => {
           <CardContent className="p-4">
             <p className="text-xs opacity-90 mb-1 text-center">Total Tagihan</p>
             <div className="flex items-center justify-center gap-2">
-              <p className="text-2xl font-bold">{hasPaymentData ? `Rp ${formatCurrency(totalAmount)},-` : "Belum ada data"}</p>
+              <p className="text-2xl font-bold">{hasPaymentData ? `Rp ${formatCurrency(totalAmount)},-` : "Belum ada tagihan aktif"}</p>
               <Button variant="ghost" size="sm" onClick={handleCopyAmount} disabled={!hasPaymentData} className="h-8 w-8 p-0 hover:bg-white/20">
                 {copiedAmount ? <Check className="h-4 w-4 text-white" /> : <Copy className="h-4 w-4 text-white/80" />}
               </Button>
@@ -276,7 +277,7 @@ const Payment = () => {
                 <span>Kode: {uniqueCode}</span>
               </div>
             ) : (
-              <p className="mt-2 text-center text-xs opacity-80">Data akan tampil setelah tersedia</p>
+              <p className="mt-2 text-center text-xs opacity-80">Data pembayaran akan tampil setelah tagihan tersedia.</p>
             )}
           </CardContent>
         </Card>
@@ -317,8 +318,8 @@ const Payment = () => {
             ) : (
               <div className="py-6 text-center">
                 <Building2 className="mx-auto mb-3 h-9 w-9 text-muted-foreground/50" />
-                <p className="font-medium text-foreground">Belum ada data</p>
-                <p className="mt-1 text-sm text-muted-foreground">Data rekening akan tampil setelah tersedia</p>
+                <p className="font-medium text-foreground">Belum ada tagihan aktif</p>
+                <p className="mt-1 text-sm text-muted-foreground">Data pembayaran akan tampil setelah tagihan tersedia.</p>
               </div>
             )}
           </CardContent>
@@ -343,7 +344,7 @@ const Payment = () => {
               <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${proofPreview ? "border-emerald-500 bg-emerald-500/10" : "border-border/50"}`}>
                 {proofPreview ? (
                   <div className="space-y-2">
-                    <img src={proofPreview} alt="Preview" className="max-h-28 mx-auto rounded-lg object-contain" />
+                    <img src={proofPreview} alt="Bukti pembayaran" className="max-h-28 mx-auto rounded-lg object-contain" />
                     <p className="text-xs text-emerald-500 font-medium truncate px-4">{proofFile?.name}</p>
                   </div>
                 ) : (
@@ -378,7 +379,7 @@ const Payment = () => {
 
         <div className="mt-5 p-3 bg-muted/30 rounded-xl">
           <p className="text-xs text-center text-muted-foreground">
-            Setelah bukti pembayaran dikirim, status akan menunggu verifikasi.
+            Setelah bukti pembayaran dikirim, status akan menunggu verifikasi pembayaran.
           </p>
         </div>
       </div>

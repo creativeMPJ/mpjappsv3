@@ -22,8 +22,8 @@ export function isPaymentActive(payment?: PaymentStatusLike | string | null) {
 export function getPaymentStateLabel(payment?: PaymentStatusLike | string | null) {
   const status = getPaymentStatus(payment);
 
-  if (status === "verified") return "Aktif";
-  if (status === "pending") return "Menunggu verifikasi";
+  if (status === "verified") return "Terverifikasi";
+  if (status === "pending") return "Menunggu verifikasi pembayaran";
   if (status === "rejected") return "Pembayaran ditolak";
   return "Belum aktif";
 }

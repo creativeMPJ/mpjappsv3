@@ -139,8 +139,8 @@ const FinanceVerifikasi = () => {
         { method: "POST" },
       );
       toast({
-        title: "Pembayaran terverifikasi",
-        description: `${result.pesantrenName ?? selectedPayment.pesantren_claims.pesantren_name} menunggu proses aktivasi sistem.`,
+        title: "Pembayaran disetujui",
+        description: `${result.pesantrenName ?? selectedPayment.pesantren_claims.pesantren_name}: Aktivasi akan diproses oleh sistem.`,
       });
       setShowApproveDialog(false);
       fetchPayments();
@@ -273,11 +273,11 @@ const FinanceVerifikasi = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <Button size="sm" onClick={() => handleApprove(payment)} className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs gap-1">
                             <CheckCircle className="h-3.5 w-3.5" />
-                            Setuju
+                            Setujui pembayaran
                           </Button>
                           <Button size="sm" variant="destructive" onClick={() => handleReject(payment)} className="h-8 text-xs gap-1">
                             <XCircle className="h-3.5 w-3.5" />
-                            Tolak
+                            Tolak pembayaran
                           </Button>
                         </div>
                       </TableCell>

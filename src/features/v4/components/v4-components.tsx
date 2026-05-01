@@ -93,11 +93,11 @@ export function StatusBadge({ status }: { status?: string | null }) {
   const normalized = (status || "belum_ada").toLowerCase();
   const label = normalized.replace(/_/g, " ");
   const className =
-    normalized.includes("active") || normalized.includes("verified") || normalized.includes("aktif")
+    normalized.includes("active") || normalized.includes("verified") || normalized.includes("aktif") || normalized.includes("terverifikasi")
       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : normalized.includes("pending") || normalized.includes("draft")
+      : normalized.includes("pending") || normalized.includes("draft") || normalized.includes("menunggu")
         ? "bg-amber-50 text-amber-700 border-amber-200"
-        : normalized.includes("reject") || normalized.includes("arsip")
+        : normalized.includes("reject") || normalized.includes("ditolak") || normalized.includes("arsip")
           ? "bg-red-50 text-red-700 border-red-200"
           : "bg-slate-50 text-slate-700 border-slate-200";
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
-import { getPaymentStatus, type PaymentReadinessState, type PaymentStatusLike } from "./payment-state";
+import { getPaymentStateLabel, getPaymentStatus, type PaymentReadinessState, type PaymentStatusLike } from "./payment-state";
 
 interface CurrentPaymentResponse {
   payment?: PaymentStatusLike | null;
@@ -43,13 +43,6 @@ export function useCurrentPaymentStatus(fallbackStatus?: string | null) {
     status,
     loading,
     isActive: status === "verified",
-    label:
-      status === "verified"
-        ? "Aktif"
-        : status === "pending"
-          ? "Menunggu verifikasi"
-          : status === "rejected"
-            ? "Pembayaran ditolak"
-            : "Belum aktif",
+    label: getPaymentStateLabel(status),
   };
 }

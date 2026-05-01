@@ -14,6 +14,7 @@ interface PaymentData {
 }
 
 const POLL_INTERVAL = 10_000;
+const DASHBOARD_ROUTE = "/cms/user-beranda";
 
 const PaymentPending = () => {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ const PaymentPending = () => {
 
         if (normalized === "verified") {
           await refreshAuth();
-          setTimeout(() => navigate("/cms", { replace: true }), 2000);
+          setTimeout(() => navigate(DASHBOARD_ROUTE, { replace: true }), 2000);
           return;
         }
 
@@ -56,7 +57,7 @@ const PaymentPending = () => {
       }
 
       if (data.redirectTo && data.redirectTo !== "/payment-pending") {
-        navigate(data.redirectTo, { replace: true });
+        navigate(data.redirectTo === "/user" ? DASHBOARD_ROUTE : data.redirectTo, { replace: true });
       }
     } catch {
       // Retry on next poll.
@@ -103,7 +104,7 @@ const PaymentPending = () => {
               ? "Akun Anda telah aktif. Mengalihkan ke dashboard..."
               : isRejected
                 ? rejectionReason || "Pembayaran Anda ditolak. Silakan unggah ulang bukti pembayaran."
-                : "Bukti pembayaran Anda sedang diverifikasi."}
+                : "Bukti pembayaran Anda sedang menunggu verifikasi pembayaran."}
           </p>
 
           <Card className="bg-muted/30 border-border/50 mb-6">
@@ -133,8 +134,8 @@ const PaymentPending = () => {
                   <CheckCircle className={`h-4 w-4 ${isVerified ? "text-white" : "text-muted-foreground"}`} />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-foreground">Akun Aktif</p>
-                  <p className="text-xs text-muted-foreground">{isVerified ? "Aktif" : "Menunggu"}</p>
+                  <p className="text-sm font-medium text-foreground">Aktivasi Akun</p>
+                  <p className="text-xs text-muted-foreground">{isVerified ? "Terverifikasi" : "Menunggu verifikasi pembayaran"}</p>
                 </div>
               </div>
             </CardContent>
@@ -149,7 +150,7 @@ const PaymentPending = () => {
             ) : (
               <>
                 <p className="text-sm text-foreground">
-                  {isRejected ? "Silakan unggah ulang bukti pembayaran." : "Data akan diperbarui otomatis setelah verifikasi selesai."}
+                  {isRejected ? "Silakan unggah ulang bukti pembayaran." : "Data akan diperbarui otomatis setelah verifikasi pembayaran selesai."}
                 </p>
                 {lastChecked && (
                   <p className="text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1">
@@ -169,7 +170,7 @@ const PaymentPending = () => {
                 </Button>
               </Link>
             ) : (
-              <Link to="/cms/user-beranda">
+              <Link to={DASHBOARD_ROUTE}>
                 <Button className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                   <Home className="mr-2 h-4 w-4" />
                   {isVerified ? "Masuk ke Dashboard" : "Ke Dashboard"}
