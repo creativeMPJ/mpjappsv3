@@ -20,9 +20,21 @@ import {
 import { cn } from "@/lib/utils";
 import { formatNIP } from "@/lib/id-utils";
 import { ProfileLevelBadge, VerifiedBadge } from "@/components/shared/LevelBadge";
+import { getPaymentStateLabel, isPaymentActive } from "@/features/v4/utils";
 
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+
+interface MediaDashboardHomeProps {
+  paymentStatus?: string;
+  profileLevel?: ProfileLevel;
+  onNavigate?: (view: ViewType) => void;
+  debugProfile?: {
+    nip?: string | null;
+    profile_level?: ProfileLevel;
+    status_payment?: string | null;
+  };
+}
 
 const VIEW_ROUTES: Record<ViewType, string> = {
   beranda:       '/cms/user-beranda',
@@ -35,16 +47,24 @@ const VIEW_ROUTES: Record<ViewType, string> = {
   pengaturan:    '/cms/pengaturan',
 };
 
-const MediaDashboardHome = () => {
+const MediaDashboardHome = ({
+  paymentStatus: paymentStatusProp,
+  profileLevel: profileLevelProp,
+  onNavigate: onNavigateProp,
+  debugProfile,
+}: MediaDashboardHomeProps = {}) => {
   const navigate = useNavigate();
   const { profile } = useAuth();
 
-  const paymentStatus = profile?.status_payment ?? 'unpaid';
-  const profileLevel: ProfileLevel = profile?.profile_level ?? 'basic';
-  const onNavigate = (view: ViewType) => navigate(VIEW_ROUTES[view]);
+  const sourceProfile = debugProfile || profile;
+  const paymentStatus = paymentStatusProp ?? sourceProfile?.status_payment ?? 'unpaid';
+  const paymentActive = isPaymentActive(paymentStatus);
+  const paymentLabel = getPaymentStateLabel(paymentStatus);
+  const profileLevel: ProfileLevel = profileLevelProp ?? sourceProfile?.profile_level ?? 'basic';
+  const onNavigate = (view: ViewType) => onNavigateProp?.(view) ?? navigate(VIEW_ROUTES[view]);
 
   const isPlatinum = profileLevel === 'platinum';
-  const displayNIP = profile?.nip ? formatNIP(profile.nip, true) : null;
+  const displayNIP = sourceProfile?.nip ? formatNIP(sourceProfile.nip, true) : null;
   const displayName = profile?.nama_pesantren || "Media Pesantren";
   const jumlahSantri = 0;
 
@@ -65,7 +85,7 @@ const MediaDashboardHome = () => {
     { label: "Data Dasar Lengkap", completed: profileLevel !== "basic" },
     { label: "Logo & Dokumen Terunggah", completed: profileLevel === "gold" || profileLevel === "platinum" },
     { label: "Profil Ensiklopedia", completed: profileLevel === "platinum" },
-    { label: "Administrasi Lunas", completed: paymentStatus === "paid" },
+    { label: "Administrasi Lunas", completed: paymentActive },
   ];
 
   const getLevelInfo = () => {
@@ -82,11 +102,11 @@ const MediaDashboardHome = () => {
   return (
     <div className="space-y-6 pb-20 bg-slate-50 min-h-screen -m-4 md:-m-6 p-4 md:p-6">
       {/* Payment Alert */}
-      {paymentStatus === "unpaid" && (
+      {!paymentActive && (
         <Alert className="bg-red-50 border-red-200 shadow-sm">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800 font-medium">
-            <strong>Tagihan Belum Lunas!</strong> Beberapa fitur seperti Tambah Kru dan Klaim Sertifikat tidak dapat diakses.
+            <strong>{paymentLabel}.</strong> Aktifkan akun terlebih dahulu untuk membuka fitur sensitif.
           </AlertDescription>
         </Alert>
       )}
@@ -125,7 +145,7 @@ const MediaDashboardHome = () => {
                 ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-0"
                 : "bg-emerald-600 text-white border-0"
             )}>
-              NIP: {displayNIP}
+              NIP: {displayNIP ?? "-"}
             </Badge>
             {isPlatinum && <VerifiedBadge isVerified={true} size="lg" showLabel />}
           </div>
@@ -161,11 +181,11 @@ const MediaDashboardHome = () => {
             </Badge>
             <Badge className={cn(
               "shadow-sm",
-              paymentStatus === "paid"
+              paymentActive
                 ? "bg-green-500 text-white shadow-green-200/50"
                 : "bg-red-500 text-white shadow-red-200/50"
             )}>
-              {paymentStatus === "paid" ? "ACTIVE" : "INACTIVE"}
+              {paymentActive ? "ACTIVE" : paymentLabel}
             </Badge>
           </div>
         </CardContent>
@@ -332,36 +352,41 @@ const MediaDashboardHome = () => {
         <Card
           className={cn(
             "bg-white border transition-all cursor-pointer group shadow-sm",
-            paymentStatus === "unpaid" ? "ring-2 ring-red-300 border-red-200" : "hover:shadow-lg border-slate-200"
+            paymentActive ? "hover:shadow-lg border-slate-200" : "ring-2 ring-red-300 border-red-200"
           )}
           onClick={() => onNavigate("administrasi")}
         >
           <CardContent className="p-4 md:p-6 text-center">
             <div className={cn(
               "h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 rounded-full flex items-center justify-center transition-colors shadow-sm",
-              paymentStatus === "unpaid" ? "bg-red-100 group-hover:bg-red-200" : "bg-emerald-100 group-hover:bg-emerald-200"
+              paymentActive ? "bg-emerald-100 group-hover:bg-emerald-200" : "bg-red-100 group-hover:bg-red-200"
             )}>
-              <CreditCard className={cn("h-6 w-6 md:h-8 md:w-8", paymentStatus === "unpaid" ? "text-red-600" : "text-emerald-600")} />
+              <CreditCard className={cn("h-6 w-6 md:h-8 md:w-8", paymentActive ? "text-emerald-600" : "text-red-600")} />
             </div>
             <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">Administrasi</h3>
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Tagihan</p>
             <Button
               className={cn(
                 "w-full text-sm shadow-sm",
-                paymentStatus === "unpaid"
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                paymentActive
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-red-600 hover:bg-red-700 text-white"
               )}
             >
-              {paymentStatus === "unpaid" ? "Bayar" : "Lihat"}
+              {paymentActive ? "Lihat" : "Bayar"}
             </Button>
           </CardContent>
         </Card>
 
         {/* E-ID & Aset */}
         <Card
-          className="bg-white border border-slate-200 hover:shadow-lg transition-all cursor-pointer group shadow-sm"
-          onClick={() => onNavigate("eid")}
+          className={cn(
+            "bg-white border transition-all group shadow-sm",
+            paymentActive ? "border-slate-200 hover:shadow-lg cursor-pointer" : "border-slate-200 opacity-75",
+          )}
+          onClick={() => {
+            if (paymentActive) onNavigate("eid");
+          }}
         >
           <CardContent className="p-4 md:p-6 text-center">
             <div className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-200 transition-colors shadow-sm">
@@ -369,8 +394,14 @@ const MediaDashboardHome = () => {
             </div>
             <h3 className="font-semibold text-slate-900 mb-1 text-sm md:text-base">E-ID & Aset</h3>
             <p className="text-xs md:text-sm text-slate-600 mb-3 md:mb-4">Piagam & Kartu</p>
-            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm shadow-sm">
-              Lihat
+            <Button
+              disabled={!paymentActive}
+              className={cn(
+                "w-full text-white text-sm shadow-sm",
+                paymentActive ? "bg-purple-600 hover:bg-purple-700" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed",
+              )}
+            >
+              {paymentActive ? "Lihat" : "Aktifkan akun terlebih dahulu"}
             </Button>
           </CardContent>
         </Card>

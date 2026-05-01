@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,13 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trash2, Users, RefreshCw, Lock, AlertTriangle, Zap, UserPlus, Shield } from "lucide-react";
+import { CreditCard, Trash2, Users, RefreshCw, Lock, AlertTriangle, Zap, UserPlus, Shield } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
 import { useNavigate } from "react-router-dom";
+import { useCurrentPaymentStatus } from "@/features/v4/utils";
 
 interface KoordinatorData {
   nama: string;
@@ -61,11 +62,15 @@ const JABATAN_OPTIONS = [
   { value: "admin", label: "Admin" },
 ];
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Terjadi kesalahan";
+
 const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }: ManajemenKruProps = {}) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const paymentStatus = paymentStatusProp ?? profile?.status_payment ?? 'unpaid';
+  const payment = useCurrentPaymentStatus(paymentStatus);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [crews, setCrews] = useState<Crew[]>([]);
@@ -76,9 +81,9 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
   const FREE_SLOT_LIMIT = slotConfig.freeSlotQuantity;
   const totalCrew = crews.length;
   const isFreeSlotFull = totalCrew >= FREE_SLOT_LIMIT;
-  const canAddCrew = !isFreeSlotFull;
+  const canAddCrew = payment.isActive && !isFreeSlotFull;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [crewData, config] = await Promise.all([
@@ -95,9 +100,7 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
         koordinator
           ? {
             nama: koordinator.nama,
-            niam: canIssueNIAM({ crewStatus: koordinator.status, paymentStatus, paymentVerified: koordinator.paymentVerified })
-              ? koordinator.niam
-              : null,
+            niam: koordinator.niam ?? null,
             jabatan: koordinator.jabatan || "Koordinator",
             xp_level: getTransactionXPTotal(koordinator as unknown as Record<string, unknown>),
             status: koordinator.status,
@@ -105,16 +108,16 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
           }
           : undefined
       );
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  };
+  }, [onKoordinatorChange, toast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleAdd = async () => {
     if (!nama.trim()) {
@@ -125,10 +128,18 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
       toast({ title: "Validasi", description: "Jabatan wajib dipilih", variant: "destructive" });
       return;
     }
+    if (!payment.isActive) {
+      toast({
+        title: payment.label,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
     if (isFreeSlotFull) {
       toast({
         title: "Slot Gratis Penuh",
-        description: "Anda telah menggunakan 3 slot gratis. Upgrade untuk menambah kru.",
+        description: `Anda telah menggunakan ${FREE_SLOT_LIMIT} slot gratis. Upgrade untuk menambah kru.`,
         variant: "destructive",
       });
       return;
@@ -148,8 +159,8 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
       setJabatan("");
       await loadData();
       toast({ title: "Berhasil", description: "Kru ditambahkan" });
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -161,8 +172,8 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
       await apiRequest(`/api/media/crew/${id}`, { method: "DELETE" });
       await loadData();
       toast({ title: "Berhasil", description: "Kru dihapus" });
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -204,18 +215,23 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
           </Button>
           <Button
             size="sm"
-            disabled={isFreeSlotFull}
+            disabled={!canAddCrew}
             onClick={() => {
-              if (isFreeSlotFull) return;
+              if (!canAddCrew) return;
               document.getElementById("add-crew-form")?.scrollIntoView({ behavior: "smooth" });
             }}
             className={cn(
-              isFreeSlotFull
+              !canAddCrew
                 ? "bg-slate-400 cursor-not-allowed"
                 : "bg-emerald-600 hover:bg-emerald-700"
             )}
           >
-            {isFreeSlotFull ? (
+            {!payment.isActive ? (
+              <>
+                <Lock className="h-4 w-4 mr-2" />
+                Aktifkan akun terlebih dahulu
+              </>
+            ) : isFreeSlotFull ? (
               <>
                 <Lock className="h-4 w-4 mr-2" />
                 Tambah Kru Baru
@@ -229,6 +245,21 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
           </Button>
         </div>
       </div>
+
+      {!payment.isActive && (
+        <Alert className="bg-slate-50 border-slate-200">
+          <Lock className="h-4 w-4 text-slate-600" />
+          <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
+            <span className="text-slate-700 font-medium">
+              {payment.label}. Aktifkan akun terlebih dahulu untuk menambah kru.
+            </span>
+            <Button variant="outline" size="sm" onClick={() => navigate("/payment")}>
+              <CreditCard className="h-3 w-3 mr-1.5" />
+              Aktifkan Akun
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Slot Full Alert */}
       {isFreeSlotFull && (
@@ -269,11 +300,6 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {crews.map((crew, index) => (
             (() => {
-              const hasValidNIAM = canIssueNIAM({
-                crewStatus: crew.status,
-                paymentStatus,
-                paymentVerified: crew.paymentVerified,
-              });
               const xpTotal = getTransactionXPTotal(crew as unknown as Record<string, unknown>);
 
               return (
@@ -309,12 +335,19 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
                     <p className="text-sm text-slate-600">{crew.jabatan || "-"}</p>
 
                     {/* NIAM Badge */}
-                    {crew.niam && hasValidNIAM && (
+                    {crew.niam ? (
                       <Badge
                         variant="outline"
                         className="mt-2 font-mono text-xs border-emerald-300 text-emerald-700 bg-emerald-50"
                       >
                         {crew.niam}
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="mt-2 text-xs border-slate-300 text-slate-600 bg-slate-50"
+                      >
+                        Belum Aktif
                       </Badge>
                     )}
 
@@ -383,10 +416,13 @@ const ManajemenKru = ({ paymentStatus: paymentStatusProp, onKoordinatorChange }:
               <div className="flex items-end">
                 <Button
                   onClick={handleAdd}
-                  disabled={saving}
-                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  disabled={saving || !payment.isActive}
+                  className={cn(
+                    "w-full h-11 text-white",
+                    payment.isActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed",
+                  )}
                 >
-                  {saving ? "Menyimpan..." : "Tambah Kru"}
+                  {!payment.isActive ? "Aktifkan akun terlebih dahulu" : saving ? "Menyimpan..." : "Tambah Kru"}
                 </Button>
               </div>
             </div>

@@ -4,6 +4,8 @@ import { Lock, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import EIDCardGenerator from "@/components/shared/EIDCardGenerator";
 
+type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+
 interface EIDCardProps {
   isGold: boolean;
   debugProfile?: {
@@ -19,6 +21,12 @@ const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
   
   // Use debug profile if provided, otherwise use auth profile
   const profile = debugProfile || authProfile;
+  const profileLevel: ProfileLevel =
+    profile?.profile_level === "silver" ||
+    profile?.profile_level === "gold" ||
+    profile?.profile_level === "platinum"
+      ? profile.profile_level
+      : "basic";
 
   if (!isGold) {
     return (
@@ -64,9 +72,9 @@ const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <EIDCardGenerator
           type="lembaga"
-          nomorId={profile?.nip || "25.00.000"}
+          nomorId={profile?.nip || "-"}
           nama={profile?.nama_pesantren || "Pesantren Anda"}
-          profileLevel={(profile?.profile_level as any) || "basic"}
+          profileLevel={profileLevel}
         />
 
         <Card>

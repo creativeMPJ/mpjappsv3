@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock3, CreditCard, Loader2, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
+import { getPaymentStatus } from "@/features/v4/utils";
 
-type PaymentStatus = "pending_payment" | "pending_verification" | "verified" | "rejected";
+type PaymentStatus = "pending_payment" | "pending_verification" | "pending" | "verified" | "rejected";
 
 const AktivasiNIPNIAM = () => {
   const navigate = useNavigate();
@@ -34,29 +35,31 @@ const AktivasiNIPNIAM = () => {
   }, []);
 
   const statusMeta = useMemo(() => {
-    if (status === "verified") {
+    const normalizedStatus = getPaymentStatus(status);
+
+    if (normalizedStatus === "verified") {
       return {
         label: "Aktivasi Selesai",
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
         tone: "bg-emerald-100 text-emerald-700 border-emerald-200",
       };
     }
-    if (status === "pending_verification") {
+    if (normalizedStatus === "pending") {
       return {
-        label: "Menunggu Verifikasi",
+        label: "Menunggu verifikasi",
         icon: <Clock3 className="h-4 w-4 text-amber-600" />,
         tone: "bg-amber-100 text-amber-700 border-amber-200",
       };
     }
-    if (status === "rejected") {
+    if (normalizedStatus === "rejected") {
       return {
-        label: "Perlu Upload Ulang",
+        label: "Pembayaran ditolak",
         icon: <AlertCircle className="h-4 w-4 text-red-600" />,
         tone: "bg-red-100 text-red-700 border-red-200",
       };
     }
     return {
-      label: "Belum Bayar",
+      label: "Belum aktif",
       icon: <CreditCard className="h-4 w-4 text-slate-600" />,
       tone: "bg-slate-100 text-slate-700 border-slate-200",
     };

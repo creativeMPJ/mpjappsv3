@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { getPaymentStateLabel, isPaymentActive } from "@/features/v4/utils";
 
 const mockCertificates = [
   {
@@ -31,11 +33,23 @@ const mockCertificates = [
 ];
 
 const KegiatanSaya = () => {
+  const { profile } = useAuth();
   const [token, setToken] = useState("");
   const [certificates, setCertificates] = useState(mockCertificates);
   const { toast } = useToast();
+  const paymentActive = isPaymentActive(profile?.status_payment);
+  const paymentLabel = getPaymentStateLabel(profile?.status_payment);
 
   const handleClaimCertificate = () => {
+    if (!paymentActive) {
+      toast({
+        title: paymentLabel,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!token.trim()) {
       toast({
         title: "Token Diperlukan",
@@ -53,7 +67,16 @@ const KegiatanSaya = () => {
     setToken("");
   };
 
-  const handleDownload = (certId: number) => {
+  const handleDownload = () => {
+    if (!paymentActive) {
+      toast({
+        title: paymentLabel,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Mengunduh...",
       description: "Sertifikat sedang diunduh.",
@@ -84,10 +107,11 @@ const KegiatanSaya = () => {
             </div>
             <Button
               onClick={handleClaimCertificate}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
+              disabled={!paymentActive}
+              className={paymentActive ? "bg-amber-500 hover:bg-amber-600 text-white font-semibold" : "bg-slate-400 hover:bg-slate-400 text-white font-semibold cursor-not-allowed"}
             >
               <Award className="h-4 w-4 mr-2" />
-              Klaim Sertifikat
+              {paymentActive ? "Klaim Sertifikat" : "Aktifkan akun terlebih dahulu"}
             </Button>
           </div>
         </CardContent>
@@ -123,11 +147,12 @@ const KegiatanSaya = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-emerald-600 text-emerald-600 hover:bg-emerald-50"
-                  onClick={() => handleDownload(cert.id)}
+                  disabled={!paymentActive}
+                  className={paymentActive ? "border-emerald-600 text-emerald-600 hover:bg-emerald-50" : "border-slate-300 text-slate-400 cursor-not-allowed"}
+                  onClick={handleDownload}
                 >
                   <Download className="h-4 w-4 mr-1" />
-                  Download PDF
+                  {paymentActive ? "Download PDF" : "Aktifkan akun terlebih dahulu"}
                 </Button>
               </div>
             </div>

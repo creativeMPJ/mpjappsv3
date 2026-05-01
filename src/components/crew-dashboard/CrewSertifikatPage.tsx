@@ -12,6 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { getPaymentStateLabel, isPaymentActive } from "@/features/v4/utils";
 
 interface Certificate {
   id: number;
@@ -66,13 +68,25 @@ const mockCertificates: Certificate[] = [
 ];
 
 const CrewSertifikatPage = () => {
+  const { profile } = useAuth();
   const [token, setToken] = useState("");
   const [certificates, setCertificates] = useState<Certificate[]>(mockCertificates);
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const paymentActive = isPaymentActive(profile?.status_payment);
+  const paymentLabel = getPaymentStateLabel(profile?.status_payment);
 
   const handleClaimToken = async () => {
+    if (!paymentActive) {
+      toast({
+        title: paymentLabel,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!token.trim()) {
       toast({
         title: "Token Kosong",
@@ -113,6 +127,15 @@ const CrewSertifikatPage = () => {
   };
 
   const handleDownload = (certificate: Certificate) => {
+    if (!paymentActive) {
+      toast({
+        title: paymentLabel,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Mengunduh Sertifikat",
       description: `Sertifikat "${certificate.eventName}" sedang diunduh...`,
@@ -138,10 +161,10 @@ const CrewSertifikatPage = () => {
               />
               <Button 
                 onClick={handleClaimToken} 
-                disabled={isLoading}
-                className="bg-primary hover:bg-primary/90 px-6"
+                disabled={isLoading || !paymentActive}
+                className={paymentActive ? "bg-primary hover:bg-primary/90 px-6" : "bg-slate-400 hover:bg-slate-400 px-6 cursor-not-allowed"}
               >
-                {isLoading ? "..." : "Klaim"}
+                {!paymentActive ? "Aktifkan akun terlebih dahulu" : isLoading ? "..." : "Klaim"}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
@@ -228,11 +251,12 @@ const CrewSertifikatPage = () => {
                 Diterbitkan: {selectedCertificate.date}
               </div>
               <Button 
-                className="w-full bg-primary hover:bg-primary/90"
+                disabled={!paymentActive}
+                className={paymentActive ? "w-full bg-primary hover:bg-primary/90" : "w-full bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
                 onClick={() => handleDownload(selectedCertificate)}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Download PDF
+                {paymentActive ? "Download PDF" : "Aktifkan akun terlebih dahulu"}
               </Button>
             </div>
           )}

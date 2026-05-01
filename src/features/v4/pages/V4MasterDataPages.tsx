@@ -156,7 +156,7 @@ function mapCrew(crew: V4MasterCrew): V4CrewRow {
     xpLevel: crew.xp_level,
     institutionName: crew.pesantren_name,
     regional: crew.region_name ?? null,
-    status: crew.niam ? "active" : "pending",
+    status: crew.niam ? "aktif" : "Belum Aktif",
   };
 }
 
@@ -333,7 +333,15 @@ function V4MasterDataPage({ scope, type }: { scope: MasterScope; type: MasterTyp
                 key={item.id || index}
                 className={isActiveCrew ? "bg-primary/10 ring-1 ring-inset ring-primary/20" : undefined}
               >
-                <TableCell className="font-medium">{formatText(item.niam)}</TableCell>
+                <TableCell className="font-medium">
+                  {item.niam ? (
+                    formatText(item.niam)
+                  ) : (
+                    <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-600">
+                      Belum Aktif
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell>
                   <RelationLink scope={scope} id={item.id}>{formatText(item.name)}</RelationLink>
                 </TableCell>

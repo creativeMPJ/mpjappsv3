@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/table";
 import { Award, Download, Search, Ticket } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCurrentPaymentStatus } from "@/features/v4/utils";
 
 interface Event {
   id: string;
@@ -24,6 +26,8 @@ interface Event {
 }
 
 const EventSertifikat = () => {
+  const { profile } = useAuth();
+  const payment = useCurrentPaymentStatus(profile?.status_payment);
   const [tokenInput, setTokenInput] = useState("");
   const [events] = useState<Event[]>([
     {
@@ -50,6 +54,15 @@ const EventSertifikat = () => {
   ]);
 
   const handleClaimToken = () => {
+    if (!payment.isActive) {
+      toast({
+        title: payment.label,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!tokenInput.trim()) {
       toast({
         title: "Error",
@@ -67,6 +80,15 @@ const EventSertifikat = () => {
   };
 
   const handleDownloadCertificate = (eventName: string) => {
+    if (!payment.isActive) {
+      toast({
+        title: payment.label,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Download Dimulai",
       description: `Sertifikat ${eventName} sedang diunduh...`,
@@ -113,10 +135,11 @@ const EventSertifikat = () => {
             </div>
             <Button 
               onClick={handleClaimToken}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={!payment.isActive}
+              className={payment.isActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
             >
               <Award className="h-4 w-4 mr-2" />
-              Klaim (Lembaga & Saya)
+              {payment.isActive ? "Klaim (Lembaga & Saya)" : "Aktifkan akun terlebih dahulu"}
             </Button>
           </div>
           <p className="text-sm text-slate-500 mt-3">
@@ -163,11 +186,12 @@ const EventSertifikat = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-emerald-600 hover:text-emerald-700"
+                          disabled={!payment.isActive}
+                          className={payment.isActive ? "text-emerald-600 hover:text-emerald-700" : "text-slate-400 cursor-not-allowed"}
                           onClick={() => handleDownloadCertificate(event.name)}
                         >
                           <Download className="h-4 w-4 mr-1" />
-                          Download
+                          {payment.isActive ? "Download" : "Aktifkan akun terlebih dahulu"}
                         </Button>
                       ) : (
                         <span className="text-sm text-slate-400">Menunggu</span>

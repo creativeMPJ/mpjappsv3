@@ -6,13 +6,16 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, CheckCircle2, Clock3, CreditCard, Loader2, PartyPopper } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
 import { useNavigate } from "react-router-dom";
+import { getPaymentStatus } from "@/features/v4/utils";
 
 interface AdministrasiProps {
+  paymentStatus?: string;
+  onPaymentStatusChange?: () => void;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
   };
-  debugPayments?: any[];
+  debugPayments?: unknown[];
 }
 
 type PaymentSnapshot = {
@@ -26,7 +29,7 @@ type PaymentSnapshot = {
 
 const Administrasi = (_props: AdministrasiProps = {}) => {
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string>('pending_payment');
+  const [, setStatus] = useState<string>('pending_payment');
   const [payment, setPayment] = useState<PaymentSnapshot | null>(null);
   const navigate = useNavigate();
 
@@ -48,6 +51,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
   }, []);
 
   const formatRupiah = (amount: number) => new Intl.NumberFormat("id-ID").format(amount);
+  const normalizedStatus = payment ? getPaymentStatus(payment) : "inactive";
 
   if (loading) {
     return (
@@ -61,7 +65,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
   }
 
   // ── VERIFIED ──────────────────────────────────────────────────────────────
-  if (status === "verified") {
+  if (normalizedStatus === "verified") {
     return (
       <div className="space-y-4">
         <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
@@ -107,7 +111,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
   }
 
   // ── PENDING VERIFICATION ──────────────────────────────────────────────────
-  if (status === "pending_verification") {
+  if (normalizedStatus === "pending") {
     return (
       <div className="space-y-4">
         <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white">
@@ -158,7 +162,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
   }
 
   // ── REJECTED ──────────────────────────────────────────────────────────────
-  if (status === "rejected") {
+  if (normalizedStatus === "rejected") {
     return (
       <div className="space-y-4">
         <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white">
@@ -199,12 +203,12 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
             <CreditCard className="h-8 w-8 text-slate-500" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-700">Belum Melakukan Pembayaran</h3>
+            <h3 className="text-lg font-bold text-slate-700">Belum aktif</h3>
             <p className="text-sm text-muted-foreground mt-1">Selesaikan pembayaran untuk mengaktifkan akun Anda.</p>
           </div>
           <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">
             <CreditCard className="h-3.5 w-3.5 mr-1" />
-            Belum Bayar
+            Belum aktif
           </Badge>
         </CardContent>
       </Card>

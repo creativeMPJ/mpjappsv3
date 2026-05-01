@@ -10,7 +10,8 @@ import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { isPaymentActive } from "@/features/v4/utils";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -68,16 +69,12 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   const { toast } = useToast();
   const { signOut, profile } = useAuth();
   
-  const isDebugMode = (location.state as any)?.isDebugMode;
+  const isDebugMode = Boolean((location.state as { isDebugMode?: boolean } | null)?.isDebugMode);
 
   // Use debug data or fallback to defaults
   const crewName = debugCrew?.nama || "Ahmad Fauzi";
-  const hasValidNIAM = canIssueNIAM({
-    crewStatus: debugCrew?.status,
-    paymentStatus: profile?.status_payment,
-    paymentVerified: debugCrew?.paymentVerified,
-  });
-  const crewNIAM = hasValidNIAM ? debugCrew?.niam || "" : "";
+  const paymentActive = isPaymentActive(profile?.status_payment);
+  const crewNIAM = debugCrew?.niam ?? null;
   const currentXP = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
   const jabatan = debugCrew?.jabatan || "Kru Media";
   const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah";
@@ -145,8 +142,7 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
         </div>
 
         {/* NIAM Identity Card - Dominant Display */}
-        {crewNIAM && (
-          <Card className="bg-primary-foreground/10 backdrop-blur border-primary-foreground/20 mb-4">
+        <Card className="bg-primary-foreground/10 backdrop-blur border-primary-foreground/20 mb-4">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
@@ -157,13 +153,17 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                     Nomor Induk Anggota Media
                   </p>
                   <p className="text-3xl font-mono font-bold text-primary-foreground tracking-widest">
-                    {formatNIAM(crewNIAM, true)}
+                    {crewNIAM ? formatNIAM(crewNIAM, true) : "-"}
                   </p>
+                  {!crewNIAM && (
+                    <Badge className="mt-2 bg-primary-foreground/20 text-primary-foreground border-0">
+                      Belum Aktif
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardContent>
-          </Card>
-        )}
+        </Card>
 
         {/* XP Progress Card */}
         <Card className="bg-primary-foreground/15 backdrop-blur border-0">
@@ -209,8 +209,19 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
         <Card className="shadow-lg border-0">
           <CardContent className="p-4">
             <div 
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => onNavigate("eid")}
+              className={`flex items-center justify-between ${paymentActive ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
+              onClick={() => {
+                if (paymentActive) {
+                  onNavigate("eid");
+                  return;
+                }
+
+                toast({
+                  title: "Belum aktif",
+                  description: "Aktifkan akun terlebih dahulu",
+                  variant: "destructive",
+                });
+              }}
             >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -218,7 +229,9 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                 </div>
                 <div>
                   <p className="text-foreground font-semibold">Lihat E-ID Card</p>
-                  <p className="text-sm text-muted-foreground">Kartu identitas digital Anda</p>
+                  <p className="text-sm text-muted-foreground">
+                    {paymentActive ? "Kartu identitas digital Anda" : "Aktifkan akun terlebih dahulu"}
+                  </p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />

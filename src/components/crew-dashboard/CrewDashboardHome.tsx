@@ -65,11 +65,11 @@ const CrewDashboardHome = ({ onNavigate, institutionPaid }: CrewDashboardHomePro
         </CardContent>
       </Card>
 
-      {/* Unpaid Institution Alert */}
+      {/* Institution activation alert */}
       {!institutionPaid && (
         <Alert className="bg-amber-50 border-amber-200">
           <AlertDescription className="text-amber-800">
-            💡 Hubungi Koordinator Anda untuk aktivasi ID Card.
+            Aktifkan akun terlebih dahulu.
           </AlertDescription>
         </Alert>
       )}

@@ -9,8 +9,9 @@ import { toast } from "@/hooks/use-toast";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
-import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
 import { useAuth } from "@/contexts/AuthContext";
+import { isPaymentActive } from "@/features/v4/utils";
 
 interface CrewEIDCardPageProps {
   canAccessEID: boolean;
@@ -41,19 +42,17 @@ const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: Cre
   const { profile } = useAuth();
 
   // Support debug mode via location.state OR props
-  const stateDebugCrew = (location.state as any)?.debugCrew;
-  const isDebugMode = (location.state as any)?.isDebugMode || !!propDebugCrew;
+  const locationState = location.state as { debugCrew?: CrewEIDCardPageProps["debugCrew"]; isDebugMode?: boolean } | null;
+  const stateDebugCrew = locationState?.debugCrew;
+  const isDebugMode = Boolean(locationState?.isDebugMode || propDebugCrew);
   const debugCrew = propDebugCrew || stateDebugCrew;
-  const hasValidNIAM = canIssueNIAM({
-    crewStatus: debugCrew?.status,
-    paymentStatus: profile?.status_payment,
-    paymentVerified: debugCrew?.paymentVerified,
-  });
+  const paymentActive = isPaymentActive(profile?.status_payment);
+  const crewNIAM = debugCrew?.niam ?? null;
 
   // Build crew data - ALL fields from crews table
   const crewData = isDebugMode && debugCrew ? {
     name: debugCrew.nama || "Nama Kru",
-    noId: debugCrew.niam && hasValidNIAM ? formatNIAM(debugCrew.niam, true) : "—",
+    noId: crewNIAM ? formatNIAM(crewNIAM, true) : "-",
     asalMedia: debugCrew.institution_name || debugCrew.pesantren_asal || "Media Pesantren",
     alamatPesantren: debugCrew.alamat_asal || "Alamat Pesantren",
     role: debugCrew.jabatan || "Kru Media",
@@ -65,11 +64,10 @@ const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: Cre
       youtube: "Media Pondok Jatim",
     },
   } : {
-    // Default/demo crew data
-    name: "Ahmad Fauzi",
-    noId: "AN260100101",
-    asalMedia: "PP. Nurul Huda",
-    alamatPesantren: "Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur",
+    name: profile?.nama_pesantren || "Nama Kru",
+    noId: "-",
+    asalMedia: profile?.nama_pesantren || "Media Pesantren",
+    alamatPesantren: "Alamat Pesantren",
     role: "Kru Media",
     xp: 0,
     skills: ["Fotografer", "Editor", "Desainer"],
@@ -83,6 +81,15 @@ const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: Cre
   const xpLevel = getXPLevel(crewData.xp);
 
   const handleDownloadPDF = () => {
+    if (!paymentActive) {
+      toast({
+        title: "Belum aktif",
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Download PDF",
       description: "Layout cetak sedang diproses untuk diunduh...",
@@ -121,9 +128,12 @@ const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: Cre
             <p className="text-primary-foreground/80 text-center text-sm mb-6 px-8">
               E-ID valid hanya untuk kru aktif dari pesantren level Silver atau lebih tinggi.
             </p>
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button
+              disabled={!paymentActive}
+              className={paymentActive ? "bg-accent hover:bg-accent/90 text-accent-foreground" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
+            >
               <Shield className="h-4 w-4 mr-2" />
-              Lengkapi Syarat E-ID
+              {paymentActive ? "Lengkapi Syarat E-ID" : "Aktifkan akun terlebih dahulu"}
             </Button>
           </div>
         </Card>
@@ -187,10 +197,11 @@ const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: Cre
           {/* Download Button */}
           <Button 
             onClick={handleDownloadPDF}
-            className="w-full max-w-[280px] mx-auto flex bg-primary hover:bg-primary/90"
+            disabled={!paymentActive}
+            className={paymentActive ? "w-full max-w-[280px] mx-auto flex bg-primary hover:bg-primary/90" : "w-full max-w-[280px] mx-auto flex bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
           >
             <Download className="h-4 w-4 mr-2" />
-            Download Layout Cetak (PDF)
+            {paymentActive ? "Download Layout Cetak (PDF)" : "Aktifkan akun terlebih dahulu"}
           </Button>
 
           {/* Physical Card Info */}
@@ -213,7 +224,7 @@ const CrewEIDCardPage = ({ canAccessEID, onBack, debugCrew: propDebugCrew }: Cre
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status Keanggotaan</span>
-              <span className="font-medium text-accent">Aktif</span>
+              <span className="font-medium text-accent">{paymentActive ? "Aktif" : "Belum aktif"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Berlaku Hingga</span>

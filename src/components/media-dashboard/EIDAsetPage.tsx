@@ -11,8 +11,9 @@ import { toast } from "@/hooks/use-toast";
 import { VirtualCharter } from "@/components/shared/VirtualCharter";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
 import { formatNIP, formatNIAM } from "@/lib/id-utils";
-import { downloadElementAsJPG, generatePiagamFilename, generateEIDFilename } from "@/lib/charter-download";
-import { canAccessEID, canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { downloadElementAsJPG, generatePiagamFilename } from "@/lib/charter-download";
+import { canAccessEID, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { useCurrentPaymentStatus } from "@/features/v4/utils";
 
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
 
@@ -61,10 +62,6 @@ interface EIDAsetPageProps {
  * - Piagam Pesantren: Single Virtual Charter (highest tier achieved) - uses institution data
  * - E-ID Koordinator: Virtual and Physical Member Card - uses CREW data (NIAM)
  * 
- * PAYWALL LOGIC:
- * - If status_payment === 'unpaid', download buttons are disabled with lock icon
- * - Tooltip shows message: 'Fitur ini hanya tersedia untuk anggota yang sudah melakukan aktivasi pembayaran.'
- * 
  * DATA BINDING:
  * - NIP: From profiles.nip (generated on payment approval)
  * - Nama Pesantren: From profiles.nama_pesantren
@@ -81,6 +78,7 @@ const EIDAsetPage = ({
 }: EIDAsetPageProps = {}) => {
   const { profile: authProfile } = useAuth();
   const paymentStatus = paymentStatusProp ?? authProfile?.status_payment ?? 'unpaid';
+  const payment = useCurrentPaymentStatus(paymentStatus);
   const profileLevel: ProfileLevel = (profileLevelProp ?? authProfile?.profile_level ?? 'basic') as ProfileLevel;
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
@@ -114,12 +112,7 @@ const EIDAsetPage = ({
 
   // Koordinator data from crews table (for E-ID)
   const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
-  const koordinatorHasValidNIAM = canIssueNIAM({
-    crewStatus: koordinator?.status,
-    paymentStatus,
-    paymentVerified: koordinator?.paymentVerified,
-  });
-  const koordinatorNIAM = koordinatorHasValidNIAM ? koordinator?.niam || null : null;
+  const koordinatorNIAM = koordinator?.niam ?? null;
   const koordinatorJabatan = koordinator?.jabatan || "Koordinator";
   const koordinatorXP = getTransactionXPTotal(koordinator as unknown as Record<string, unknown>);
   const koordinatorPhoto = koordinator?.photoUrl;
@@ -132,16 +125,15 @@ const EIDAsetPage = ({
   };
 
   const highestLevel = getHighestLevel();
-  const canAccessCoordinatorEID = canAccessEID({
+  const canAccessCoordinatorEID = payment.isActive && canAccessEID({
     crewStatus: koordinator?.status,
     profileLevel,
   });
   const hasKoordinator = Boolean(koordinator && koordinatorNIAM);
 
-  // Check if user is unpaid - for paywall logic
-  const isUnpaid = paymentStatus === "unpaid";
+  const isUnpaid = !payment.isActive;
   const hasValidNIP = !!displayNIP && displayNIP.length >= 7;
-  const lockedTooltipMessage = "Fitur ini hanya tersedia untuk anggota yang sudah melakukan aktivasi pembayaran.";
+  const lockedTooltipMessage = "Aktifkan akun terlebih dahulu";
 
   const getLevelBadgeColor = () => {
     switch (highestLevel) {
@@ -277,7 +269,7 @@ const EIDAsetPage = ({
                 <VirtualCharter
                   ref={charterRef}
                   level={highestLevel}
-                  noId={displayNIP || "XXXXXXX"}
+                  noId={displayNIP || "-"}
                   namaPesantren={displayPesantrenName}
                   namaKoordinator={hasKoordinator ? koordinatorName : undefined}
                   alamat={displayAddress}
@@ -336,7 +328,9 @@ const EIDAsetPage = ({
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Fitur Terkunci</h3>
                 <p className="text-slate-300 text-center mb-4 px-8 max-w-md">
-                  E-ID valid hanya untuk kru aktif dari pesantren level Silver atau lebih tinggi.
+                  {payment.isActive
+                    ? "E-ID valid hanya untuk kru aktif dari pesantren level Silver atau lebih tinggi."
+                    : "Aktifkan akun terlebih dahulu"}
                 </p>
               </div>
             </Card>
@@ -367,7 +361,7 @@ const EIDAsetPage = ({
                 </CardHeader>
                 <CardContent>
                   <VirtualMemberCard
-                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "—"}
+                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "-"}
                     name={koordinatorName}
                     asalMedia={displayMediaName}
                     alamat={displayAddress}
@@ -391,7 +385,7 @@ const EIDAsetPage = ({
                 </CardHeader>
                 <CardContent>
                   <PhysicalMemberCard
-                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "—"}
+                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "-"}
                     name={koordinatorName}
                     asalMedia={displayMediaName}
                     alamat={displayAddress}

@@ -13,7 +13,8 @@ import { toast } from "@/hooks/use-toast";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
 import { useAuth } from "@/contexts/AuthContext";
-import { canIssueNIAM, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { isPaymentActive } from "@/features/v4/utils";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -54,14 +55,11 @@ const teamMembers = [
 
 const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
   const { profile } = useAuth();
+  const paymentActive = isPaymentActive(profile?.status_payment);
   // Use debug data if available
   const [namaLengkap, setNamaLengkap] = useState(debugCrew?.nama || "Ahmad Fauzi");
   const [namaPanggilan, setNamaPanggilan] = useState(debugCrew?.nama_panggilan || "Fauzi");
-  const niam = canIssueNIAM({
-    crewStatus: debugCrew?.status,
-    paymentStatus: profile?.status_payment,
-    paymentVerified: debugCrew?.paymentVerified,
-  }) ? debugCrew?.niam || null : null;
+  const niam = debugCrew?.niam ?? null;
   const xpLevel = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
   const [whatsapp, setWhatsapp] = useState(debugCrew?.whatsapp || "081234567890");
   const [pesantrenAsal, setPesantrenAsal] = useState(debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah");
@@ -94,6 +92,15 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
   };
 
   const handleUploadPhoto = () => {
+    if (!paymentActive) {
+      toast({
+        title: "Belum aktif",
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Update Foto",
       description: "Fitur upload foto akan segera tersedia",
@@ -101,6 +108,15 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
   };
 
   const handleUploadCV = () => {
+    if (!paymentActive) {
+      toast({
+        title: "Belum aktif",
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
       title: "Upload CV/Portofolio",
       description: "Fitur upload portofolio akan segera tersedia",
@@ -124,14 +140,17 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
               <Badge className="mt-1 bg-primary/10 text-primary">{debugCrew?.jabatan || 'Kru Media'}</Badge>
               
               {/* NIAM Display - Professional Typography */}
-              {niam && (
-                <div className="mt-3 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <p className="text-xs text-emerald-600 uppercase tracking-wider text-center">NIAM</p>
-                  <p className="text-xl font-mono font-bold text-emerald-800 tracking-widest text-center">
-                    {formatNIAM(niam, true)}
-                  </p>
-                </div>
-              )}
+              <div className="mt-3 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <p className="text-xs text-emerald-600 uppercase tracking-wider text-center">NIAM</p>
+                <p className="text-xl font-mono font-bold text-emerald-800 tracking-widest text-center">
+                  {niam ? formatNIAM(niam, true) : "-"}
+                </p>
+                {!niam && (
+                  <Badge variant="outline" className="mt-2 w-full justify-center border-slate-300 bg-slate-50 text-slate-600">
+                    Belum Aktif
+                  </Badge>
+                )}
+              </div>
 
               {/* XP Badge */}
               <div className="mt-3 flex items-center gap-2">
@@ -143,8 +162,19 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
 
         {/* E-ID Card Access */}
         <Card 
-          className="bg-gradient-to-r from-primary/10 to-accent/10 cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => onNavigate("eid")}
+          className={`bg-gradient-to-r from-primary/10 to-accent/10 transition-shadow ${paymentActive ? "cursor-pointer hover:shadow-md" : "cursor-not-allowed opacity-70"}`}
+          onClick={() => {
+            if (paymentActive) {
+              onNavigate("eid");
+              return;
+            }
+
+            toast({
+              title: "Belum aktif",
+              description: "Aktifkan akun terlebih dahulu",
+              variant: "destructive",
+            });
+          }}
         >
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
@@ -153,7 +183,9 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-foreground">E-ID Card</h3>
-                <p className="text-sm text-muted-foreground">Lihat & download ID Card digital</p>
+                <p className="text-sm text-muted-foreground">
+                  {paymentActive ? "Lihat & download ID Card digital" : "Aktifkan akun terlebih dahulu"}
+                </p>
               </div>
               <Badge className="bg-accent text-accent-foreground text-xs">BARU</Badge>
             </div>
