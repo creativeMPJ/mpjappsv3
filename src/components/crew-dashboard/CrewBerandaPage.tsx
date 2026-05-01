@@ -2,8 +2,7 @@ import { Bell, Zap, Award, ChevronRight, IdCard, LogOut } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
@@ -42,27 +41,6 @@ interface CrewBerandaPageProps {
   debugCrew?: CrewData;
 }
 
-const mockNews = [
-  {
-    id: 1,
-    title: "Kopdar Akbar MPJ Jawa Timur 2025",
-    date: "25 Des 2024",
-    thumbnail: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200&h=120&fit=crop",
-  },
-  {
-    id: 2,
-    title: "Workshop Video Editing untuk Kru Media",
-    date: "20 Des 2024",
-    thumbnail: "https://images.unsplash.com/photo-1492724441997-5dc865305da7?w=200&h=120&fit=crop",
-  },
-  {
-    id: 3,
-    title: "Pengumuman Pemenang Lomba Konten Kreatif",
-    date: "15 Des 2024",
-    thumbnail: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=200&h=120&fit=crop",
-  },
-];
-
 const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,19 +49,18 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   
   const isDebugMode = Boolean((location.state as { isDebugMode?: boolean } | null)?.isDebugMode);
 
-  // Use debug data or fallback to defaults
-  const crewName = debugCrew?.nama || "Ahmad Fauzi";
+  const crewName = debugCrew?.nama || "Belum ada data";
   const paymentActive = isPaymentActive(profile?.status_payment);
   const crewNIAM = debugCrew?.niam ?? null;
   const currentXP = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
   const jabatan = debugCrew?.jabatan || "Kru Media";
-  const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah";
+  const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "Data akan tampil setelah tersedia";
   
   const xpInfo = getXPLevel(currentXP);
   const stats = {
     currentXP,
     targetXP: xpInfo.maxXP === Infinity ? currentXP + 1000 : xpInfo.maxXP,
-    totalCertificates: 5,
+    totalCertificates: 0,
   };
 
   const handleLogout = async () => {
@@ -107,9 +84,8 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Avatar className="h-14 w-14 ring-2 ring-primary-foreground/30">
-                <AvatarImage src="https://i.pravatar.cc/150?img=12" />
                 <AvatarFallback className="bg-primary-foreground text-primary font-bold text-lg">
-                  {crewName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  {debugCrew?.nama ? crewName.split(' ').map(n => n[0]).join('').slice(0, 2) : "K"}
                 </AvatarFallback>
               </Avatar>
               {/* Militansi Badge Overlay */}
@@ -254,7 +230,7 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                   <p className="text-2xl font-bold text-foreground">{stats.totalCertificates}</p>
                 </div>
               </div>
-              <Badge className="bg-amber-100 text-amber-700 border-amber-200">Coming Soon</Badge>
+              <Badge className="bg-amber-100 text-amber-700 border-amber-200">Segera Hadir</Badge>
             </div>
           </CardContent>
         </Card>
@@ -269,29 +245,13 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
           </Button>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-580px)]">
-          <div className="space-y-3 pb-4">
-            {mockNews.map((news) => (
-              <Card key={news.id} className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-0">
-                  <div className="flex gap-3">
-                    <img
-                      src={news.thumbnail}
-                      alt={news.title}
-                      className="w-24 h-20 object-cover rounded-l-lg"
-                    />
-                    <div className="flex-1 py-3 pr-3">
-                      <h3 className="font-semibold text-sm text-foreground line-clamp-2 mb-1">
-                        {news.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">{news.date}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <Award className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+            <p className="font-medium text-foreground">Belum ada data</p>
+            <p className="mt-1 text-sm text-muted-foreground">Data akan tampil setelah tersedia</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

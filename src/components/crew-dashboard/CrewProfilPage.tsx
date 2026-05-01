@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
@@ -47,25 +47,18 @@ const availableSkills = [
   "Motion Graphics", "Drone Pilot", "Live Streaming", "Audio Editing"
 ];
 
-const teamMembers = [
-  { id: 1, name: "Siti Aisyah", role: "Admin Media", avatar: "https://i.pravatar.cc/150?img=44" },
-  { id: 2, name: "Muhammad Rizki", role: "Kru Media", avatar: "https://i.pravatar.cc/150?img=12" },
-  { id: 3, name: "Nurul Hidayah", role: "Kru Media", avatar: "https://i.pravatar.cc/150?img=32" },
-];
-
 const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
   const { profile } = useAuth();
   const paymentActive = isPaymentActive(profile?.status_payment);
-  // Use debug data if available
-  const [namaLengkap, setNamaLengkap] = useState(debugCrew?.nama || "Ahmad Fauzi");
-  const [namaPanggilan, setNamaPanggilan] = useState(debugCrew?.nama_panggilan || "Fauzi");
+  const [namaLengkap, setNamaLengkap] = useState(debugCrew?.nama || "");
+  const [namaPanggilan, setNamaPanggilan] = useState(debugCrew?.nama_panggilan || "");
   const niam = debugCrew?.niam ?? null;
   const xpLevel = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
-  const [whatsapp, setWhatsapp] = useState(debugCrew?.whatsapp || "081234567890");
-  const [pesantrenAsal, setPesantrenAsal] = useState(debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah");
-  const [alamatAsal, setAlamatAsal] = useState(debugCrew?.alamat_asal || "Jl. Raya Pesantren No. 45, Malang");
+  const [whatsapp, setWhatsapp] = useState(debugCrew?.whatsapp || "");
+  const [pesantrenAsal, setPesantrenAsal] = useState(debugCrew?.pesantren_asal || debugCrew?.institution_name || "");
+  const [alamatAsal, setAlamatAsal] = useState(debugCrew?.alamat_asal || "");
   const [prinsipHidup, setPrinsipHidup] = useState(debugCrew?.prinsip_hidup || "");
-  const [selectedSkills, setSelectedSkills] = useState<string[]>(debugCrew?.skill || ["Video Editing", "Desain Grafis", "Videography"]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(debugCrew?.skill || []);
   const [showSkillPicker, setShowSkillPicker] = useState(false);
 
   const xpInfo = getXPLevel(xpLevel);
@@ -86,8 +79,8 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
 
   const handleSave = () => {
     toast({
-      title: "Profil Disimpan",
-      description: "Perubahan data profil berhasil disimpan",
+      title: "Fitur akan segera tersedia",
+      description: "Perubahan profil belum tersedia saat ini",
     });
   };
 
@@ -131,12 +124,11 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
           <CardContent className="p-6">
             <div className="flex flex-col items-center">
               <Avatar className="h-24 w-24">
-                <AvatarImage src="https://i.pravatar.cc/150?img=12" />
                 <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                  {namaLengkap.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  {namaLengkap ? namaLengkap.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "K"}
                 </AvatarFallback>
               </Avatar>
-              <h2 className="mt-4 text-xl font-bold text-foreground">{namaLengkap}</h2>
+              <h2 className="mt-4 text-xl font-bold text-foreground">{namaLengkap || "Belum ada data"}</h2>
               <Badge className="mt-1 bg-primary/10 text-primary">{debugCrew?.jabatan || 'Kru Media'}</Badge>
               
               {/* NIAM Display - Professional Typography */}
@@ -225,7 +217,7 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
               <Input 
                 value={whatsapp} 
                 onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="Contoh: 081234567890"
+                placeholder="Nomor WhatsApp"
               />
             </div>
             <div className="space-y-2">
@@ -336,20 +328,11 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground mb-3">Rekan satu lembaga (read-only)</p>
-            <div className="space-y-3">
-              {teamMembers.map((member) => (
-                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={member.avatar} />
-                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.role}</p>
-                  </div>
-                </div>
-              ))}
+            <p className="text-xs text-muted-foreground mb-3">Rekan satu lembaga</p>
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <Users className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
+              <p className="text-sm font-medium text-foreground">Belum ada data</p>
+              <p className="mt-1 text-xs text-muted-foreground">Data akan tampil setelah tersedia</p>
             </div>
           </CardContent>
         </Card>
@@ -398,13 +381,10 @@ const CrewProfilPage = ({ onNavigate, debugCrew }: CrewProfilPageProps) => {
             {/* Uploaded Documents */}
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground font-medium">Dokumen Terunggah:</p>
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <FileText className="h-5 w-5 text-primary" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">SK_Kru_Media_2024.pdf</p>
-                  <p className="text-xs text-muted-foreground">Diupload: 15 Nov 2024</p>
-                </div>
-                <Badge variant="secondary" className="text-xs">Aktif</Badge>
+              <div className="rounded-lg border border-dashed p-4 text-center">
+                <FileText className="mx-auto mb-2 h-6 w-6 text-muted-foreground/50" />
+                <p className="text-sm font-medium text-foreground">Belum ada data</p>
+                <p className="text-xs text-muted-foreground">Data akan tampil setelah tersedia</p>
               </div>
             </div>
           </CardContent>
