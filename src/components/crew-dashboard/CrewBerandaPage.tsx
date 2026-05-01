@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { getTransactionXPTotal } from "@/lib/v4-core-rules";
 import { isPaymentActive } from "@/features/v4/utils";
+import { getCrewStatusClass, getCrewStatusLabel } from "./crew-state";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -53,8 +54,9 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   const paymentActive = isPaymentActive(profile?.status_payment);
   const crewNIAM = debugCrew?.niam ?? null;
   const currentXP = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
-  const jabatan = debugCrew?.jabatan || "Kru Media";
+  const jabatan = debugCrew?.jabatan || "-";
   const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "Data akan tampil setelah tersedia";
+  const statusLabel = getCrewStatusLabel(debugCrew?.status);
   
   const xpInfo = getXPLevel(currentXP);
   const stats = {
@@ -96,8 +98,11 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
             <div>
               <h1 className="text-xl font-bold text-primary-foreground">{crewName}</h1>
               <p className="text-primary-foreground/80 text-sm">{pesantrenAsal}</p>
-              <Badge variant="secondary" className="mt-1 bg-primary-foreground/20 text-primary-foreground border-0 text-xs">
+              <Badge variant="secondary" className="mt-1 mr-1 bg-primary-foreground/20 text-primary-foreground border-0 text-xs">
                 {jabatan}
+              </Badge>
+              <Badge variant="outline" className={cn("mt-1 text-xs", getCrewStatusClass(debugCrew?.status))}>
+                {statusLabel}
               </Badge>
             </div>
           </div>
@@ -165,7 +170,7 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                 />
                 <p className="text-xs text-primary-foreground/60 mt-2">
                   {stats.targetXP === Infinity 
-                    ? '🎉 Level Tertinggi Tercapai!' 
+                    ? 'Level tertinggi tercapai'
                     : `${stats.targetXP - stats.currentXP} XP lagi ke ${xpInfo.level === 'bronze' ? 'Silver' : xpInfo.level === 'silver' ? 'Gold' : 'Platinum'}`
                   }
                 </p>

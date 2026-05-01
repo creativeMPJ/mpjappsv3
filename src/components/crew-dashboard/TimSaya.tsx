@@ -1,5 +1,5 @@
 import { Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const TimSaya = () => {
@@ -22,28 +22,6 @@ const TimSaya = () => {
           <Users className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
           <p className="font-medium text-foreground">Belum ada data</p>
           <p className="mt-1 text-sm text-muted-foreground">Data akan tampil setelah tersedia</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Statistik Tim</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-emerald-50 rounded-lg">
-              <p className="text-2xl font-bold text-emerald-600">0</p>
-              <p className="text-sm text-muted-foreground">Total Anggota</p>
-            </div>
-            <div className="p-4 bg-amber-50 rounded-lg">
-              <p className="text-2xl font-bold text-amber-600">0</p>
-              <p className="text-sm text-muted-foreground">Event Diikuti</p>
-            </div>
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">0</p>
-              <p className="text-sm text-muted-foreground">Total XP Tim</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { canAccessEID, canAccessRestrictedCrewFeature } from "@/lib/v4-core-rules";
+import { canAccessEID } from "@/lib/v4-core-rules";
 import CrewBerandaPage from "@/components/crew-dashboard/CrewBerandaPage";
 import CrewEIDCardPage from "@/components/crew-dashboard/CrewEIDCardPage";
 import CrewProfilPage from "@/components/crew-dashboard/CrewProfilPage";
 import ComingSoonOverlay from "@/components/shared/ComingSoonOverlay";
+import { canUseCrewFeature, getCrewStatusLabel } from "@/components/crew-dashboard/crew-state";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -20,6 +21,16 @@ interface NavItem {
   icon: React.ElementType;
   isActive: boolean;
   isComingSoon: boolean;
+}
+
+interface CrewDashboardLocationState {
+  debugCrew?: {
+    status?: string | null;
+    niam?: string | null;
+    institution_profile_level?: string | null;
+    profile_level?: string | null;
+  };
+  isDebugMode?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -39,15 +50,16 @@ const CrewDashboard = () => {
   const [activeView, setActiveView] = useState<ViewType>("beranda");
 
   // Support debug mode via location.state
-  const debugCrew = (location.state as any)?.debugCrew;
-  const isDebugMode = (location.state as any)?.isDebugMode;
+  const locationState = location.state as CrewDashboardLocationState | null;
+  const debugCrew = locationState?.debugCrew;
+  const isDebugMode = locationState?.isDebugMode;
   const crewStatus = debugCrew?.status;
   const institutionProfileLevel =
     debugCrew?.institution_profile_level ??
     debugCrew?.profile_level ??
     profile?.profile_level;
-  const canUseRestrictedFeature = canAccessRestrictedCrewFeature({ crewStatus });
-  const canUseEID = canAccessEID({ crewStatus, profileLevel: institutionProfileLevel });
+  const canUseRestrictedFeature = canUseCrewFeature(crewStatus, profile?.status_payment);
+  const canUseEID = canUseRestrictedFeature && Boolean(debugCrew?.niam) && canAccessEID({ crewStatus, profileLevel: institutionProfileLevel });
   const restrictedViews = new Set<ViewType>(["leaderboard", "hub", "event", "eid"]);
 
   const handleLogout = async () => {
@@ -66,18 +78,22 @@ const CrewDashboard = () => {
   const handleNavClick = (item: NavItem) => {
     if (restrictedViews.has(item.id) && !canUseRestrictedFeature) {
       toast({
-        title: "Akses Ditutup",
-        description: "Status alumni tidak dapat mengakses fitur terbatas atau mendaftar event.",
+        title: getCrewStatusLabel(crewStatus),
+        description: "Aktifkan akun terlebih dahulu atau tunggu aktivasi kru selesai.",
         variant: "destructive",
       });
       return;
     }
 
     if (item.isComingSoon) {
-      setActiveView(item.id);
-    } else {
-      setActiveView(item.id);
+      toast({
+        title: "Segera Hadir",
+        description: "Fitur akan segera tersedia.",
+      });
+      return;
     }
+
+    setActiveView(item.id);
   };
 
   const renderContent = () => {
@@ -85,7 +101,7 @@ const CrewDashboard = () => {
       return (
         <ComingSoonOverlay
           title="Akses Ditutup"
-          description="Status alumni tidak dapat mengakses fitur terbatas atau mendaftar event."
+          description="Aktifkan akun terlebih dahulu atau tunggu aktivasi kru selesai."
         />
       );
     }
@@ -99,9 +115,9 @@ const CrewDashboard = () => {
         event: "Event & Kegiatan",
       };
       const descriptions: Record<string, string> = {
-        leaderboard: "Papan peringkat anggota berdasarkan XP Militansi akan segera hadir.",
+        leaderboard: "Papan peringkat anggota akan segera hadir.",
         hub: "Pusat koneksi dan kolaborasi antar anggota MPJ se-Jawa Timur.",
-        event: "Jadwal event, pendaftaran kegiatan, dan riwayat partisipasi.",
+        event: "Event akan tampil setelah tersedia.",
       };
       return (
         <ComingSoonOverlay 
@@ -193,7 +209,9 @@ const CrewDashboard = () => {
                 <div className="relative">
                   <item.icon className={cn("h-5 w-5", isActive && "stroke-[2.5px]")} />
                   {item.isComingSoon && (
-                    <span className="absolute -top-1 -right-2 w-2 h-2 bg-amber-400 rounded-full" />
+                    <span className="absolute -top-1 -right-2 rounded bg-amber-400 px-1 text-[8px] font-semibold text-white">
+                      Baru
+                    </span>
                   )}
                 </div>
                 <span className={cn("text-[10px]", isActive && "font-semibold")}>{item.label}</span>
