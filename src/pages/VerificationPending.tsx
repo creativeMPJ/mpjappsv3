@@ -217,10 +217,10 @@ const VerificationPending = () => {
                 </div>
                 <div className="pt-2 opacity-50">
                   <p className="text-sm font-medium text-foreground">
-                    {isKlaim ? 'Akun Aktif (Data Lama)' : 'Verifikasi Admin Pusat'}
+                    {isKlaim ? 'Aktif' : 'Verifikasi Admin Pusat'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isKlaim ? 'Akun langsung aktif dengan data existing' : 'Pengesahan akhir oleh Admin Pusat'}
+                    {isKlaim ? 'Akun aktif dengan data lama' : 'Pengesahan akhir oleh Admin Pusat'}
                   </p>
                 </div>
               </div>

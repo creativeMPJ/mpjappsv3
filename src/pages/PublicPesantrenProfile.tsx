@@ -125,8 +125,8 @@ const PublicPesantrenProfile = () => {
   }
 
   const isVerified = pesantren?.profile_level === 'platinum' || pesantren?.profile_level === 'gold';
-  const ogTitle = `${pesantren?.nama_pesantren || 'Pesantren'} - Anggota Resmi Media Pondok Jawa Timur`;
-  const ogDescription = `Terverifikasi dengan NIP ${formatNIP(pesantren?.nip, false)}. Lihat profil resmi media pesantren ini di MPJ Apps.`;
+  const ogTitle = `${pesantren?.nama_pesantren || 'Identitas Pesantren'} - MPJ Apps`;
+  const ogDescription = "Identitas resmi akan tampil setelah pembayaran terverifikasi.";
   const ogImage = pesantren?.logo_url || `${window.location.origin}/favicon.ico`;
 
   return (
@@ -173,7 +173,7 @@ const PublicPesantrenProfile = () => {
               <Avatar className="w-24 h-24 border-4 border-white shadow-xl">
                 <AvatarImage src={pesantren?.logo_url || ''} alt={pesantren?.nama_pesantren || ''} />
                 <AvatarFallback className="bg-emerald-100 text-emerald-700 text-2xl font-bold">
-                  {pesantren?.nama_pesantren?.charAt(0) || 'P'}
+                  {pesantren?.nama_pesantren?.charAt(0) || '-'}
                 </AvatarFallback>
               </Avatar>
               {isVerified && (
@@ -184,7 +184,7 @@ const PublicPesantrenProfile = () => {
             </div>
             
             <h2 className="text-xl font-bold mt-4 flex items-center justify-center gap-2">
-              {pesantren?.nama_pesantren || 'Pesantren'}
+              {pesantren?.nama_pesantren || '-'}
               {isVerified && <VerifiedBadge isVerified={true} size="lg" />}
             </h2>
             
@@ -319,7 +319,7 @@ const PublicPesantrenProfile = () => {
                     <div>
                       <p className="font-semibold text-gray-800 text-sm">{crew.nama}</p>
                       <p className="text-xs text-gray-500">
-                        {crew.jabatan || 'Kru'} • {formatNIAM(crew.niam, false)}
+                        {crew.jabatan || 'Kru'} · {formatNIAM(crew.niam, false)}
                       </p>
                     </div>
                   </div>

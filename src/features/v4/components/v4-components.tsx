@@ -90,20 +90,30 @@ export function EmptyState({
 }
 
 export function StatusBadge({ status }: { status?: string | null }) {
-  const normalized = (status || "belum_ada").toLowerCase();
-  const label = normalized.replace(/_/g, " ");
-  const className =
-    normalized.includes("active") || normalized.includes("verified") || normalized.includes("aktif") || normalized.includes("terverifikasi")
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : normalized.includes("pending") || normalized.includes("draft") || normalized.includes("menunggu")
-        ? "bg-amber-50 text-amber-700 border-amber-200"
-        : normalized.includes("reject") || normalized.includes("ditolak") || normalized.includes("arsip")
-          ? "bg-red-50 text-red-700 border-red-200"
-          : "bg-slate-50 text-slate-700 border-slate-200";
+  const normalized = (status || "").trim().toLowerCase();
+
+  const resolved =
+    !normalized || normalized === "unknown" || normalized === "null"
+      ? { label: "-", className: "bg-slate-50 text-slate-700 border-slate-200" }
+      : normalized.includes("approved") || normalized.includes("verified") || normalized.includes("final") || normalized.includes("terverifikasi")
+        ? { label: "Final / Terverifikasi", className: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+        : normalized.includes("draft")
+          ? { label: "Draft", className: "bg-slate-50 text-slate-700 border-slate-200" }
+          : normalized.includes("pending") || normalized.includes("menunggu")
+            ? { label: "Menunggu", className: "bg-amber-50 text-amber-700 border-amber-200" }
+            : normalized.includes("reject") || normalized.includes("ditolak")
+              ? { label: "Ditolak", className: "bg-red-50 text-red-700 border-red-200" }
+              : normalized.includes("archived") || normalized.includes("arsip")
+                ? { label: "Diarsipkan", className: "bg-slate-50 text-slate-700 border-slate-200" }
+                : normalized.includes("aktif") || normalized === "active"
+                  ? { label: "Aktif", className: "bg-emerald-50 text-emerald-700 border-emerald-200" }
+                  : normalized.includes("nonaktif") || normalized.includes("inactive")
+                    ? { label: "Tidak Aktif", className: "bg-slate-50 text-slate-700 border-slate-200" }
+                    : { label: status ?? "-", className: "bg-slate-50 text-slate-700 border-slate-200" };
 
   return (
-    <Badge variant="outline" className={cn("capitalize", className)}>
-      {label}
+    <Badge variant="outline" className={cn("capitalize", resolved.className)}>
+      {resolved.label}
     </Badge>
   );
 }
@@ -135,6 +145,8 @@ export function DataTableShell({
   searchValue,
   onSearchChange,
   emptyType = "no_data",
+  emptyTitle,
+  emptyDescription,
   onRetry,
 }: {
   title: string;
@@ -151,10 +163,12 @@ export function DataTableShell({
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   emptyType?: DataTableEmptyType;
+  emptyTitle?: string;
+  emptyDescription?: string;
   onRetry?: () => void;
 }) {
   const resolvedEmptyType: DataTableEmptyType = error ? "error" : emptyType;
-  const emptyState = getDataTableEmptyState(resolvedEmptyType, error);
+  const emptyState = getDataTableEmptyState(resolvedEmptyType, error, emptyTitle, emptyDescription);
   const showToolbar = enableSearch || Boolean(actions) || Boolean(headerRight);
 
   return (
@@ -258,23 +272,23 @@ function TableLoadingSkeleton({ columns }: { columns: number }) {
   );
 }
 
-function getDataTableEmptyState(type: DataTableEmptyType, error?: string | null) {
+function getDataTableEmptyState(type: DataTableEmptyType, error?: string | null, titleOverride?: string, descriptionOverride?: string) {
   if (type === "error") {
     return {
-      title: "Gagal memuat data",
-      description: error || "Terjadi kendala saat memuat data.",
+      title: titleOverride || "Gagal memuat data",
+      description: descriptionOverride || error || "Terjadi kendala saat memuat data.",
     };
   }
 
   if (type === "not_active") {
     return {
-      title: "Fitur akan segera tersedia",
-      description: "Segera Hadir",
+      title: titleOverride || "Fitur akan segera tersedia",
+      description: descriptionOverride || "Segera Hadir",
     };
   }
 
   return {
-    title: "Belum ada data",
-    description: "Data akan muncul setelah tersedia.",
+    title: titleOverride || "Belum ada data",
+    description: descriptionOverride || "Data akan muncul setelah tersedia.",
   };
 }

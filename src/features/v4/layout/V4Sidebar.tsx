@@ -244,7 +244,7 @@ function SidebarItem({
       >
         {Icon && <Icon className="h-4 w-4 shrink-0" />}
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
-        <Badge className="bg-white/10 text-[10px] text-white/55 hover:bg-white/10">Phase 2</Badge>
+        <Badge className="bg-white/10 text-[10px] text-white/55 hover:bg-white/10">Segera Hadir</Badge>
       </div>
     );
   }

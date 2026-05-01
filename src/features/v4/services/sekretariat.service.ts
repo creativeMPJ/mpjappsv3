@@ -18,7 +18,7 @@ export interface V4LetterItem {
   signerPosition: string | null;
   letterDate: string | null;
   receivedAt: string | null;
-  status: string;
+  status: string | null;
   finalFileUrl: string | null;
   scanFileUrl: string | null;
   validationQrUrl: string | null;

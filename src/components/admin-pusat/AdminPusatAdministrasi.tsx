@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { 
   DollarSign, 
   Settings, 
@@ -349,12 +349,12 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     fetchLevelingProfiles();
     fetchPriceSettings();
     fetchLatePaymentCount();
-  }, [isDebugMode, debugData]);
+  }, [isDebugMode, debugData, fetchLatePaymentCount]);
 
   // Fetch late payment count (> 7 days since regional approval)
-  const fetchLatePaymentCount = async () => {
+  const fetchLatePaymentCount = useCallback(async () => {
     if (isDebugMode) {
-      setLatePaymentCount(3); // Mock data
+      setLatePaymentCount(3);
       return;
     }
 
@@ -364,7 +364,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     } catch (error) {
       console.error('Error fetching late payment count:', error);
     }
-  };
+  }, [isDebugMode]);
 
   const fetchClaims = async () => {
     setIsLoadingClaims(true);
@@ -382,9 +382,9 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
     setIsLoadingPayments(true);
     try {
       const data = await apiRequest<{ payments: PaymentRecord[] }>('/api/admin/payments');
-      setPayments((data.payments || []).map((p: any) => ({
-        ...p,
-        profiles: p.profiles || { no_wa_pendaftar: null }
+      setPayments((data.payments || []).map((payment) => ({
+        ...payment,
+        profiles: payment.profiles || { no_wa_pendaftar: null }
       })));
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -444,11 +444,9 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
         `/api/admin/payments/${selectedPayment.id}/approve`,
         { method: 'POST' }
       );
-      const generatedNIP = result.nip;
-
       toast({
-        title: "NIP Diterbitkan",
-        description: `NIP: ${formatNIP(generatedNIP, true)} - Akun telah diaktifkan`,
+        title: "Pembayaran Disetujui",
+        description: "Aktivasi akan diproses oleh sistem.",
       });
 
       // Open WhatsApp with notification
@@ -456,7 +454,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
       const pesantrenName = result.pesantrenName || 'Pesantren';
       if (phoneNumber) {
         const waMessage = encodeURIComponent(
-          `Assalamu'alaikum, pembayaran aktivasi Anda telah kami verifikasi. NIP & NIAM untuk ${pesantrenName} telah AKTIF. Silakan cek dashboard Anda untuk mendownload E-ID dan Piagam. Terima kasih.`
+          `Assalamu'alaikum, pembayaran aktivasi Anda telah kami verifikasi. Aktivasi akan diproses oleh sistem untuk ${pesantrenName}. Silakan cek dashboard Anda untuk melihat status terbaru. Terima kasih.`
         );
         const cleanPhone = phoneNumber.replace(/\D/g, '').replace(/^0/, '62');
         window.open(`https://wa.me/${cleanPhone}?text=${waMessage}`, '_blank');
@@ -466,11 +464,11 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
       setProofModalOpen(false);
       fetchPayments();
       fetchClaims();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error approving payment:', error);
       toast({
         title: "Error",
-        description: error.message || "Gagal memverifikasi pembayaran",
+        description: error instanceof Error ? error.message : "Gagal memverifikasi pembayaran",
         variant: "destructive",
       });
     } finally {
@@ -1096,9 +1094,9 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
                       </div>
                     </div>
 
-                    {/* Bundle Preview */}
+                    {/* Bundle Summary */}
                     <div className="bg-white border border-emerald-200 rounded-lg p-4 text-sm space-y-1.5">
-                      <p className="font-medium text-emerald-800 mb-2">Preview Bundle Aktif:</p>
+                      <p className="font-medium text-emerald-800 mb-2">Ringkasan Bundle Aktif:</p>
                       <div className="flex items-center gap-2 text-slate-700">
                         <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">1</span>
                         <span>Slot 1 → Admin Pengelola (PIC) otomatis</span>
@@ -1121,7 +1119,7 @@ const AdminPusatAdministrasi = ({ isDebugMode, debugData }: Props = {}) => {
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span className="text-sm font-medium">Masa Aktif Keanggotaan</span>
-                        <Badge variant="outline">Coming Soon</Badge>
+                        <Badge variant="outline">Segera Hadir</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-2">
                         Fitur periode keanggotaan tahunan akan tersedia di update selanjutnya.
