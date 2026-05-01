@@ -93,6 +93,15 @@ const router = createBrowserRouter([
   { path: ROUTES.PUBLIC.PAYMENT_PENDING, element: <PaymentPending /> },
   { path: ROUTES.PUBLIC.DEBUG_VIEW, element: <DebugView /> },
 
+  // Legacy user dashboard aliases
+  { path: '/user', element: <Navigate to="/cms/user-beranda" replace /> },
+  { path: '/user/beranda', element: <Navigate to="/cms/user-beranda" replace /> },
+  { path: '/user/identitas', element: <Navigate to="/cms/identitas" replace /> },
+  { path: '/user/pembayaran', element: <Navigate to="/cms/pembayaran" replace /> },
+  { path: '/user/tim', element: <Navigate to="/cms/tim" replace /> },
+  { path: '/user/eid', element: <Navigate to="/cms/eid" replace /> },
+  { path: '/user/crew', element: <Navigate to="/cms/user-beranda" replace /> },
+
   // Public verification routes
   { path: ROUTES.VERIFICATION.DIREKTORI, element: <PublicDirektori /> },
   { path: ROUTES.VERIFICATION.PESANTREN_PROFILE, element: <PublicPesantrenProfile /> },

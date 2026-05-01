@@ -51,7 +51,9 @@ const ClaimSuccess = () => {
   }, [pesantren_claim_id]);
 
   const handleContactAdmin = () => {
-    const phone = adminPhone?.replace(/^0/, '62') || '6281234567890';
+    if (!adminPhone) return;
+
+    const phone = adminPhone.replace(/^0/, '62');
     const message = encodeURIComponent(
       `Assalamu'alaikum,\n\nSaya *${nama_pengaju || 'Pengaju'}* ingin melaporkan klaim akun untuk *${pesantren_name || 'Pesantren'}*.\n\nMohon bantuannya untuk verifikasi.\n\nTerima kasih.`
     );
@@ -109,7 +111,7 @@ const ClaimSuccess = () => {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Untuk mempercepat proses verifikasi, silakan hubungi Admin Regional melalui WhatsApp.
+              Untuk mempercepat proses verifikasi, silakan hubungi Admin Regional jika kontak tersedia.
             </p>
           </div>
 
@@ -117,7 +119,7 @@ const ClaimSuccess = () => {
           <div className="space-y-3">
             <Button
               onClick={handleContactAdmin}
-              disabled={loadingAdmin}
+              disabled={loadingAdmin || !adminPhone}
               className="w-full h-12 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               {loadingAdmin ? (
@@ -128,12 +130,14 @@ const ClaimSuccess = () => {
               ) : (
                 <>
                   <MessageCircle className="w-5 h-5" />
-                  Lapor via WhatsApp
+                  {adminPhone ? "Lapor via WhatsApp" : "Kontak Admin Belum Tersedia"}
                 </>
               )}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              Klik untuk menghubungi Admin Regional agar segera diverifikasi
+              {adminPhone
+                ? "Klik untuk menghubungi Admin Regional agar segera diverifikasi"
+                : "Hubungi admin MPJ melalui kanal resmi jika membutuhkan bantuan."}
             </p>
           </div>
 
@@ -143,7 +147,7 @@ const ClaimSuccess = () => {
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white font-bold">✓</span>
+                  <span className="text-xs text-white font-bold">1</span>
                 </div>
                 <span className="text-sm text-foreground">Klaim akun berhasil dikirim</span>
               </div>
@@ -157,7 +161,7 @@ const ClaimSuccess = () => {
                 <div className="w-6 h-6 bg-muted rounded-full flex items-center justify-center">
                   <span className="text-xs text-muted-foreground font-bold">3</span>
                 </div>
-                <span className="text-sm text-muted-foreground">Pembayaran & Aktivasi Akun</span>
+                <span className="text-sm text-muted-foreground">Status akun dan identitas resmi</span>
               </div>
             </div>
           </div>

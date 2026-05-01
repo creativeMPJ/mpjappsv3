@@ -35,7 +35,7 @@ import EventPage from "@/components/media-dashboard/EventPage";
 import EIDAsetPage from "@/components/media-dashboard/EIDAsetPage";
 import AktivasiNIPNIAM from "@/components/media-dashboard/AktivasiNIPNIAM";
 import BasicMemberBanner from "@/components/shared/BasicMemberBanner";
-import Sidebar from "@/components/shared/Sidebar";
+import Sidebar, { type SidebarMenuItem } from "@/components/shared/Sidebar";
 
 interface KoordinatorData {
   nama: string;
@@ -52,15 +52,56 @@ interface KoordinatorData {
 }
 
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan" | "aktivasi";
+type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+type MediaMenuItem = SidebarMenuItem & { id: ViewType };
+
+interface DebugProfileData {
+  nip?: string | null;
+  nama_pesantren?: string | null;
+  nama_pengasuh?: string | null;
+  alamat_singkat?: string | null;
+  nama_media?: string | null;
+  profile_level?: ProfileLevel;
+  status_payment?: string | null;
+  logo_url?: string | null;
+}
+
+interface MediaDashboardLocationState {
+  debugProfile?: DebugProfileData;
+  koordinator?: KoordinatorData;
+  isDebugMode?: boolean;
+}
 
 const getViewFromPath = (pathname: string): ViewType => {
-  const segment = pathname.split('/user/')[1] as ViewType;
+  const cmsToView: Record<string, ViewType> = {
+    "user-beranda": "beranda",
+    identitas: "identitas",
+    pembayaran: "administrasi",
+    tim: "tim",
+    eid: "eid",
+    "user-event": "event",
+    hub: "hub",
+    pengaturan: "pengaturan",
+  };
+  const segment = pathname.replace('/cms/', '');
   const valid: ViewType[] = ["beranda","identitas","administrasi","tim","event","eid","hub","pengaturan","aktivasi"];
-  return valid.includes(segment) ? segment : "beranda";
+  return cmsToView[segment] || (valid.includes(segment as ViewType) ? segment as ViewType : "beranda");
+};
+
+const VIEW_ROUTES: Record<ViewType, string> = {
+  beranda: "/cms/user-beranda",
+  identitas: "/cms/identitas",
+  administrasi: "/cms/pembayaran",
+  tim: "/cms/tim",
+  event: "/cms/user-event",
+  eid: "/cms/eid",
+  hub: "/cms/hub",
+  pengaturan: "/cms/pengaturan",
+  aktivasi: "/cms/pembayaran",
 };
 
 const getMenuItems = (showAktivasi: boolean) => {
-  const baseItems = [
+  const baseItems: MediaMenuItem[] = [
     { id: "beranda" as ViewType, label: "BERANDA", icon: LayoutDashboard },
     { id: "identitas" as ViewType, label: "IDENTITAS PESANTREN", icon: Building },
     { id: "administrasi" as ViewType, label: "ADMINISTRASI", icon: CreditCard },
@@ -74,10 +115,10 @@ const getMenuItems = (showAktivasi: boolean) => {
   if (showAktivasi) {
     baseItems.splice(3, 0, {
       id: "aktivasi" as ViewType,
-      label: "AKTIVASI NIP/NIAM",
+      label: "AKTIVASI AKUN",
       icon: Sparkles,
       highlight: true,
-    } as any);
+    });
   }
 
   return baseItems;
@@ -94,9 +135,10 @@ const MediaDashboard = () => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const { toast } = useToast();
 
-  const debugProfile = (location.state as any)?.debugProfile;
-  const debugKoordinator = (location.state as any)?.koordinator;
-  const isDebugMode = (location.state as any)?.isDebugMode;
+  const locationState = location.state as MediaDashboardLocationState | null;
+  const debugProfile = locationState?.debugProfile;
+  const debugKoordinator = locationState?.koordinator;
+  const isDebugMode = locationState?.isDebugMode;
   const profile = isDebugMode && debugProfile ? debugProfile : authProfile;
 
   const paymentStatus = profile?.status_payment ?? 'unpaid';
@@ -149,7 +191,7 @@ const MediaDashboard = () => {
 
   const handleMenuClick = (viewId: ViewType) => {
     setActiveView(viewId);
-    navigate(viewId === "beranda" ? "/user" : `/user/${viewId}`);
+    navigate(VIEW_ROUTES[viewId]);
   };
 
   const handleDismissWelcome = () => {

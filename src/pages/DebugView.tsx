@@ -213,7 +213,7 @@ const DebugView = () => {
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                ✓ Verifikasi Pembayaran, ✓ Terbitkan NIP/NIAM, ✓ Edit/Hapus Data, ✓ Kode Jabatan, ✓ Setting Harga
+                Verifikasi Pembayaran, identitas resmi setelah pembayaran terverifikasi, Edit/Hapus Data, Kode Jabatan, Setting Harga
               </p>
               <Button 
                 className="w-full bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white py-6"
@@ -325,7 +325,7 @@ const DebugView = () => {
                   className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
                   onClick={() => {
                     const mediaData = getMediaDebugData();
-                    navigateWithState('/user', { 
+                    navigateWithState('/cms/user-beranda', {
                       debugProfile: mediaData.profile,
                       koordinator: mediaData.koordinator ? {
                         nama: mediaData.koordinator.nama,
@@ -377,11 +377,11 @@ const DebugView = () => {
                 </Button>
                 <Button 
                   className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900"
-                  onClick={() => navigateWithState('/user/crew', { 
-                    debugCrew: MOCK_DATA.crewMilitan 
+                  onClick={() => navigateWithState('/cms/user-beranda', {
+                    debugCrew: MOCK_DATA.crewMilitan
                   })}
                 >
-                  Buka Dashboard
+                  Segera Hadir
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>

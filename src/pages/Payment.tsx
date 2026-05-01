@@ -229,7 +229,7 @@ const Payment = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-3">Pembayaran belum tersedia</h1>
           <p className="text-muted-foreground mb-6 leading-relaxed">{accessDeniedReason}</p>
-          <Button onClick={() => navigate("/user")} className="w-full">
+          <Button onClick={() => navigate("/cms/user-beranda")} className="w-full">
             Kembali ke Dashboard
           </Button>
         </div>
@@ -240,7 +240,7 @@ const Payment = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary via-primary/90 to-primary">
       <div className="flex-shrink-0 pt-6 pb-3 px-4">
-        <Link to="/user" className="inline-flex items-center text-primary-foreground/80 text-sm mb-3">
+        <Link to="/cms/user-beranda" className="inline-flex items-center text-primary-foreground/80 text-sm mb-3">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Kembali
         </Link>

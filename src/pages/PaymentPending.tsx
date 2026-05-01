@@ -169,7 +169,7 @@ const PaymentPending = () => {
                 </Button>
               </Link>
             ) : (
-              <Link to={isVerified ? "/user" : "/user"}>
+              <Link to="/cms/user-beranda">
                 <Button className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
                   <Home className="mr-2 h-4 w-4" />
                   {isVerified ? "Masuk ke Dashboard" : "Ke Dashboard"}
