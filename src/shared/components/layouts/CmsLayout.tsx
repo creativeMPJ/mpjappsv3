@@ -59,7 +59,7 @@ const ALL_MENUS: CmsMenuItem[] = [
 
   { id: 'administrasi',               aksesKey: 'administrasi',               label: 'ADMINISTRASI',        icon: ClipboardList },
   { id: 'master-data',                aksesKey: 'master-data',                label: 'MASTER DATA',         icon: BarChart3 },
-  { id: 'master-regional',            aksesKey: 'master-regional',            label: 'MASTER REGIONAL',     icon: Map },
+  { id: 'master-regional',            aksesKey: 'master-regional',            label: 'PENGATURAN REGIONAL', icon: Map },
   { id: 'admin-pusat-manajemen-event',aksesKey: 'admin-pusat-manajemen-event',label: 'KELOLA EVENT',        icon: CalendarDays },
   { id: 'militansi',                  aksesKey: 'militansi',                  label: 'MANAJEMEN MILITANSI', icon: Swords, soon: true },
   { id: 'mpj-hub',                    aksesKey: 'mpj-hub',                    label: 'MPJ HUB',             icon: Globe, soon: true },

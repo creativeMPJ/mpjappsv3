@@ -2,7 +2,24 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import V4DashboardLayout from "../layout/V4DashboardLayout";
 import { PusatBerandaPage, RegionalBerandaPage } from "../pages/V4HomePages";
-import { PusatVerifikasiPaymentPage, RegionalMonitoringPendaftaranPage } from "../pages/V4Phase2Pages";
+import {
+  PusatAdministrasiKlaimAkunPage,
+  PusatAdministrasiMonitoringAktivasiPage,
+  PusatAdministrasiOverviewPage,
+  PusatAdministrasiPendaftaranPage,
+  PusatEventOverviewPage,
+  PusatHubPage,
+  PusatMasterDataOverviewPage,
+  PusatMilitansiPage,
+  PusatPengaturanAdminRolePage,
+  PusatPengaturanKodeKhodimPage,
+  PusatPengaturanLevelingPage,
+  PusatPengaturanOverviewPage,
+  PusatPengaturanPaketSlotPage,
+  PusatPengaturanRegionalPage,
+  PusatVerifikasiPaymentPage,
+  RegionalMonitoringPendaftaranPage,
+} from "../pages/V4Phase2Pages";
 import {
   PusatMasterKruPage,
   PusatMasterMediaPage,
@@ -44,11 +61,17 @@ import {
   MediaPengaturanPage,
   MediaTimPage,
 } from "../pages/V4RoleDashboardPages";
+import { auditPusatNavigationRoutes } from "./v4-route-audit";
 
 const pusatChildren: RouteObject[] = [
   { index: true, element: <Navigate to="/pusat/beranda" replace /> },
   { path: "beranda", element: <PusatBerandaPage /> },
+  { path: "administrasi", element: <PusatAdministrasiOverviewPage /> },
+  { path: "administrasi/pendaftaran", element: <PusatAdministrasiPendaftaranPage /> },
+  { path: "administrasi/klaim-akun", element: <PusatAdministrasiKlaimAkunPage /> },
   { path: "administrasi/verifikasi-payment", element: <PusatVerifikasiPaymentPage /> },
+  { path: "administrasi/monitoring-aktivasi", element: <PusatAdministrasiMonitoringAktivasiPage /> },
+  { path: "master-data", element: <PusatMasterDataOverviewPage /> },
   { path: "sekretariat", element: <PusatSekretariatPage /> },
   { path: "sekretariat/surat-keluar", element: <PusatSuratKeluarPage /> },
   { path: "sekretariat/surat-masuk", element: <PusatSuratMasukPage /> },
@@ -57,7 +80,17 @@ const pusatChildren: RouteObject[] = [
   { path: "master-data/pesantren", element: <PusatMasterPesantrenPage /> },
   { path: "master-data/media", element: <PusatMasterMediaPage /> },
   { path: "master-data/kru", element: <PusatMasterKruPage /> },
+  { path: "event", element: <PusatEventOverviewPage /> },
   { path: "event/daftar", element: <PusatEventDaftarPage /> },
+  { path: "mpj-hub", element: <PusatHubPage /> },
+  { path: "militansi", element: <PusatMilitansiPage /> },
+  { path: "pengaturan", element: <PusatPengaturanOverviewPage /> },
+  { path: "pengaturan/regional", element: <PusatPengaturanRegionalPage /> },
+  { path: "pengaturan/kode-khodim", element: <PusatPengaturanKodeKhodimPage /> },
+  { path: "pengaturan/leveling", element: <PusatPengaturanLevelingPage /> },
+  { path: "pengaturan/paket-slot", element: <PusatPengaturanPaketSlotPage /> },
+  { path: "pengaturan/admin-role", element: <PusatPengaturanAdminRolePage /> },
+  { path: "master-regional", element: <Navigate to="/pusat/pengaturan/regional" replace /> },
 ];
 
 const regionalChildren: RouteObject[] = [
@@ -154,3 +187,7 @@ export const v4Routes: RouteObject[] = [
     children: crewChildren,
   },
 ];
+
+export function getPusatRouteAuditReport() {
+  return auditPusatNavigationRoutes(v4Routes);
+}

@@ -30,6 +30,11 @@ const crewLegacyTitleByPath: Record<string, string> = {
   "/crew/sertifikat": "Sertifikat",
 };
 
+const pusatLegacyTitleByPath: Record<string, string> = {
+  "/pusat/master-regional": "Pengaturan Regional",
+  "/pusat/pengaturan/regional": "Pengaturan Regional",
+};
+
 const mediaLegacyTitleByPath: Record<string, string> = {
   "/media/eid": "E-ID Card",
   "/media/pembayaran": "Administrasi",
@@ -52,6 +57,7 @@ export default function V4DashboardLayout({ role }: { role: V4Role }) {
   const displayName = user?.name || profile?.nama_pesantren || roleLabel(role);
   const displayRole = roleLabel(role);
   const pageTitle =
+    (role === "pusat" ? pusatLegacyTitleByPath[pathname] : undefined) ||
     active?.label ||
     (role === "crew" ? crewLegacyTitleByPath[pathname] : undefined) ||
     (role === "media" ? mediaLegacyTitleByPath[pathname] : undefined) ||

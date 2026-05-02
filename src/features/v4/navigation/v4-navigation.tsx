@@ -3,6 +3,7 @@ import {
   BarChart3,
   Building2,
   CalendarDays,
+  ClipboardList,
   FileSignature,
   FileText,
   FolderOpen,
@@ -10,10 +11,12 @@ import {
   Home,
   IdCard,
   Medal,
+  Map,
   QrCode,
   Settings,
   ShieldCheck,
   User,
+  UserCog,
   Users,
   WalletCards,
   Upload,
@@ -44,12 +47,14 @@ export const pusatNav: V4NavGroup[] = [
     items: [
       {
         label: "Administrasi",
-        icon: BarChart3,
+        path: "/pusat/administrasi",
+        icon: ClipboardList,
+        enabled: true,
         children: [
-          { label: "Monitoring Regional", icon: BarChart3 },
+          { label: "Pendaftaran Pesantren", path: "/pusat/administrasi/pendaftaran", icon: Building2, enabled: true },
+          { label: "Klaim Akun", path: "/pusat/administrasi/klaim-akun", icon: IdCard, enabled: true },
           { label: "Verifikasi Payment", path: "/pusat/administrasi/verifikasi-payment", icon: WalletCards, enabled: true },
-          { label: "Leveling", icon: Medal },
-          { label: "Kode Khodim", icon: IdCard },
+          { label: "Monitoring Aktivasi", path: "/pusat/administrasi/monitoring-aktivasi", icon: ShieldCheck, enabled: true },
         ],
       },
     ],
@@ -78,42 +83,33 @@ export const pusatNav: V4NavGroup[] = [
     items: [
       {
         label: "Master Data",
+        path: "/pusat/master-data",
         icon: Building2,
+        enabled: true,
         children: [
           { label: "Pesantren", path: "/pusat/master-data/pesantren", icon: Building2, enabled: true },
           { label: "Media", path: "/pusat/master-data/media", icon: Globe, enabled: true },
           { label: "Kru", path: "/pusat/master-data/kru", icon: Users, enabled: true },
-          { label: "Surat", icon: FileText },
-          { label: "Event", icon: CalendarDays },
         ],
       },
     ],
   },
   {
-    label: "Manajemen Event",
-    items: [
-      {
-        label: "Manajemen Event",
-        icon: CalendarDays,
-        children: [
-          { label: "Daftar Event", path: "/pusat/event/daftar", icon: CalendarDays, enabled: true },
-          { label: "Narasumber", icon: Users },
-          { label: "Peserta", icon: Users },
-          { label: "Scan", icon: QrCode },
-        ],
-      },
-    ],
+    label: "Event",
+    items: [{ label: "Event", path: "/pusat/event", icon: CalendarDays, enabled: true }],
   },
   {
-    label: "Manajemen Militansi",
+    label: "Militansi",
     items: [
       {
-        label: "Manajemen Militansi",
+        label: "Militansi",
+        path: "/pusat/militansi",
         icon: Medal,
+        enabled: true,
         children: [
-          { label: "Daftar Level", icon: Medal },
-          { label: "Daftar XP", icon: ShieldCheck },
-          { label: "Pengaturan Level/XP", icon: Settings },
+          { label: "Daftar Level", icon: Medal, enabled: false },
+          { label: "Daftar XP", icon: ShieldCheck, enabled: false },
+          { label: "Pengaturan Level/XP", icon: Settings, enabled: false },
         ],
       },
     ],
@@ -123,11 +119,13 @@ export const pusatNav: V4NavGroup[] = [
     items: [
       {
         label: "MPJ Hub",
+        path: "/pusat/mpj-hub",
         icon: FolderOpen,
+        enabled: true,
         children: [
-          { label: "Daftar File", icon: FolderOpen },
-          { label: "Upload File", icon: Upload },
-          { label: "Pengaturan", icon: Settings },
+          { label: "Daftar File", icon: FolderOpen, enabled: false },
+          { label: "Upload File", icon: Upload, enabled: false },
+          { label: "Pengaturan", icon: Settings, enabled: false },
         ],
       },
     ],
@@ -137,11 +135,15 @@ export const pusatNav: V4NavGroup[] = [
     items: [
       {
         label: "Pengaturan",
+        path: "/pusat/pengaturan",
         icon: Settings,
+        enabled: true,
         children: [
-          { label: "Profil", icon: Settings },
-          { label: "Tim Pusat", icon: Users },
-          { label: "Tim Regional", icon: Users },
+          { label: "Regional", path: "/pusat/pengaturan/regional", icon: Map, enabled: true },
+          { label: "Kode Khodim", path: "/pusat/pengaturan/kode-khodim", icon: IdCard, enabled: true },
+          { label: "Leveling", path: "/pusat/pengaturan/leveling", icon: Medal, enabled: true },
+          { label: "Paket / Slot", path: "/pusat/pengaturan/paket-slot", icon: WalletCards, enabled: true },
+          { label: "Admin & Role", path: "/pusat/pengaturan/admin-role", icon: UserCog, enabled: true },
         ],
       },
     ],

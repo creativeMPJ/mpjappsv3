@@ -10,6 +10,12 @@ import { apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Eye, EyeOff, Lock } from "lucide-react";
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return fallback;
+}
+
 interface PengaturanProps {
   isDebugMode?: boolean;
 }
@@ -55,8 +61,8 @@ const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error, "Terjadi kesalahan saat mengubah password."), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -65,7 +71,7 @@ const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Pengaturan Regional</CardTitle>
+        <CardTitle>Pengaturan Operasional</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md border bg-muted/20 p-3 text-sm">
@@ -74,6 +80,9 @@ const Pengaturan = ({ isDebugMode = false }: PengaturanProps) => {
           <Badge variant="outline" className="mt-2">
             Akun Login API Lokal
           </Badge>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Cakupan wilayah dikelola oleh Admin Pusat.
+          </p>
         </div>
 
         <Separator />

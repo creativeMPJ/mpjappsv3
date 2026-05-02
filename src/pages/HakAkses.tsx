@@ -113,7 +113,7 @@ const menuGroups = [
     items: [
       { id: "master-data",     label: "MASTER DATA",     icon: BarChart3 },
       { id: "data-master",     label: "DATA MASTER",     icon: BarChart3 },
-      { id: "master-regional", label: "MASTER REGIONAL", icon: Map },
+      { id: "master-regional", label: "PENGATURAN REGIONAL", icon: Map },
     ],
   },
   {

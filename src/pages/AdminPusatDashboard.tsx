@@ -41,7 +41,7 @@ const menuItems = [
   { id: "dashboard", label: "BERANDA", icon: LayoutDashboard },
   { id: "administrasi", label: "ADMINISTRASI", icon: ClipboardCheck },
   { id: "master-data", label: "MASTER DATA", icon: Database },
-  { id: "master-regional", label: "MASTER REGIONAL", icon: Map },
+  { id: "master-regional", label: "PENGATURAN REGIONAL", icon: Map },
   { id: "manajemen-event", label: "MANAJEMEN EVENT", icon: Calendar },
   { id: "manajemen-militansi", label: "MANAJEMEN MILITANSI", icon: Medal, soon: true },
   { id: "mpj-hub", label: "MPJ HUB", icon: Layers, soon: true },
@@ -118,7 +118,7 @@ const Dashboard = () => {
             className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-red-500/20 text-red-200 hover:bg-red-500/30 transition-colors border border-red-500/30"
           >
             <Zap className="h-5 w-5 flex-shrink-0" />
-            <span className="font-semibold text-sm">⚡ SUPER ADMIN</span>
+            <span className="font-semibold text-sm">SUPER ADMIN</span>
           </Link>
         ) : null
       }
