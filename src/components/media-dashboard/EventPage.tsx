@@ -1,11 +1,18 @@
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarDays, History, Ticket } from "lucide-react";
-import { EmptyState, PageHeader } from "@/features/v4/components/v4-components";
+import { DataTableShell, DisabledActionCell, EmptyState, PageHeader, StatusBadge } from "@/features/v4/components/v4-components";
+import { getEventList, type V4EventItem } from "@/features/v4/services/event.service";
+import { formatDate, formatText } from "@/features/v4/utils";
 
 const EventPage = () => {
+  const [events, setEvents] = useState<V4EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const tabs = [
     {
       id: "tersedia",
@@ -30,6 +37,14 @@ const EventPage = () => {
     },
   ];
 
+  useEffect(() => {
+    getEventList().then((result) => {
+      setEvents(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -41,8 +56,8 @@ const EventPage = () => {
         <div>
           <p className="text-sm text-muted-foreground">Data event akan tampil setelah tersedia.</p>
         </div>
-        <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-          Segera Hadir
+        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          Monitoring
         </Badge>
       </div>
 
@@ -62,15 +77,41 @@ const EventPage = () => {
 
         {tabs.map((tab) => (
           <TabsContent key={tab.id} value={tab.id}>
-            <Card className="border-border shadow-sm">
-              <CardContent className="p-6">
-                <EmptyState
-                  title={tab.title}
-                  description={tab.description}
-                  action={<Button disabled>Segera Hadir</Button>}
-                />
-              </CardContent>
-            </Card>
+            {tab.id === "tersedia" ? (
+              <DataTableShell
+                title="Event Tersedia"
+                description="Daftar event untuk pemantauan kegiatan."
+                columns={["Nama Event", "Tanggal", "Lokasi", "Status", "Aksi"]}
+                rows={events}
+                loading={loading}
+                error={error}
+                emptyTitle={tab.title}
+                emptyDescription={tab.description}
+                renderRow={(row, index) => {
+                  const event = row as V4EventItem;
+
+                  return (
+                    <TableRow key={event.id || index}>
+                      <TableCell className="font-medium">{formatText(event.name)}</TableCell>
+                      <TableCell>{formatDate(event.date)}</TableCell>
+                      <TableCell>{formatText(event.location)}</TableCell>
+                      <TableCell><StatusBadge status={event.status} /></TableCell>
+                      <DisabledActionCell />
+                    </TableRow>
+                  );
+                }}
+              />
+            ) : (
+              <Card className="border-border shadow-sm">
+                <CardContent className="p-6">
+                  <EmptyState
+                    title={tab.title}
+                    description={tab.description}
+                    action={<Button disabled>Segera Hadir</Button>}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         ))}
       </Tabs>

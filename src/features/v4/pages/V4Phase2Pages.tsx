@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTableShell, DisabledActionCell, EmptyState, PageHeader, StatusBadge } from "../components/v4-components";
+import { getEventList, type V4EventItem } from "../services/event.service";
 import { getPaymentList, type V4PaymentItem } from "../services/payment.service";
 import { getPendingRegistrations, type V4PendingRegistrationItem } from "../services/regional.service";
 import { FileLink, formatCurrency, formatDate, formatText, getPaymentStateLabel } from "../utils";
@@ -20,6 +21,12 @@ type RouteCard = {
 type HargaSkuReadinessItem = {
   name: string;
   invoiceType: string;
+  description: string;
+  status: string;
+};
+
+type ReadinessItem = {
+  name: string;
   description: string;
   status: string;
 };
@@ -53,6 +60,60 @@ const hargaSkuReadinessItems: HargaSkuReadinessItem[] = [
     name: "Layanan Lainnya",
     invoiceType: "service_item",
     description: "Item biaya untuk layanan atau produk lain yang bisa ditagihkan.",
+    status: "Segera Hadir",
+  },
+];
+
+const pendaftaranReadinessItems: ReadinessItem[] = [
+  {
+    name: "Pengajuan Baru",
+    description: "Monitoring pengajuan pendaftaran pesantren sebelum masuk proses validasi.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Validasi Dokumen",
+    description: "Kesiapan pemeriksaan dokumen dan kelengkapan data pendaftar.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Koordinasi Regional",
+    description: "Kesiapan tindak lanjut pendaftaran dengan admin regional terkait.",
+    status: "Segera Hadir",
+  },
+];
+
+const klaimAkunReadinessItems: ReadinessItem[] = [
+  {
+    name: "Pengajuan Klaim",
+    description: "Monitoring klaim akun pesantren yang masuk ke sistem.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Verifikasi Kepemilikan",
+    description: "Kesiapan pemeriksaan bukti pengelolaan akun.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Tindak Lanjut Aktivasi",
+    description: "Kesiapan penerusan klaim yang sudah valid ke proses aktivasi.",
+    status: "Segera Hadir",
+  },
+];
+
+const aktivasiReadinessItems: ReadinessItem[] = [
+  {
+    name: "Status Akun",
+    description: "Monitoring kesiapan akun setelah pendaftaran atau klaim diproses.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Status Pembayaran",
+    description: "Kesiapan sinkronisasi status pembayaran dengan proses aktivasi.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Status Identitas",
+    description: "Kesiapan identitas resmi setelah akun memenuhi syarat aktivasi.",
     status: "Segera Hadir",
   },
 ];
@@ -126,6 +187,44 @@ function PlaceholderPage({
         title="Belum ada data"
         description="Data akan tampil setelah tersedia"
         action={<Button disabled>{actionLabel}</Button>}
+      />
+    </div>
+  );
+}
+
+function ReadinessPage({
+  title,
+  description,
+  items,
+}: {
+  title: string;
+  description: string;
+  items: ReadinessItem[];
+}) {
+  return (
+    <div className="space-y-6">
+      <PageHeader title={title} description={description} />
+      <DataTableShell
+        title="Kesiapan Monitoring"
+        description="Halaman ini menampilkan kesiapan modul tanpa menjalankan aksi operasional."
+        columns={["Area", "Deskripsi", "Status", "Aksi"]}
+        rows={items}
+        renderRow={(row) => {
+          const item = row as ReadinessItem;
+
+          return (
+            <TableRow key={item.name}>
+              <TableCell className="font-medium">{item.name}</TableCell>
+              <TableCell>{item.description}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                  {item.status}
+                </Badge>
+              </TableCell>
+              <DisabledActionCell />
+            </TableRow>
+          );
+        }}
       />
     </div>
   );
@@ -263,27 +362,30 @@ export function PusatAdministrasiOverviewPage() {
 
 export function PusatAdministrasiPendaftaranPage() {
   return (
-    <PlaceholderPage
+    <ReadinessPage
       title="Pendaftaran Pesantren"
-      description="Data pendaftaran akan tampil setelah tersedia."
+      description="Monitoring kesiapan proses pendaftaran pesantren."
+      items={pendaftaranReadinessItems}
     />
   );
 }
 
 export function PusatAdministrasiKlaimAkunPage() {
   return (
-    <PlaceholderPage
+    <ReadinessPage
       title="Klaim Akun"
-      description="Data klaim akun akan tampil setelah tersedia."
+      description="Monitoring kesiapan proses klaim akun pesantren."
+      items={klaimAkunReadinessItems}
     />
   );
 }
 
 export function PusatAdministrasiMonitoringAktivasiPage() {
   return (
-    <PlaceholderPage
+    <ReadinessPage
       title="Monitoring Aktivasi"
-      description="Data aktivasi akan tampil setelah tersedia."
+      description="Monitoring kesiapan aktivasi akun dan identitas."
+      items={aktivasiReadinessItems}
     />
   );
 }
@@ -319,13 +421,44 @@ export function PusatMasterDataOverviewPage() {
 }
 
 export function PusatEventOverviewPage() {
+  const [events, setEvents] = useState<V4EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getEventList().then((result) => {
+      setEvents(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, []);
+
   return (
     <div className="space-y-6">
       <PageHeader title="Event" description="Kelola event pusat dan daftar event yang tersedia." />
-      <EmptyState
-        title="Belum ada data"
-        description="Data akan tampil setelah tersedia"
-        action={<Button asChild><Link to="/pusat/event/daftar">Lihat Daftar Event</Link></Button>}
+      <DataTableShell
+        title="Monitoring Event"
+        description="Daftar event untuk pemantauan kegiatan."
+        columns={["Nama Event", "Tanggal", "Lokasi", "Status", "Aksi"]}
+        rows={events.slice(0, 5)}
+        loading={loading}
+        error={error}
+        emptyTitle="Belum ada event"
+        emptyDescription="Data event akan tampil setelah tersedia"
+        headerRight={<Button asChild><Link to="/pusat/event/daftar">Lihat Daftar Event</Link></Button>}
+        renderRow={(row, index) => {
+          const event = row as V4EventItem;
+
+          return (
+            <TableRow key={event.id || index}>
+              <TableCell className="font-medium">{formatText(event.name)}</TableCell>
+              <TableCell>{formatDate(event.date)}</TableCell>
+              <TableCell>{formatText(event.location)}</TableCell>
+              <TableCell><StatusBadge status={event.status} /></TableCell>
+              <DisabledActionCell />
+            </TableRow>
+          );
+        }}
       />
     </div>
   );

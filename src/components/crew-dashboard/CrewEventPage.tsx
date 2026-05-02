@@ -1,8 +1,13 @@
+import { useEffect, useState } from "react";
 import { Calendar as CalendarIcon, QrCode } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DataTableShell, DisabledActionCell, StatusBadge } from "@/features/v4/components/v4-components";
+import { getEventList, type V4EventItem } from "@/features/v4/services/event.service";
+import { formatDate, formatText } from "@/features/v4/utils";
 
 function EmptyEventState({ actionLabel }: { actionLabel?: string }) {
   return (
@@ -22,6 +27,18 @@ function EmptyEventState({ actionLabel }: { actionLabel?: string }) {
 }
 
 const CrewEventPage = () => {
+  const [events, setEvents] = useState<V4EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getEventList().then((result) => {
+      setEvents(result.data ?? []);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       <Tabs defaultValue="upcoming" className="flex-1 flex flex-col">
@@ -36,7 +53,29 @@ const CrewEventPage = () => {
         <TabsContent value="upcoming" className="flex-1 mt-0">
           <ScrollArea className="h-[calc(100vh-180px)]">
             <div className="p-4">
-              <EmptyEventState actionLabel="Segera Hadir" />
+              <DataTableShell
+                title="Event Tersedia"
+                description="Daftar event untuk pemantauan kegiatan."
+                columns={["Nama Event", "Tanggal", "Lokasi", "Status", "Aksi"]}
+                rows={events}
+                loading={loading}
+                error={error}
+                emptyTitle="Belum ada event"
+                emptyDescription="Event akan tampil setelah tersedia"
+                renderRow={(row, index) => {
+                  const event = row as V4EventItem;
+
+                  return (
+                    <TableRow key={event.id || index}>
+                      <TableCell className="font-medium">{formatText(event.name)}</TableCell>
+                      <TableCell>{formatDate(event.date)}</TableCell>
+                      <TableCell>{formatText(event.location)}</TableCell>
+                      <TableCell><StatusBadge status={event.status} /></TableCell>
+                      <DisabledActionCell />
+                    </TableRow>
+                  );
+                }}
+              />
             </div>
           </ScrollArea>
         </TabsContent>
