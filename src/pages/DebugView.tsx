@@ -14,6 +14,8 @@ import {
   setDevPreviewRole,
   type DevPreviewRole,
 } from "@/config/devAuth";
+import { getPusatRouteAuditReport } from "@/features/v4/routes/v4-routes";
+import type { V4RouteAuditStatus } from "@/features/v4/routes/v4-route-audit";
 
 const ROLE_ICONS: Record<DevPreviewRole, ComponentType<{ className?: string }>> = {
   admin_pusat: Crown,
@@ -21,6 +23,20 @@ const ROLE_ICONS: Record<DevPreviewRole, ComponentType<{ className?: string }>> 
   admin_finance: WalletCards,
   user: Users,
   crew: UserRound,
+};
+
+const ROUTE_AUDIT_LABELS: Record<V4RouteAuditStatus, string> = {
+  OK: "OK",
+  PLACEHOLDER_COMING_SOON: "Placeholder Segera Hadir",
+  SAFE_REDIRECT_TO_FIRST_CHILD: "Redirect Aman",
+  ERROR: "Error",
+};
+
+const ROUTE_AUDIT_BADGE_CLASSES: Record<V4RouteAuditStatus, string> = {
+  OK: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  PLACEHOLDER_COMING_SOON: "border-amber-200 bg-amber-50 text-amber-700",
+  SAFE_REDIRECT_TO_FIRST_CHILD: "border-sky-200 bg-sky-50 text-sky-700",
+  ERROR: "border-red-200 bg-red-50 text-red-700",
 };
 
 export default function DebugView() {
@@ -51,6 +67,7 @@ export default function DebugView() {
   };
 
   const currentOption = DEV_ROLE_PREVIEW_OPTIONS.find((option) => option.role === activeRole);
+  const pusatRouteAudit = getPusatRouteAuditReport();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
@@ -131,6 +148,39 @@ export default function DebugView() {
               Buka dashboard aktif
               <ArrowRight className="h-4 w-4" />
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle>Audit Route Admin Pusat</CardTitle>
+            <CardDescription>Parent route dengan placeholder atau child route aman tidak dihitung sebagai error.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="grid grid-cols-[1.2fr_1fr_1.4fr] gap-3 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500">
+                <span>Route</span>
+                <span>Status</span>
+                <span>Keterangan</span>
+              </div>
+              {pusatRouteAudit.map((item) => (
+                <div key={item.path} className="grid grid-cols-[1.2fr_1fr_1.4fr] gap-3 border-t border-slate-100 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">{item.label}</p>
+                    <p className="truncate text-xs text-slate-500">{item.path}</p>
+                  </div>
+                  <div>
+                    <Badge variant="outline" className={ROUTE_AUDIT_BADGE_CLASSES[item.status]}>
+                      {ROUTE_AUDIT_LABELS[item.status]}
+                    </Badge>
+                  </div>
+                  <p className="text-slate-600">
+                    {item.message}
+                    {item.status === "SAFE_REDIRECT_TO_FIRST_CHILD" && item.firstChildPath ? ` Tujuan: ${item.firstChildPath}.` : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
