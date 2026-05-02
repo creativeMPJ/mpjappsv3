@@ -14,8 +14,48 @@ type RouteCard = {
   title: string;
   description: string;
   path: string;
-  badge?: string;
+  status?: "Aktif" | "Segera Hadir" | "Belum dikonfigurasi";
 };
+
+type HargaSkuReadinessItem = {
+  name: string;
+  invoiceType: string;
+  description: string;
+  status: string;
+};
+
+const hargaSkuReadinessItems: HargaSkuReadinessItem[] = [
+  {
+    name: "Aktivasi Akun Pesantren",
+    invoiceType: "account_activation",
+    description: "Item biaya untuk proses aktivasi akun pesantren.",
+    status: "Belum dikonfigurasi",
+  },
+  {
+    name: "Aktivasi Kru",
+    invoiceType: "crew_activation",
+    description: "Item biaya untuk aktivasi akses kru.",
+    status: "Belum dikonfigurasi",
+  },
+  {
+    name: "Tambah Slot Kru",
+    invoiceType: "slot_addon",
+    description: "Item biaya untuk penambahan kapasitas slot kru.",
+    status: "Belum dikonfigurasi",
+  },
+  {
+    name: "Tiket Event",
+    invoiceType: "event_ticket",
+    description: "Item biaya untuk tiket event jika dibutuhkan.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Layanan Lainnya",
+    invoiceType: "service_item",
+    description: "Item biaya untuk layanan atau produk lain yang bisa ditagihkan.",
+    status: "Segera Hadir",
+  },
+];
 
 function RouteHubPage({
   title,
@@ -28,6 +68,12 @@ function RouteHubPage({
   cards: RouteCard[];
   note?: string;
 }) {
+  const getStatusBadgeClass = (status: RouteCard["status"]) => {
+    if (status === "Aktif") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    if (status === "Belum dikonfigurasi") return "border-slate-200 bg-slate-50 text-slate-700";
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title={title} description={description} />
@@ -38,9 +84,9 @@ function RouteHubPage({
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-base font-semibold text-foreground">{card.title}</h3>
-                  {card.badge && (
-                    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
-                      {card.badge}
+                  {card.status && (
+                    <Badge variant="outline" className={getStatusBadgeClass(card.status)}>
+                      {card.status}
                     </Badge>
                   )}
                 </div>
@@ -190,25 +236,25 @@ export function PusatAdministrasiOverviewPage() {
           title: "Pendaftaran Pesantren",
           description: "Kelola pengajuan pendaftaran sebelum data aktif.",
           path: "/pusat/administrasi/pendaftaran",
-          badge: "Proses Awal",
+          status: "Segera Hadir",
         },
         {
           title: "Klaim Akun",
           description: "Tinjau klaim akun yang masuk ke sistem.",
           path: "/pusat/administrasi/klaim-akun",
-          badge: "Tindak Lanjut",
+          status: "Segera Hadir",
         },
         {
           title: "Verifikasi Payment",
           description: "Monitor pembayaran yang menunggu verifikasi.",
           path: "/pusat/administrasi/verifikasi-payment",
-          badge: "Aktif",
+          status: "Aktif",
         },
         {
           title: "Monitoring Aktivasi",
           description: "Pantau aktivasi akun yang sedang diproses sistem.",
           path: "/pusat/administrasi/monitoring-aktivasi",
-          badge: "Aktif",
+          status: "Segera Hadir",
         },
       ]}
     />
@@ -252,22 +298,22 @@ export function PusatMasterDataOverviewPage() {
           title: "Pesantren",
           description: "Data lembaga resmi yang sudah aktif.",
           path: "/pusat/master-data/pesantren",
-          badge: "Resmi",
+          status: "Aktif",
         },
         {
           title: "Media",
           description: "Data media resmi dari pesantren aktif.",
           path: "/pusat/master-data/media",
-          badge: "Resmi",
+          status: "Aktif",
         },
         {
           title: "Kru",
           description: "Data kru resmi yang sudah tervalidasi.",
           path: "/pusat/master-data/kru",
-          badge: "Resmi",
+          status: "Aktif",
         },
       ]}
-      note="Regional, Kode Khodim, Leveling, dan Paket / Slot dikelola di Pengaturan."
+      note="Regional, Kode Khodim, Leveling, dan Harga & SKU dikelola di Pengaturan."
     />
   );
 }
@@ -307,40 +353,39 @@ export function PusatPengaturanOverviewPage() {
   return (
     <RouteHubPage
       title="Pengaturan"
-      description="Konfigurasi sistem dikelola oleh Admin Pusat."
+      description="Kelola konfigurasi sistem MPJ, cakupan wilayah, role, leveling, dan katalog harga."
       cards={[
         {
           title: "Regional",
-          description: "Kelola cakupan wilayah, kota/kabupaten, dan admin regional MPJ.",
+          description: "Kelola cakupan wilayah, kota/kabupaten, dan admin regional.",
           path: "/pusat/pengaturan/regional",
-          badge: "Penting",
+          status: "Aktif",
         },
         {
           title: "Kode Khodim",
-          description: "Atur kode jabatan yang dipakai sistem anggota.",
+          description: "Kelola role khodim resmi untuk NIAM dan struktur organisasi.",
           path: "/pusat/pengaturan/kode-khodim",
-          badge: "Konfigurasi",
+          status: "Segera Hadir",
         },
         {
           title: "Leveling",
-          description: "Atur level profil dan aturan peningkatan.",
+          description: "Atur level profil, benefit, dan syarat peningkatan level.",
           path: "/pusat/pengaturan/leveling",
-          badge: "Konfigurasi",
+          status: "Segera Hadir",
         },
         {
-          title: "Paket / Slot",
-          description: "Atur paket gratis dan add-on slot untuk tim.",
-          path: "/pusat/pengaturan/paket-slot",
-          badge: "Konfigurasi",
+          title: "Harga & SKU",
+          description: "Kelola katalog harga, item invoice, dan konfigurasi biaya sistem MPJ.",
+          path: "/pusat/pengaturan/harga-sku",
+          status: "Belum dikonfigurasi",
         },
         {
           title: "Admin & Role",
-          description: "Kelola admin pusat, regional, finance, dan role operasional.",
+          description: "Kelola akses admin, role, dan permission dashboard.",
           path: "/pusat/pengaturan/admin-role",
-          badge: "Konfigurasi",
+          status: "Segera Hadir",
         },
       ]}
-      note="Pengaturan ini akan segera tersedia. Data akan tampil setelah tersedia."
     />
   );
 }
@@ -352,8 +397,8 @@ export function PusatPengaturanRegionalPage() {
 export function PusatPengaturanKodeKhodimPage() {
   return (
     <PlaceholderPage
-      title="Kode Khodim"
-      description="Pengaturan ini akan segera tersedia."
+      title="Pengaturan Kode Khodim"
+      description="Kelola role khodim resmi untuk struktur NIAM."
     />
   );
 }
@@ -361,26 +406,51 @@ export function PusatPengaturanKodeKhodimPage() {
 export function PusatPengaturanLevelingPage() {
   return (
     <PlaceholderPage
-      title="Leveling"
-      description="Pengaturan ini akan segera tersedia."
+      title="Pengaturan Leveling"
+      description="Atur level profil, benefit, dan syarat peningkatan level."
     />
   );
 }
 
-export function PusatPengaturanPaketSlotPage() {
+export function PusatPengaturanHargaSkuPage() {
   return (
-    <PlaceholderPage
-      title="Paket / Slot"
-      description="Pengaturan ini akan segera tersedia."
-    />
+    <div className="space-y-6">
+      <PageHeader
+        title="Pengaturan Harga & SKU"
+        description="Kelola katalog harga, item invoice, dan konfigurasi biaya sistem MPJ."
+      />
+      <DataTableShell
+        title="Fitur akan segera tersedia"
+        description="Konsep SKU readiness untuk konfigurasi sistem oleh Admin Pusat."
+        columns={["Nama SKU", "Tipe invoice", "Deskripsi singkat", "Status"]}
+        rows={hargaSkuReadinessItems}
+        renderRow={(row) => {
+          const item = row as HargaSkuReadinessItem;
+
+          return (
+            <TableRow key={item.invoiceType}>
+              <TableCell className="font-medium">{item.name}</TableCell>
+              <TableCell>{item.invoiceType}</TableCell>
+              <TableCell>{item.description}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                  {item.status}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          );
+        }}
+        headerRight={<Button disabled>Segera Hadir</Button>}
+      />
+    </div>
   );
 }
 
 export function PusatPengaturanAdminRolePage() {
   return (
     <PlaceholderPage
-      title="Admin & Role"
-      description="Pengaturan ini akan segera tersedia."
+      title="Pengaturan Admin & Role"
+      description="Kelola akses admin dan permission dashboard."
     />
   );
 }

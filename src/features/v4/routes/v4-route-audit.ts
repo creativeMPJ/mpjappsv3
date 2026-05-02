@@ -20,7 +20,24 @@ type ParentRoutePolicy = {
   message: string;
 };
 
+type ExplicitRouteAuditPolicy = ParentRoutePolicy & {
+  label: string;
+  path: string;
+};
+
 const PUSAT_PARENT_ROUTE_POLICIES: Record<string, ParentRoutePolicy> = {
+  "/pusat/pengaturan": {
+    status: "OK",
+    message: "Parent route Pengaturan punya overview langsung dan child route aman.",
+  },
+  "/pusat/pengaturan/regional": {
+    status: "OK",
+    message: "Pengaturan Regional aktif dan render halaman pengelolaan regional.",
+  },
+  "/pusat/pengaturan/harga-sku": {
+    status: "PLACEHOLDER_COMING_SOON",
+    message: "Harga & SKU adalah placeholder Segera Hadir yang aman.",
+  },
   "/pusat/event": {
     status: "OK",
     message: "Parent route punya overview langsung dan child route aktif.",
@@ -39,8 +56,29 @@ const PUSAT_PARENT_ROUTE_POLICIES: Record<string, ParentRoutePolicy> = {
   },
 };
 
+const EXTRA_PUSAT_ROUTE_AUDIT_POLICIES: ExplicitRouteAuditPolicy[] = [
+  {
+    path: "/pusat/pengaturan/paket-slot",
+    label: "Harga & SKU Legacy",
+    status: "SAFE_REDIRECT_TO_FIRST_CHILD",
+    message: "Legacy route aman dan redirect ke /pusat/pengaturan/harga-sku.",
+  },
+];
+
 export function auditPusatNavigationRoutes(routes: RouteObject[]): V4RouteAuditResult[] {
-  return auditNavigationRoutes(pusatNav, collectRegisteredPaths(routes));
+  const registeredPaths = collectRegisteredPaths(routes);
+  const navAudit = auditNavigationRoutes(pusatNav, registeredPaths);
+  const extraAudit = EXTRA_PUSAT_ROUTE_AUDIT_POLICIES
+    .filter((policy) => registeredPaths.has(policy.path))
+    .map((policy) => ({
+      path: policy.path,
+      label: policy.label,
+      status: policy.status,
+      message: policy.message,
+      firstChildPath: "/pusat/pengaturan/harga-sku",
+    }));
+
+  return [...navAudit, ...extraAudit];
 }
 
 export function auditNavigationRoutes(groups: V4NavGroup[], registeredPaths: Set<string>): V4RouteAuditResult[] {

@@ -142,7 +142,7 @@ export const pusatNav: V4NavGroup[] = [
           { label: "Regional", path: "/pusat/pengaturan/regional", icon: Map, enabled: true },
           { label: "Kode Khodim", path: "/pusat/pengaturan/kode-khodim", icon: IdCard, enabled: true },
           { label: "Leveling", path: "/pusat/pengaturan/leveling", icon: Medal, enabled: true },
-          { label: "Paket / Slot", path: "/pusat/pengaturan/paket-slot", icon: WalletCards, enabled: true },
+          { label: "Harga & SKU", path: "/pusat/pengaturan/harga-sku", icon: WalletCards, enabled: true },
           { label: "Admin & Role", path: "/pusat/pengaturan/admin-role", icon: UserCog, enabled: true },
         ],
       },
