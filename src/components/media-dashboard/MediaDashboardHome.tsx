@@ -1,11 +1,15 @@
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import {
+  ArrowRight,
+  History,
+  Ticket,
   Users,
   Calendar,
   Building2,
@@ -19,7 +23,8 @@ import {
 import { cn } from "@/lib/utils";
 import { formatNIP } from "@/lib/id-utils";
 import { VerifiedBadge } from "@/components/shared/LevelBadge";
-import { getPaymentStateLabel, isPaymentActive } from "@/features/v4/utils";
+import { formatDate, formatText, getPaymentStateLabel, isPaymentActive } from "@/features/v4/utils";
+import { getEventList, type V4EventItem } from "@/features/v4/services/event.service";
 
 type ViewType = "beranda" | "identitas" | "administrasi" | "tim" | "event" | "eid" | "hub" | "pengaturan";
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
@@ -68,6 +73,8 @@ const MediaDashboardHome = ({
   const isPlatinum = profileLevel === 'platinum';
   const displayNIP = sourceProfile?.nip ? formatNIP(sourceProfile.nip, true) : null;
   const displayName = sourceProfile?.nama_pesantren || "Media Pesantren";
+  const [events, setEvents] = useState<V4EventItem[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   // Calculate profile completion based on level
   const getProfileCompletion = () => {
@@ -99,6 +106,30 @@ const MediaDashboardHome = ({
   };
 
   const levelInfo = getLevelInfo();
+  const upcomingEvent = useMemo(() => {
+    const sorted = [...events].sort((left, right) => {
+      const leftDate = left.date ? new Date(left.date).getTime() : Number.POSITIVE_INFINITY;
+      const rightDate = right.date ? new Date(right.date).getTime() : Number.POSITIVE_INFINITY;
+      return leftDate - rightDate;
+    });
+
+    const now = Date.now();
+    return sorted.find((event) => event.date && new Date(event.date).getTime() >= now) ?? sorted[0] ?? null;
+  }, [events]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    getEventList().then((result) => {
+      if (!mounted) return;
+      setEvents(result.data ?? []);
+      setEventsLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6 pb-20 bg-slate-50 min-h-screen -m-4 md:-m-6 p-4 md:p-6">
@@ -236,68 +267,83 @@ const MediaDashboardHome = ({
       </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Card className="bg-white border border-slate-200 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">Data Santri</h3>
-              <Users className="h-5 w-5 text-emerald-600" />
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-base font-semibold text-slate-900">Event Mendatang</CardTitle>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
-                <Users className="h-7 w-7 text-emerald-600" />
+            <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+              <ArrowRight className="mr-1 h-3.5 w-3.5" />
+              Lihat Event
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-4 p-6 pt-0">
+            {eventsLoading ? (
+              <div className="space-y-2">
+                <div className="h-5 w-40 rounded bg-slate-200/70" />
+                <div className="h-4 w-56 rounded bg-slate-200/60" />
               </div>
-              <div>
-                <p className="text-base font-semibold text-slate-900">Belum ada data</p>
-                <p className="text-sm text-slate-600">Data akan tampil setelah tersedia</p>
+            ) : upcomingEvent ? (
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 shadow-sm">
+                  <Calendar className="h-7 w-7 text-emerald-600" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate text-base font-semibold text-slate-900">{formatText(upcomingEvent.name)}</p>
+                  <p className="text-sm text-slate-600">{formatText(upcomingEvent.description)}</p>
+                  <p className="text-xs text-slate-500">
+                    {formatDate(upcomingEvent.date)}{upcomingEvent.location ? ` · ${formatText(upcomingEvent.location)}` : ""}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 shadow-sm">
+                  <Calendar className="h-7 w-7 text-emerald-600" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-base font-semibold text-slate-900">Belum ada event mendatang</p>
+                  <p className="text-sm text-slate-600">Event akan tampil setelah tersedia.</p>
+                </div>
+              </div>
+            )}
+            <Button variant="outline" className="w-full justify-between" onClick={() => onNavigate("event")}>
+              <span>Lihat Event</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
 
-        <Card
-          className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-          onClick={() => onNavigate("tim")}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">Total Kru</h3>
-              <UserCog className="h-5 w-5 text-emerald-600" />
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-base font-semibold text-slate-900">Riwayat Event</CardTitle>
             </div>
+            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+              <Ticket className="mr-1 h-3.5 w-3.5" />
+              Lihat Riwayat
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-4 p-6 pt-0">
             <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center shadow-sm">
-                <UserCog className="h-7 w-7 text-emerald-600" />
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-slate-100 shadow-sm">
+                <History className="h-7 w-7 text-slate-600" />
               </div>
-              <div>
-                <p className="text-base font-semibold text-slate-900">Belum ada data</p>
-                <p className="text-sm text-slate-600">Data akan tampil setelah tersedia</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-3xl font-bold text-slate-900">0</p>
+                <p className="text-sm text-slate-600">Belum ada riwayat event</p>
               </div>
             </div>
+            <p className="text-sm text-slate-500">Aktivitas akan tampil setelah tersedia.</p>
+            <Button variant="outline" className="w-full justify-between" onClick={() => onNavigate("event")}>
+              <span>Lihat Riwayat</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
       </div>
-
-      {/* Upcoming Events / Agenda */}
-      <Card className="bg-white border border-slate-200 shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-emerald-600" />
-              <h3 className="font-semibold text-slate-900">Agenda Mendatang</h3>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-slate-50 border border-slate-100">
-              <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Calendar className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900 truncate">Belum ada data</p>
-                <p className="text-sm text-slate-600">Data akan tampil setelah tersedia</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Quick Menu Grid */}
       <div className="grid grid-cols-2 gap-4">

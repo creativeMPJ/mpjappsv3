@@ -1,4 +1,4 @@
-import { Bell, Zap, Award, ChevronRight, IdCard, LogOut } from "lucide-react";
+import { Bell, CalendarCheck, ChevronRight, IdCard, LogOut, Zap, Award } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -63,7 +63,7 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   const stats = {
     currentXP,
     targetXP: xpInfo.maxXP === Infinity ? currentXP + 1000 : xpInfo.maxXP,
-    totalCertificates: 0,
+    totalEventsJoined: 0,
   };
 
   const handleLogout = async () => {
@@ -222,21 +222,25 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
         </Card>
       </div>
 
-      {/* Certificate Counter */}
+      {/* Event Counter */}
       <div className="px-4 mt-3">
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-amber-50 to-orange-50">
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-lime-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Award className="h-6 w-6 text-amber-600" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <CalendarCheck className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-sm">Total Sertifikat</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalCertificates}</p>
+                  <p className="text-muted-foreground text-sm">Total Event Diikuti</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalEventsJoined}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Belum ada event diikuti</p>
                 </div>
               </div>
-              <Badge className="bg-amber-100 text-amber-700 border-amber-200">Segera Hadir</Badge>
+              <Button variant="outline" size="sm" onClick={() => onNavigate("event")}>
+                Lihat Event
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
