@@ -6,13 +6,16 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, CheckCircle2, Clock3, CreditCard, Loader2, PartyPopper } from "lucide-react";
 import { apiRequest } from "@/lib/api-client";
 import { useNavigate } from "react-router-dom";
+import { getPaymentStatus } from "@/features/v4/utils";
 
 interface AdministrasiProps {
+  paymentStatus?: string;
+  onPaymentStatusChange?: () => void;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
   };
-  debugPayments?: any[];
+  debugPayments?: unknown[];
 }
 
 type PaymentSnapshot = {
@@ -26,7 +29,7 @@ type PaymentSnapshot = {
 
 const Administrasi = (_props: AdministrasiProps = {}) => {
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string>('pending_payment');
+  const [, setStatus] = useState<string>('pending_payment');
   const [payment, setPayment] = useState<PaymentSnapshot | null>(null);
   const navigate = useNavigate();
 
@@ -48,6 +51,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
   }, []);
 
   const formatRupiah = (amount: number) => new Intl.NumberFormat("id-ID").format(amount);
+  const normalizedStatus = payment ? getPaymentStatus(payment) : "inactive";
 
   if (loading) {
     return (
@@ -60,8 +64,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── VERIFIED ──────────────────────────────────────────────────────────────
-  if (status === "verified") {
+  if (normalizedStatus === "verified") {
     return (
       <div className="space-y-4">
         <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
@@ -70,12 +73,12 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
               <PartyPopper className="h-8 w-8 text-emerald-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-emerald-700">Pembayaran Lunas!</h3>
-              <p className="text-sm text-muted-foreground mt-1">Akun Anda aktif penuh. Nikmati semua fitur MPJ Apps.</p>
+              <h3 className="text-lg font-bold text-emerald-700">Pembayaran terverifikasi</h3>
+              <p className="text-sm text-muted-foreground mt-1">Akun aktif.</p>
             </div>
             <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
               <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-              Lunas & Terverifikasi
+              Terverifikasi
             </Badge>
           </CardContent>
         </Card>
@@ -106,8 +109,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── PENDING VERIFICATION ──────────────────────────────────────────────────
-  if (status === "pending_verification") {
+  if (normalizedStatus === "pending") {
     return (
       <div className="space-y-4">
         <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white">
@@ -116,12 +118,12 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
               <Clock3 className="h-8 w-8 text-amber-500 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-amber-700">Menunggu Verifikasi</h3>
-              <p className="text-sm text-muted-foreground mt-1">Bukti pembayaran Anda sedang diproses admin. Estimasi 1×24 jam kerja.</p>
+              <h3 className="text-lg font-bold text-amber-700">Menunggu verifikasi pembayaran</h3>
+              <p className="text-sm text-muted-foreground mt-1">Bukti pembayaran Anda sedang diproses.</p>
             </div>
             <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
               <Clock3 className="h-3.5 w-3.5 mr-1" />
-              Dalam Proses
+              Menunggu verifikasi pembayaran
             </Badge>
           </CardContent>
         </Card>
@@ -157,8 +159,7 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── REJECTED ──────────────────────────────────────────────────────────────
-  if (status === "rejected") {
+  if (normalizedStatus === "rejected") {
     return (
       <div className="space-y-4">
         <Card className="border-red-200 bg-gradient-to-br from-red-50 to-white">
@@ -190,7 +191,6 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
     );
   }
 
-  // ── PENDING PAYMENT (belum bayar) ─────────────────────────────────────────
   return (
     <div className="space-y-4">
       <Card className="border-slate-200 bg-gradient-to-br from-slate-50 to-white">
@@ -199,12 +199,12 @@ const Administrasi = (_props: AdministrasiProps = {}) => {
             <CreditCard className="h-8 w-8 text-slate-500" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-700">Belum Melakukan Pembayaran</h3>
+            <h3 className="text-lg font-bold text-slate-700">Belum aktif</h3>
             <p className="text-sm text-muted-foreground mt-1">Selesaikan pembayaran untuk mengaktifkan akun Anda.</p>
           </div>
           <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200">
             <CreditCard className="h-3.5 w-3.5 mr-1" />
-            Belum Bayar
+            Belum aktif
           </Badge>
         </CardContent>
       </Card>

@@ -111,8 +111,29 @@ const menuGroups = [
     ],
   },
   {
-    id: "admin-keuangan",
-    label: "Admin Keuangan",
+    id: "laporan-dokumen",
+    label: "Laporan & Dokumen",
+    icon: FileText,
+    items: [
+      { id: "laporan",          label: "LAPORAN & DOKUMENTASI", icon: FileText },
+      { id: "laporan-keuangan", label: "LAPORAN KEUANGAN",      icon: FileText },
+      { id: "late-payment",     label: "LATE PAYMENT",          icon: AlertCircle },
+      { id: "download-center",  label: "DOWNLOAD CENTER",       icon: Download },
+    ],
+  },
+  {
+    id: "master",
+    label: "Master Data",
+    icon: BarChart3,
+    items: [
+      { id: "master-data",     label: "MASTER DATA",     icon: BarChart3 },
+      { id: "data-master",     label: "DATA MASTER",     icon: BarChart3 },
+      { id: "master-regional", label: "PENGATURAN REGIONAL", icon: Map },
+    ],
+  },
+  {
+    id: "keuangan",
+    label: "Keuangan",
     icon: Banknote,
     items: [
       { id: "verifikasi",          label: "Verifikasi Pembayaran", icon: UserCheck },

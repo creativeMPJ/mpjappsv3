@@ -4,6 +4,8 @@ import { Lock, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import EIDCardGenerator from "@/components/shared/EIDCardGenerator";
 
+type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+
 interface EIDCardProps {
   isGold: boolean;
   debugProfile?: {
@@ -19,6 +21,12 @@ const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
   
   // Use debug profile if provided, otherwise use auth profile
   const profile = debugProfile || authProfile;
+  const profileLevel: ProfileLevel =
+    profile?.profile_level === "silver" ||
+    profile?.profile_level === "gold" ||
+    profile?.profile_level === "platinum"
+      ? profile.profile_level
+      : "basic";
 
   if (!isGold) {
     return (
@@ -41,11 +49,11 @@ const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Fitur Terkunci</h3>
               <p className="text-slate-300 text-center mb-6 px-8">
-                Upgrade ke status Gold untuk mengakses E-ID Card
+                Aktifkan akun terlebih dahulu untuk mengakses E-ID Card
               </p>
               <Button className="bg-amber-500 hover:bg-amber-600 text-white">
                 <Shield className="h-4 w-4 mr-2" />
-                Upgrade to Gold
+                Aktifkan Akun
               </Button>
             </div>
           </Card>
@@ -64,9 +72,9 @@ const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <EIDCardGenerator
           type="lembaga"
-          nomorId={profile?.nip || "25.00.000"}
-          nama={profile?.nama_pesantren || "Pesantren Anda"}
-          profileLevel={(profile?.profile_level as any) || "basic"}
+          nomorId={profile?.nip || "-"}
+          nama={profile?.nama_pesantren || "-"}
+          profileLevel={profileLevel}
         />
 
         <Card>
@@ -85,9 +93,9 @@ const EIDCard = ({ isGold, debugProfile }: EIDCardProps) => {
             <div className="pt-4 border-t">
               <h4 className="font-medium text-slate-800 mb-2">Cara Penggunaan</h4>
               <ul className="space-y-1 text-sm text-slate-600">
-                <li>• Tunjukkan QR Code saat registrasi event</li>
-                <li>• Scan QR untuk verifikasi data lembaga</li>
-                <li>• Download dan cetak untuk keperluan offline</li>
+                <li>- Tunjukkan QR Code saat registrasi event</li>
+                <li>- Scan QR untuk verifikasi data lembaga</li>
+                <li>- Download dan cetak untuk keperluan offline</li>
               </ul>
             </div>
           </CardContent>

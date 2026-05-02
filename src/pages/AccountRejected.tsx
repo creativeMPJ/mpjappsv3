@@ -12,7 +12,7 @@ import logoMpj from "@/assets/logo-mpj.png";
  * Features:
  * - Clear rejection notification
  * - Guidance for next steps
- * - Contact admin via WhatsApp
+ * - Contact admin guidance
  * - Option to re-register
  */
 const AccountRejected = () => {
@@ -30,10 +30,10 @@ const AccountRejected = () => {
   };
 
   const handleContactAdmin = () => {
-    const message = encodeURIComponent(
-      `Assalamu'alaikum Admin MPJ,\n\nSaya ingin menanyakan alasan penolakan akun saya dan bagaimana langkah selanjutnya untuk mendaftar ulang.\n\nTerima kasih.`
-    );
-    window.open(`https://wa.me/6281234567890?text=${message}`, "_blank");
+    toast({
+      title: "Kontak Admin",
+      description: "Hubungi admin MPJ melalui kanal resmi jika membutuhkan bantuan.",
+    });
   };
 
   const handleReRegister = async () => {
@@ -110,10 +110,10 @@ const AccountRejected = () => {
             {/* Requirements Reminder */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
               <p className="text-xs text-amber-800 leading-relaxed">
-                <span className="font-semibold">📋 Dokumen yang diperlukan:</span><br />
-                • SK Pesantren / Surat Tugas Pengelola<br />
-                • Ukuran file maksimal 100KB<br />
-                • Format: PDF, JPG, atau PNG
+                <span className="font-semibold">Dokumen yang diperlukan:</span><br />
+                - SK Pesantren / Surat Tugas Pengelola<br />
+                - Ukuran file maksimal 1MB<br />
+                - Format: PDF, JPG, PNG, atau WebP
               </p>
             </div>
 
@@ -125,7 +125,7 @@ const AccountRejected = () => {
                 className="w-full h-11 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 <MessageCircle className="w-4 h-4" />
-                Hubungi Admin via WhatsApp
+                Hubungi Admin MPJ
               </Button>
 
               {/* Re-register */}
@@ -153,7 +153,7 @@ const AccountRejected = () => {
 
         {/* Footer Note */}
         <p className="text-center text-xs text-muted-foreground mt-4">
-          Butuh bantuan? Hubungi admin melalui WhatsApp
+          Butuh bantuan? Hubungi admin MPJ melalui kanal resmi.
         </p>
       </div>
     </div>

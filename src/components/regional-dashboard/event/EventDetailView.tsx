@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { ArrowLeft, Upload, Plus, Trash2, Search, Download, UserPlus, FileText, 
 import { useToast } from "@/hooks/use-toast";
 import { EventData, EventStatus } from "./EventCard";
 import { MAX_FILE_SIZE_BYTES } from "@/lib/file-validation";
+import { apiRequest } from "@/lib/api-client";
+import { isPaymentVerified } from "@/lib/v4-core-rules";
 
 interface Participant {
   id: string;
@@ -20,6 +22,10 @@ interface Participant {
   asalPesantren: string;
   waktuKlaim: string;
   metode: "App Token" | "Manual Admin";
+  niam?: string;
+  role?: string;
+  identitySource?: "niam_lookup" | "manual";
+  identityLocked?: boolean;
 }
 
 interface Registrant {
@@ -35,6 +41,17 @@ interface EventDetailViewProps {
   event: EventData;
   onBack: () => void;
   onUpdateEvent: (event: EventData) => void;
+}
+
+interface MemberLookupSnapshot {
+  niam: string;
+  name: string;
+  pesantren: string;
+  role: string;
+  crewStatus: string;
+  institutionStatus: string;
+  paymentStatus: string;
+  paymentVerified?: boolean;
 }
 
 // Mock data
@@ -74,6 +91,65 @@ const regionalBankAccount = {
   accountHolder: "MPJ Media Regional Malang",
 };
 
+function normalizeMemberLookupResponse(response: unknown, fallbackNiam: string): MemberLookupSnapshot | null {
+  const container = response as { member?: unknown; data?: unknown } | null;
+  const raw = (container?.member ?? container?.data ?? response) as Record<string, any> | null;
+
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const name = raw.name ?? raw.nama ?? raw.fullName;
+  const pesantren =
+    raw.pesantren ??
+    raw.pesantrenName ??
+    raw.institutionName ??
+    raw.nama_pesantren ??
+    raw.profile?.nama_pesantren;
+  const role = raw.role ?? raw.roleCode ?? raw.jabatan;
+  const niam = raw.niam ?? fallbackNiam;
+  const crewStatus = raw.crew?.status ?? raw.status ?? raw.crewStatus ?? raw.status_crew;
+  const institutionStatus =
+    raw.institution?.status ??
+    raw.profile?.status ??
+    raw.institutionStatus ??
+    raw.statusInstitution ??
+    raw.status_institution ??
+    raw.profile?.status_account;
+  const paymentStatus =
+    raw.institution?.status_payment ??
+    raw.institution?.paymentStatus ??
+    raw.profile?.status_payment ??
+    raw.profile?.paymentStatus ??
+    raw.paymentStatus ??
+    raw.statusPayment ??
+    raw.payment?.status;
+  const paymentVerified = raw.paymentVerified ?? raw.institution?.paymentVerified ?? raw.profile?.paymentVerified;
+
+  if (!name || !pesantren || !role || !niam || !crewStatus || !institutionStatus || !paymentStatus) {
+    return null;
+  }
+
+  return {
+    niam: String(niam),
+    name: String(name),
+    pesantren: String(pesantren),
+    role: String(role),
+    crewStatus: String(crewStatus),
+    institutionStatus: String(institutionStatus),
+    paymentStatus: String(paymentStatus),
+    paymentVerified: typeof paymentVerified === "boolean" ? paymentVerified : undefined,
+  };
+}
+
+function isActiveStatus(status: string) {
+  return ["active", "aktif"].includes(status.toLowerCase());
+}
+
+function normalizeNiam(niam: string) {
+  return niam.trim().toLowerCase();
+}
+
 const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("proposal");
@@ -110,6 +186,10 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
   const [manualUserSearch, setManualUserSearch] = useState("");
   const [selectedManualUser, setSelectedManualUser] = useState<typeof userList[0] | null>(null);
   const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [manualNiam, setManualNiam] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupMember, setLookupMember] = useState<MemberLookupSnapshot | null>(null);
 
   const [lokasiSearch, setLokasiSearch] = useState(event.lokasi);
   const [showLokasiDropdown, setShowLokasiDropdown] = useState(false);
@@ -122,6 +202,78 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
     u.nama.toLowerCase().includes(manualUserSearch.toLowerCase()) ||
     u.pesantren.toLowerCase().includes(manualUserSearch.toLowerCase())
   );
+
+  useEffect(() => {
+    if (!manualModalOpen) return;
+
+    const trimmedNiam = manualNiam.trim();
+
+    if (!trimmedNiam) {
+      setLookupLoading(false);
+      setLookupError(null);
+      setLookupMember(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setLookupLoading(true);
+      setLookupError(null);
+      setLookupMember(null);
+
+      try {
+        const duplicateParticipant = participants.find(
+          (participant) => participant.niam && normalizeNiam(participant.niam) === normalizeNiam(trimmedNiam)
+        );
+
+        if (duplicateParticipant) {
+          setLookupError("NIAM sudah terdaftar pada event ini.");
+          return;
+        }
+
+        const response = await apiRequest<unknown>(`/api/members/lookup?niam=${encodeURIComponent(trimmedNiam)}`, {
+          signal: controller.signal,
+        });
+        const member = normalizeMemberLookupResponse(response, trimmedNiam);
+
+        if (!member) {
+          setLookupError("NIAM tidak ditemukan.");
+          return;
+        }
+
+        if (!isActiveStatus(member.crewStatus)) {
+          setLookupError("NIAM ditemukan, tetapi status kru tidak aktif.");
+          return;
+        }
+
+        if (!isActiveStatus(member.institutionStatus)) {
+          setLookupError("NIAM ditemukan, tetapi status pesantren tidak aktif.");
+          return;
+        }
+
+        if (!(member.paymentVerified ?? isPaymentVerified(member.paymentStatus))) {
+          setLookupError("NIAM ditemukan, tetapi pembayaran belum terverifikasi.");
+          return;
+        }
+
+        setLookupMember(member);
+        setSelectedManualUser(null);
+        setManualUserSearch("");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setLookupError(error instanceof Error ? error.message : "Gagal mencari NIAM.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setLookupLoading(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [manualModalOpen, manualNiam, participants]);
 
   // Stats for Tab 2
   const pendingCount = registrants.filter((r) => r.status === "PENDING").length;
@@ -242,25 +394,55 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
     });
   };
 
+  const resetManualParticipantForm = () => {
+    setSelectedManualUser(null);
+    setManualUserSearch("");
+    setManualNiam("");
+    setLookupLoading(false);
+    setLookupError(null);
+    setLookupMember(null);
+  };
+
+  const handleManualModalOpenChange = (open: boolean) => {
+    setManualModalOpen(open);
+    if (!open) {
+      resetManualParticipantForm();
+    }
+  };
+
   const handleManualCheckIn = () => {
-    if (!selectedManualUser) return;
+    if (!lookupMember && !selectedManualUser) return;
+
+    if (lookupMember) {
+      const duplicateParticipant = participants.find(
+        (participant) => participant.niam && normalizeNiam(participant.niam) === normalizeNiam(lookupMember.niam)
+      );
+
+      if (duplicateParticipant) {
+        setLookupError("NIAM sudah terdaftar pada event ini.");
+        return;
+      }
+    }
 
     const newParticipant: Participant = {
       id: Date.now().toString(),
-      nama: selectedManualUser.nama,
-      asalPesantren: selectedManualUser.pesantren,
+      nama: lookupMember?.name ?? selectedManualUser!.nama,
+      asalPesantren: lookupMember?.pesantren ?? selectedManualUser!.pesantren,
       waktuKlaim: new Date().toLocaleString("id-ID"),
       metode: "Manual Admin",
+      niam: lookupMember?.niam,
+      role: lookupMember?.role,
+      identitySource: lookupMember ? "niam_lookup" : "manual",
+      identityLocked: Boolean(lookupMember),
     };
 
     setParticipants([...participants, newParticipant]);
     setManualModalOpen(false);
-    setSelectedManualUser(null);
-    setManualUserSearch("");
+    resetManualParticipantForm();
 
     toast({
       title: "Peserta ditambahkan",
-      description: `${selectedManualUser.nama} berhasil ditambahkan ke daftar hadir.`,
+      description: `${newParticipant.nama} berhasil ditambahkan ke daftar hadir.`,
     });
   };
 
@@ -768,7 +950,7 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Dialog open={manualModalOpen} onOpenChange={setManualModalOpen}>
+                      <Dialog open={manualModalOpen} onOpenChange={handleManualModalOpenChange}>
                         <DialogTrigger asChild>
                           <Button variant="outline">
                             <UserPlus className="h-4 w-4 mr-2" />
@@ -784,6 +966,48 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                             </DialogDescription>
                           </DialogHeader>
                           <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="manual-niam">NIAM</Label>
+                              <Input
+                                id="manual-niam"
+                                placeholder="Masukkan NIAM peserta"
+                                value={manualNiam}
+                                onChange={(event) => setManualNiam(event.target.value)}
+                                disabled={lookupLoading}
+                              />
+                              {lookupLoading && (
+                                <p className="text-xs text-muted-foreground">Mencari data anggota...</p>
+                              )}
+                              {lookupError && (
+                                <p className="text-xs text-destructive">{lookupError}</p>
+                              )}
+                            </div>
+
+                            {lookupMember && (
+                              <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/20">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                                    Identitas terkunci dari NIAM
+                                  </p>
+                                  <Badge className="bg-emerald-600">NIAM Verified</Badge>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div className="space-y-1">
+                                    <Label>Nama</Label>
+                                    <Input value={lookupMember.name} readOnly />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label>Role</Label>
+                                    <Input value={lookupMember.role} readOnly />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label>Pesantren</Label>
+                                    <Input value={lookupMember.pesantren} readOnly />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                               <Input
@@ -791,10 +1015,15 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                                 className="pl-10"
                                 value={manualUserSearch}
                                 onChange={(e) => setManualUserSearch(e.target.value)}
+                                disabled={Boolean(lookupMember)}
                               />
                             </div>
                             <div className="max-h-60 overflow-y-auto space-y-2">
-                              {filteredUsers.map((user) => (
+                              {lookupMember ? (
+                                <p className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                                  Data manual dikunci karena NIAM ditemukan.
+                                </p>
+                              ) : filteredUsers.map((user) => (
                                 <div
                                   key={user.id}
                                   className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -811,10 +1040,10 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                             </div>
                             <Button
                               className="w-full bg-emerald-600 hover:bg-emerald-700"
-                              disabled={!selectedManualUser}
+                              disabled={lookupLoading || (!lookupMember && !selectedManualUser)}
                               onClick={handleManualCheckIn}
                             >
-                              Tambahkan ke Daftar Hadir
+                              {lookupLoading ? "Memvalidasi NIAM..." : "Tambahkan ke Daftar Hadir"}
                             </Button>
                           </div>
                         </DialogContent>
@@ -843,7 +1072,8 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                           .filter(
                             (p) =>
                               p.nama.toLowerCase().includes(searchParticipant.toLowerCase()) ||
-                              p.asalPesantren.toLowerCase().includes(searchParticipant.toLowerCase())
+                              p.asalPesantren.toLowerCase().includes(searchParticipant.toLowerCase()) ||
+                              (p.niam || "").toLowerCase().includes(searchParticipant.toLowerCase())
                           )
                           .map((participant, index) => (
                             <TableRow key={participant.id}>
@@ -851,6 +1081,18 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                               <TableCell>
                                 <div>
                                   <p className="font-medium">{participant.nama}</p>
+                                  {(participant.niam || participant.role) && (
+                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                      {participant.niam && (
+                                        <span className="text-xs font-mono text-muted-foreground">{participant.niam}</span>
+                                      )}
+                                      {participant.role && (
+                                        <Badge variant="outline" className="text-[10px]">
+                                          {participant.role}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  )}
                                   <p className="text-sm text-muted-foreground sm:hidden">{participant.asalPesantren}</p>
                                 </div>
                               </TableCell>
@@ -863,6 +1105,16 @@ const EventDetailView = ({ event, onBack, onUpdateEvent }: EventDetailViewProps)
                                 >
                                   {participant.metode}
                                 </Badge>
+                                {participant.identityLocked && (
+                                  <Badge variant="outline" className="ml-2 bg-emerald-50 text-emerald-700">
+                                    NIAM Verified
+                                  </Badge>
+                                )}
+                                {!participant.identityLocked && participant.metode === "Manual Admin" && (
+                                  <Badge variant="outline" className="ml-2 bg-slate-50 text-slate-700">
+                                    Peserta Umum
+                                  </Badge>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}

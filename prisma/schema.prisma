@@ -17,6 +17,9 @@ model Region {
   claims       PesantrenClaim[]
   profiles     Profile[]
   eventReports EventReport[]
+  letters      Letter[]
+  signatures   Signature[]
+  templates    TemplatePosition[]
 
   @@map("regions")
 }
@@ -130,6 +133,12 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(0)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.DateTime(0)
   profile      Profile?
+  lettersCreated Letter[] @relation("letters_created_by")
+  lettersUpdated Letter[] @relation("letters_updated_by")
+  signaturesCreated Signature[] @relation("signatures_created_by")
+  signaturesUpdated Signature[] @relation("signatures_updated_by")
+  templatePositionsCreated TemplatePosition[] @relation("template_positions_created_by")
+  templatePositionsUpdated TemplatePosition[] @relation("template_positions_updated_by")
 
   @@map("users")
 }
@@ -288,6 +297,101 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+model Letter {
+  id              String             @id @default(uuid()) @db.VarChar(36)
+  direction       LetterDirection
+  scope           LetterScope
+  regionId        String?            @map("region_id") @db.VarChar(36)
+  letterNumber    String?            @map("letter_number")
+  originNumber    String?            @map("origin_number")
+  subject         String
+  documentType    LetterDocumentType @map("document_type")
+  senderName      String?            @map("sender_name")
+  recipientName   String?            @map("recipient_name")
+  signerName      String?            @map("signer_name")
+  signerPosition  String?            @map("signer_position")
+  letterDate      DateTime?          @map("letter_date") @db.DateTime(0)
+  receivedAt      DateTime?          @map("received_at") @db.DateTime(0)
+  status          LetterStatus       @default(draft)
+  finalFileUrl    String?            @map("final_file_url")
+  scanFileUrl     String?            @map("scan_file_url")
+  validationQrUrl String?            @map("validation_qr_url")
+  notes           String?            @db.Text
+  createdById     String             @map("created_by_id") @db.VarChar(36)
+  updatedById     String?            @map("updated_by_id") @db.VarChar(36)
+  archivedAt      DateTime?          @map("archived_at") @db.DateTime(0)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.DateTime(0)
+
+  region          Region?            @relation(fields: [regionId], references: [id])
+  createdBy       User               @relation("letters_created_by", fields: [createdById], references: [id])
+  updatedBy       User?              @relation("letters_updated_by", fields: [updatedById], references: [id])
+
+  @@index([direction])
+  @@index([scope])
+  @@index([regionId])
+  @@index([status])
+  @@index([letterDate])
+  @@index([createdAt])
+  @@index([scope, regionId, direction, status])
+  @@map("letters")
+}
+
+model Signature {
+  id           String      @id @default(uuid()) @db.VarChar(36)
+  scope        LetterScope
+  regionId     String?     @map("region_id") @db.VarChar(36)
+  leaderName   String      @map("leader_name")
+  positionName String      @map("position_name")
+  imageUrl     String      @map("image_url")
+  isActive     Boolean     @default(true) @map("is_active")
+  createdById  String      @map("created_by_id") @db.VarChar(36)
+  updatedById  String?     @map("updated_by_id") @db.VarChar(36)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.DateTime(0)
+
+  region       Region?     @relation(fields: [regionId], references: [id])
+  createdBy    User        @relation("signatures_created_by", fields: [createdById], references: [id])
+  updatedBy    User?       @relation("signatures_updated_by", fields: [updatedById], references: [id])
+
+  @@index([scope])
+  @@index([regionId])
+  @@index([isActive])
+  @@index([scope, regionId, positionName])
+  @@map("signatures")
+}
+
+model TemplatePosition {
+  id           String             @id @default(uuid()) @db.VarChar(36)
+  scope        LetterScope
+  regionId     String?            @map("region_id") @db.VarChar(36)
+  documentType LetterDocumentType @map("document_type")
+  numberX      Decimal            @map("number_x") @db.Decimal(10, 2)
+  numberY      Decimal            @map("number_y") @db.Decimal(10, 2)
+  signatureX   Decimal            @map("signature_x") @db.Decimal(10, 2)
+  signatureY   Decimal            @map("signature_y") @db.Decimal(10, 2)
+  qrX          Decimal            @map("qr_x") @db.Decimal(10, 2)
+  qrY          Decimal            @map("qr_y") @db.Decimal(10, 2)
+  fontSize     Int                @map("font_size")
+  targetPage   Int                @default(1) @map("target_page")
+  isActive     Boolean            @default(true) @map("is_active")
+  createdById  String             @map("created_by_id") @db.VarChar(36)
+  updatedById  String?            @map("updated_by_id") @db.VarChar(36)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.DateTime(0)
+
+  region       Region?            @relation(fields: [regionId], references: [id])
+  createdBy    User               @relation("template_positions_created_by", fields: [createdById], references: [id])
+  updatedBy    User?              @relation("template_positions_updated_by", fields: [updatedById], references: [id])
+
+  @@index([scope])
+  @@index([regionId])
+  @@index([documentType])
+  @@index([isActive])
+  @@index([scope, regionId, documentType])
+  @@map("template_positions")
+}
+
 enum AccountStatus {
   pending
   active
@@ -340,4 +444,33 @@ enum PricingCategory {
   registration
   renewal
   upgrade
+}
+
+enum LetterDirection {
+  incoming
+  outgoing
+}
+
+enum LetterScope {
+  pusat
+  regional
+}
+
+enum LetterStatus {
+  draft
+  registered
+  finalized
+  archived
+  rejected
+}
+
+enum LetterDocumentType {
+  surat_keputusan
+  surat_tugas
+  surat_undangan
+  surat_edaran
+  surat_keterangan
+  surat_rekomendasi
+  berita_acara
+  lainnya
 }

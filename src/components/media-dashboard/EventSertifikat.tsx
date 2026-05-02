@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -12,44 +11,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Award, Download, Search, Ticket } from "lucide-react";
+import { Award, Search, Ticket } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-interface Event {
-  id: string;
-  name: string;
-  date: string;
-  representative: string;
-  certificateStatus: "available" | "claimed" | "pending";
-}
+import { useAuth } from "@/contexts/AuthContext";
+import { useCurrentPaymentStatus } from "@/features/v4/utils";
 
 const EventSertifikat = () => {
+  const { profile } = useAuth();
+  const payment = useCurrentPaymentStatus(profile?.status_payment);
   const [tokenInput, setTokenInput] = useState("");
-  const [events] = useState<Event[]>([
-    {
-      id: "1",
-      name: "Workshop Jurnalistik Santri 2024",
-      date: "15 Januari 2024",
-      representative: "Ahmad Fauzi",
-      certificateStatus: "claimed",
-    },
-    {
-      id: "2",
-      name: "Pelatihan Videografi Dasar",
-      date: "28 Februari 2024",
-      representative: "Ahmad Fauzi, Budi Santoso",
-      certificateStatus: "available",
-    },
-    {
-      id: "3",
-      name: "Seminar Media Digital",
-      date: "10 Maret 2024",
-      representative: "Ahmad Fauzi",
-      certificateStatus: "pending",
-    },
-  ]);
 
   const handleClaimToken = () => {
+    if (!payment.isActive) {
+      toast({
+        title: payment.label,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!tokenInput.trim()) {
       toast({
         title: "Error",
@@ -60,28 +41,10 @@ const EventSertifikat = () => {
     }
 
     toast({
-      title: "Token Diklaim",
-      description: "Sertifikat untuk lembaga dan Anda sedang diproses via Node.js API",
+      title: "Fitur akan segera tersedia",
+      description: "Klaim sertifikat belum tersedia.",
     });
     setTokenInput("");
-  };
-
-  const handleDownloadCertificate = (eventName: string) => {
-    toast({
-      title: "Download Dimulai",
-      description: `Sertifikat ${eventName} sedang diunduh...`,
-    });
-  };
-
-  const getStatusBadge = (status: Event["certificateStatus"]) => {
-    switch (status) {
-      case "claimed":
-        return <Badge className="bg-emerald-100 text-emerald-700">Sudah Diklaim</Badge>;
-      case "available":
-        return <Badge className="bg-amber-100 text-amber-700">Tersedia</Badge>;
-      case "pending":
-        return <Badge className="bg-slate-100 text-slate-600">Pending</Badge>;
-    }
   };
 
   return (
@@ -105,22 +68,24 @@ const EventSertifikat = () => {
               <Label htmlFor="token" className="sr-only">Token Acara</Label>
               <Input
                 id="token"
-                placeholder="Masukkan token acara (contoh: EVT-2024-ABCD)"
+                placeholder="Masukkan token acara"
                 value={tokenInput}
                 onChange={(e) => setTokenInput(e.target.value)}
                 className="bg-white"
+                disabled
               />
             </div>
             <Button 
               onClick={handleClaimToken}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled
+              className={payment.isActive ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
             >
               <Award className="h-4 w-4 mr-2" />
-              Klaim (Lembaga & Saya)
+              Segera Hadir
             </Button>
           </div>
           <p className="text-sm text-slate-500 mt-3">
-            Token didapatkan setelah menghadiri event. Klaim akan mendaftarkan sertifikat untuk lembaga dan perwakilan.
+            Fitur klaim sertifikat akan segera tersedia.
           </p>
         </CardContent>
       </Card>
@@ -152,40 +117,18 @@ const EventSertifikat = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.name}</TableCell>
-                    <TableCell>{event.date}</TableCell>
-                    <TableCell>{event.representative}</TableCell>
-                    <TableCell>{getStatusBadge(event.certificateStatus)}</TableCell>
-                    <TableCell className="text-right">
-                      {event.certificateStatus === "available" || event.certificateStatus === "claimed" ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-emerald-600 hover:text-emerald-700"
-                          onClick={() => handleDownloadCertificate(event.name)}
-                        >
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-slate-400">Menunggu</span>
-                      )}
-                    </TableCell>
+                <TableRow>
+                  <TableCell colSpan={5}>
+                    <div className="text-center py-12">
+                      <Award className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                      <h3 className="text-lg font-medium text-slate-600 mb-2">Belum ada data</h3>
+                      <p className="text-slate-400">Data akan tampil setelah tersedia</p>
+                    </div>
+                  </TableCell>
                   </TableRow>
-                ))}
               </TableBody>
             </Table>
           </div>
-
-          {events.length === 0 && (
-            <div className="text-center py-12">
-              <Award className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-              <h3 className="text-lg font-medium text-slate-600 mb-2">Belum Ada Event</h3>
-              <p className="text-slate-400">Ikuti event untuk mendapatkan sertifikat</p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

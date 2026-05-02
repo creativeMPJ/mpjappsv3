@@ -24,7 +24,7 @@ const calculateDaysRemaining = (approvedAt: string | null): number | null => {
 };
 
 /**
- * Banner displayed to Basic (unpaid) members to encourage NIP/NIAM activation
+ * Banner displayed to Basic members to encourage account activation.
  * Shows countdown timer based on regional approval date
  */
 const BasicMemberBanner = ({ onActivate, regionalApprovedAt }: BasicMemberBannerProps) => {
@@ -91,14 +91,14 @@ const BasicMemberBanner = ({ onActivate, regionalApprovedAt }: BasicMemberBanner
             )}
           </div>
           <p className={`${isUrgent ? 'text-orange-700' : 'text-amber-700'} text-sm mt-1`}>
-            Klik di sini untuk aktivasi pembayaran guna mendapatkan nomor ID digital yaitu <strong>NIP</strong> dan <strong>NIAM</strong>.
+            Klik di sini untuk menyelesaikan aktivasi akun.
           </p>
         </div>
         <Button 
           onClick={onActivate}
           className={`${isUrgent ? 'bg-orange-600 hover:bg-orange-700' : 'bg-amber-600 hover:bg-amber-700'} text-white shrink-0`}
         >
-          Aktivasi NIP/NIAM
+          Aktivasi Akun
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </AlertDescription>

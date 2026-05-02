@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,6 @@ import { Loader2, CheckCircle, XCircle, Eye } from "lucide-react";
 import LatePaymentFollowUp from "./LatePaymentFollowUp";
 import { DetailPendaftarDialog, type PendaftarDetail as PesantrenClaim } from "./DetailPendaftarDialog";
 
-// Interface replaced by import
-// interface PesantrenClaim { ... }
-
 interface PricingPackage {
   id: string;
   name: string;
@@ -39,6 +36,21 @@ interface PricingPackage {
 
 interface ValidasiPendaftarProps {
   isDebugMode?: boolean;
+}
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Terjadi kesalahan";
+
+function getApprovalDescription(claim: PesantrenClaim | null) {
+  if (claim?.jenis_pengajuan === "pesantren_baru") {
+    return "Pengajuan disetujui regional. Pendaftar akan lanjut ke pembayaran setelah paket harga dipilih.";
+  }
+
+  if (claim?.jenis_pengajuan === "klaim") {
+    return "Pengajuan disetujui regional. Status selanjutnya mengikuti aturan klaim atau bypass pusat yang berlaku.";
+  }
+
+  return "Pengajuan disetujui regional.";
 }
 
 const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
@@ -69,7 +81,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
       minimumFractionDigits: 0,
     }).format(amount);
 
-  const loadClaims = async () => {
+  const loadClaims = useCallback(async () => {
     if (isDebugMode) {
       setClaims([]);
       setLoading(false);
@@ -80,12 +92,12 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
     try {
       const data = await apiRequest<{ claims: PesantrenClaim[] }>("/api/regional/pending-claims");
       setClaims(data.claims || []);
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  };
+  }, [isDebugMode, toast]);
 
   const loadPricingPackages = async () => {
     setLoadingPackages(true);
@@ -95,8 +107,8 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
       if (data.packages?.length > 0) {
         setSelectedPackageId(data.packages[0].id);
       }
-    } catch (error: any) {
-      toast({ title: "Gagal memuat paket harga", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal memuat paket harga", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setLoadingPackages(false);
     }
@@ -104,7 +116,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
   useEffect(() => {
     loadClaims();
-  }, [isDebugMode]);
+  }, [loadClaims]);
 
   const openApproveDialog = (claim: PesantrenClaim) => {
     setApproveClaimId(claim.id);
@@ -123,7 +135,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
     setApproving(true);
     try {
-      const body: any = {};
+      const body: { pricingPackageId?: string } = {};
       if (approveClaim?.jenis_pengajuan === "pesantren_baru" && selectedPackageId) {
         body.pricingPackageId = selectedPackageId;
       }
@@ -132,13 +144,13 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
         method: "POST",
         body: JSON.stringify(body),
       });
-      toast({ title: "Berhasil", description: "Pengajuan disetujui regional" });
+      toast({ title: "Pengajuan disetujui", description: getApprovalDescription(approveClaim) });
       setApproveOpen(false);
       setApproveClaimId(null);
       setApproveClaim(null);
       await loadClaims();
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setApproving(false);
     }
@@ -162,12 +174,12 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
         method: "POST",
         body: JSON.stringify({ reason: rejectReason.trim() }),
       });
-      toast({ title: "Berhasil", description: "Pengajuan ditolak" });
+      toast({ title: "Pengajuan ditolak", description: "Alasan penolakan sudah dicatat untuk ditindaklanjuti." });
       setRejectOpen(false);
       setSelectedClaimId(null);
       await loadClaims();
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -255,6 +267,9 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
           {approveClaim?.jenis_pengajuan === "pesantren_baru" && (
             <div className="space-y-3 py-2">
+              <p className="text-sm text-muted-foreground">
+                Pengajuan disetujui regional. Pendaftar akan lanjut ke pembayaran setelah paket harga dipilih.
+              </p>
               <Label>Paket Harga</Label>
               {loadingPackages ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
@@ -263,7 +278,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
                 </div>
               ) : pricingPackages.length === 0 ? (
                 <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
-                  ⚠️ Belum ada paket harga aktif. Hubungi Finance untuk menambahkan paket terlebih dahulu.
+                  Belum ada paket harga aktif. Hubungi Finance untuk menambahkan paket terlebih dahulu.
                 </p>
               ) : (
                 <>
@@ -274,7 +289,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
                     <SelectContent>
                       {pricingPackages.map((pkg) => (
                         <SelectItem key={pkg.id} value={pkg.id}>
-                          {pkg.name} — {formatCurrency(pkg.harga_diskon ?? pkg.harga_paket)}
+                          {pkg.name} - {formatCurrency(pkg.harga_diskon ?? pkg.harga_paket)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -308,7 +323,7 @@ const ValidasiPendaftar = ({ isDebugMode = false }: ValidasiPendaftarProps) => {
 
           {approveClaim?.jenis_pengajuan === "klaim" && (
             <p className="text-sm text-muted-foreground py-2">
-              Pengajuan klaim akan langsung mengaktifkan akun tanpa pembayaran.
+              Pengajuan disetujui regional. Status selanjutnya mengikuti aturan klaim atau bypass pusat yang berlaku.
             </p>
           )}
 

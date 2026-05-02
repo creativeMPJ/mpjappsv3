@@ -9,13 +9,12 @@ const AdminPusatHub = () => {
 
   const handleLockedFeature = (feature: string) => {
     toast({
-      title: "Coming Soon",
-      description: `Fitur "${feature}" akan tersedia di update selanjutnya.`,
+      title: "Segera Hadir",
+      description: `Fitur ${feature} akan segera tersedia.`,
       variant: "default",
     });
   };
 
-  // Dummy files for preview
   const pusatFiles = [
     { id: "1", nama: "Panduan Branding MPJ 2025", tipe: "PDF", tanggal: "10 Jan 2025" },
     { id: "2", nama: "Template Poster Event", tipe: "PSD", tanggal: "05 Jan 2025" },
@@ -33,7 +32,7 @@ const AdminPusatHub = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">MPJ-HUB</h1>
-          <p className="text-slate-500 mt-1">Pusat file dan resources MPJ</p>
+          <p className="text-slate-500 mt-1">Pusat file dan aset MPJ</p>
         </div>
         <Button 
           onClick={() => handleLockedFeature("Upload File")}
@@ -82,7 +81,7 @@ const AdminPusatHub = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-slate-900 truncate">{file.nama}</h3>
-                      <p className="text-sm text-slate-500">{file.tipe} • {file.tanggal}</p>
+                      <p className="text-sm text-slate-500">{file.tipe} · {file.tanggal}</p>
                     </div>
                     <Button variant="ghost" size="sm" className="text-slate-500">
                       <LinkIcon className="h-4 w-4" />
@@ -114,7 +113,7 @@ const AdminPusatHub = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-slate-900 truncate">{file.nama}</h3>
-                      <p className="text-sm text-slate-500">{file.tipe} • {file.tanggal}</p>
+                      <p className="text-sm text-slate-500">{file.tipe} · {file.tanggal}</p>
                     </div>
                     <Button variant="ghost" size="sm" className="text-slate-500">
                       <LinkIcon className="h-4 w-4" />
@@ -128,7 +127,7 @@ const AdminPusatHub = () => {
       </Tabs>
 
       <p className="text-sm text-slate-500 text-center">
-        * Data dummy untuk preview
+        * Data akan tampil setelah tersedia
       </p>
     </div>
   );

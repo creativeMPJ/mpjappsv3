@@ -122,7 +122,7 @@ const ForgotPassword = () => {
 
                             {/* Info Card */}
                             <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-left">
-                                <p className="text-sm font-medium text-foreground mb-2">📋 Langkah selanjutnya:</p>
+                                <p className="text-sm font-medium text-foreground mb-2">Langkah selanjutnya:</p>
                                 <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside">
                                     <li>Admin akan memverifikasi identitas Anda</li>
                                     <li>Password baru akan dikirim via WhatsApp</li>
@@ -139,19 +139,14 @@ const ForgotPassword = () => {
 
                             {/* Actions */}
                             <div className="space-y-3 pt-2">
-                                <a
-                                    href="https://wa.me/6281234567890?text=Halo%20Admin%2C%20saya%20ingin%20reset%20password%20MPJ%20Apps.%20Email%2FNo%20HP%3A%20"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <Button
+                                    variant="outline"
+                                    className="w-full h-11 rounded-xl border-emerald-500/50 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                                    disabled
                                 >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full h-11 rounded-xl border-emerald-500/50 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                                    >
-                                        <Send className="mr-2 h-4 w-4" />
-                                        Hubungi Admin via WhatsApp
-                                    </Button>
-                                </a>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Hubungi admin MPJ melalui kanal resmi
+                                </Button>
 
                                 <Link to="/login">
                                     <Button className="w-full h-11 rounded-xl mt-2">
@@ -212,7 +207,7 @@ const ForgotPassword = () => {
                         {/* Info */}
                         <div className="bg-muted/50 border border-border/50 rounded-xl p-3">
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                💡 Kami akan mengirimkan permintaan reset password ke admin.
+                                Kami akan mengirimkan permintaan reset password ke admin.
                                 Password baru akan dikirim melalui WhatsApp yang terdaftar.
                             </p>
                         </div>

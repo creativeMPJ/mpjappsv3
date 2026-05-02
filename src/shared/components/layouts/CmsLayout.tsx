@@ -5,8 +5,6 @@ import {
   IdCard,
   ClipboardList,
   Users,
-  Users2,
-  Image,
   CalendarDays,
   Globe,
   Settings,
@@ -32,12 +30,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Sidebar, { SidebarMenuItem } from '@/components/shared/Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { IS_DEV_AUTH_BYPASS_ENABLED } from '@/config/devAuth';
 
 interface CmsMenuItem extends SidebarMenuItem {
   aksesKey: string;
 }
 
-// Dashboard IDs — ditampilkan berdasarkan role, bukan akses
+// Dashboard IDs ditampilkan berdasarkan role, bukan akses.
 const DASHBOARD_IDS = new Set([
   '',
   'user-beranda',
@@ -47,36 +46,24 @@ const DASHBOARD_IDS = new Set([
 ]);
 
 const ALL_MENUS: CmsMenuItem[] = [
-  // Dashboards — satu per role, dipilih berdasarkan role
+  // Dashboards, satu per role, dipilih berdasarkan role.
   { id: 'user-beranda',             aksesKey: 'user-beranda',             label: 'BERANDA',   icon: LayoutDashboard },
   { id: 'admin-pusat-dashboard',    aksesKey: 'admin-pusat-dashboard',    label: 'DASHBOARD', icon: LayoutDashboard },
   { id: 'admin-regional-dashboard', aksesKey: 'admin-regional-dashboard', label: 'DASHBOARD', icon: LayoutDashboard },
   { id: 'admin-finance-dashboard',  aksesKey: 'admin-finance-dashboard',  label: 'DASHBOARD', icon: LayoutDashboard },
   { id: '',                         aksesKey: '',                         label: 'DASHBOARD', icon: LayoutDashboard },
 
-  // Feature menus — tampil jika akses[aksesKey].view === true (dari API)
+  // Feature menus tampil jika akses[aksesKey].view === true dari API.
   { id: 'identitas',    aksesKey: 'identitas',   label: 'PROFIL PESANTREN', icon: IdCard },
   { id: 'pembayaran',   aksesKey: 'pembayaran',  label: 'ADMINISTRASI',     icon: ClipboardList },
   { id: 'tim',          aksesKey: 'tim',         label: 'KELOLA CREW',      icon: Users },
-  { id: 'eid',          aksesKey: 'eid',         label: 'E-ID CARD',        icon: Image },
   { id: 'user-event',   aksesKey: 'user-event',  label: 'EVENT',               icon: CalendarDays },
   { id: 'hub',          aksesKey: 'hub',         label: 'MPJ HUB',             icon: Globe },
 
   { id: 'administrasi',               aksesKey: 'administrasi',               label: 'ADMINISTRASI',        icon: ClipboardList },
   { id: 'master-data',                aksesKey: 'master-data',                label: 'MASTER DATA',         icon: BarChart3 },
-  { id: 'master-regional',            aksesKey: 'master-regional',            label: 'MASTER REGIONAL',     icon: Map },
-  {
-    id: 'admin-pusat-manajemen-event',
-    aksesKey: 'admin-pusat-manajemen-event',
-    label: 'MASTER EVENT',
-    icon: CalendarDays,
-    children: [
-      { id: 'admin-pusat-manajemen-event',         aksesKey: 'admin-pusat-manajemen-event',         label: 'Daftar Event',    icon: List },
-      { id: 'admin-pusat-event-narasumber',        aksesKey: 'admin-pusat-event-narasumber',        label: 'Narasumber',      icon: Users2 },
-      { id: 'admin-pusat-event-peserta',           aksesKey: 'admin-pusat-event-peserta',           label: 'Master Peserta',  icon: UserCheck },
-      { id: 'admin-pusat-event-scan',              aksesKey: 'admin-pusat-event-scan',              label: 'Scan Absensi',    icon: QrCode },
-    ],
-  },
+  { id: 'master-regional',            aksesKey: 'master-regional',            label: 'PENGATURAN REGIONAL', icon: Map },
+  { id: 'admin-pusat-manajemen-event',aksesKey: 'admin-pusat-manajemen-event',label: 'KELOLA EVENT',        icon: CalendarDays },
   { id: 'militansi',                  aksesKey: 'militansi',                  label: 'MANAJEMEN MILITANSI', icon: Swords, soon: true },
   { id: 'mpj-hub',                    aksesKey: 'mpj-hub',                    label: 'MPJ HUB',             icon: Globe, soon: true },
 
@@ -98,7 +85,7 @@ const ALL_MENUS: CmsMenuItem[] = [
   { id: 'finance',         aksesKey: 'finance',         label: 'FINANCE',         icon: DollarSign, soon: true },
   { id: 'hak-akses',       aksesKey: 'hak-akses',       label: 'HAK AKSES',       icon: Shield },
 
-  // Shared — satu route, semua role
+  // Shared, satu route untuk semua role.
   { id: 'pengaturan', aksesKey: 'pengaturan', label: 'PENGATURAN', icon: Settings },
 ];
 
@@ -123,7 +110,6 @@ const CmsLayout = () => {
   const akses = useMemo(() => profile?.akses ?? {}, [profile?.akses]);
   const isSuperAdmin = profile?.is_super_admin ?? false;
   const roleLabel = profile?.role ?? '';
-  const roleDisplayLabel = formatRoleLabel(roleLabel);
 
   const activeDashboardId = useMemo(
     () => getActiveDashboardId(roleLabel, isSuperAdmin),
@@ -131,35 +117,23 @@ const CmsLayout = () => {
   );
 
   const isUserRole = activeDashboardId === 'user-beranda';
-  const sidebarTitle = isUserRole
-    ? (profile?.nama_pesantren ?? 'MPJ Media')
-    : `MPJ ${roleDisplayLabel}`;
-  const sidebarSubtitle = isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
+  const isCrewPreview = IS_DEV_AUTH_BYPASS_ENABLED && roleLabel === 'crew';
+  const isMediaPreview = IS_DEV_AUTH_BYPASS_ENABLED && roleLabel === 'user';
+  const roleDisplayLabel = isMediaPreview ? 'Dev Koordinator' : formatRoleLabel(roleLabel);
+  const sidebarTitle = isCrewPreview
+    ? (profile?.nama_pesantren ?? 'Dev Kru')
+    : isMediaPreview
+      ? (profile?.nama_pesantren ?? 'Dev Koordinator')
+      : isUserRole
+        ? (profile?.nama_pesantren ?? 'MPJ Media')
+      : `MPJ ${roleDisplayLabel}`;
+  const sidebarSubtitle = isCrewPreview ? 'Preview Kru' : isMediaPreview ? 'Preview Media' : isUserRole ? 'Dashboard Media Pesantren' : 'Admin Panel';
 
-  // Filter menu berdasarkan akses dari API.
-  // Untuk menu grup (dengan children): tampil jika setidaknya 1 child punya akses.
-  // Children difilter secara individual.
-  const visibleMenus = useMemo(() => {
-    return ALL_MENUS
-      .filter((m) => {
-        if (DASHBOARD_IDS.has(m.id)) return m.id === activeDashboardId;
-        if (m.children && m.children.length > 0) {
-          // Group parent: tampil jika parent punya akses ATAU minimal 1 child punya akses
-          const parentAccess = akses[m.aksesKey]?.view === true;
-          const anyChildAccess = m.children.some((c) => akses[c.aksesKey]?.view === true);
-          return parentAccess || anyChildAccess;
-        }
-        return akses[m.aksesKey]?.view === true;
-      })
-      .map((m) => {
-        if (!m.children) return m;
-        // Filter children berdasarkan akses individual
-        const filteredChildren = m.children.filter(
-          (c) => akses[c.aksesKey]?.view === true || akses[m.aksesKey]?.view === true
-        );
-        return { ...m, children: filteredChildren };
-      });
-  }, [akses, activeDashboardId]);
+  // Filter murni berdasarkan akses dari API.
+  const visibleMenus = useMemo(() => ALL_MENUS.filter((m) => {
+    if (DASHBOARD_IDS.has(m.id)) return m.id === activeDashboardId;
+    return akses[m.aksesKey]?.view === true;
+  }), [akses, activeDashboardId]);
 
   const activeSlug = pathname.replace('/cms', '').replace(/^\//, '');
 
@@ -205,7 +179,7 @@ const CmsLayout = () => {
         <div>
           <p className="text-sm text-muted-foreground">Selamat datang kembali,</p>
           <h2 className="text-lg font-bold text-emerald-700">
-            Halo, {displayName} 👋
+            Halo, {displayName}
           </h2>
         </div>
       }

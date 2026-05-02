@@ -99,7 +99,7 @@ export const VirtualIDCard = ({
                       Nomor Induk Pesantren
                     </p>
                     <p className="text-2xl font-mono font-bold text-amber-400 tracking-wider">
-                      {nip ? formatNIP(nip, true) : '0000000'}
+                      {nip ? formatNIP(nip, true) : '-'}
                     </p>
                   </div>
                 </>
@@ -121,7 +121,7 @@ export const VirtualIDCard = ({
                       Nomor Induk Anggota Media
                     </p>
                     <p className="text-2xl font-mono font-bold text-amber-400 tracking-wider">
-                      {niam ? formatNIAM(niam, true) : '—'}
+                      {niam ? formatNIAM(niam, true) : '-'}
                     </p>
                   </div>
                 </>

@@ -11,7 +11,9 @@ import { toast } from "@/hooks/use-toast";
 import { VirtualCharter } from "@/components/shared/VirtualCharter";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
 import { formatNIP, formatNIAM } from "@/lib/id-utils";
-import { downloadElementAsJPG, generatePiagamFilename, generateEIDFilename } from "@/lib/charter-download";
+import { downloadElementAsJPG, generatePiagamFilename } from "@/lib/charter-download";
+import { canAccessEID, getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { useCurrentPaymentStatus } from "@/features/v4/utils";
 
 type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
 
@@ -20,10 +22,18 @@ interface KoordinatorData {
   niam: string | null;
   jabatan: string;
   xp_level?: number;
+  status?: string | null;
+  paymentVerified?: boolean;
+  xpTotal?: number;
+  xp_total?: number;
+  transactionXpTotal?: number;
+  transaction_xp_total?: number;
   photoUrl?: string;
 }
 
 interface EIDAsetPageProps {
+  paymentStatus?: string;
+  profileLevel?: string;
   debugProfile?: {
     nip?: string;
     nama_pesantren?: string;
@@ -52,37 +62,36 @@ interface EIDAsetPageProps {
  * - Piagam Pesantren: Single Virtual Charter (highest tier achieved) - uses institution data
  * - E-ID Koordinator: Virtual and Physical Member Card - uses CREW data (NIAM)
  * 
- * PAYWALL LOGIC:
- * - If status_payment === 'unpaid', download buttons are disabled with lock icon
- * - Tooltip shows message: 'Fitur ini hanya tersedia untuk anggota yang sudah melakukan aktivasi pembayaran.'
- * 
  * DATA BINDING:
- * - NIP: From profiles.nip (generated on payment approval)
+ * - NIP: From profiles.nip after payment approval
  * - Nama Pesantren: From profiles.nama_pesantren
  * - Tanggal Terbit: From pesantren_claims.approved_at
  * - QR Code: Links to public profile /pesantren/[NIP]
  */
 const EIDAsetPage = ({
+  paymentStatus: paymentStatusProp,
+  profileLevel: profileLevelProp,
   debugProfile,
   realProfile,
   approvalDate,
   koordinator: koordinatorProp
 }: EIDAsetPageProps = {}) => {
   const { profile: authProfile } = useAuth();
-  const paymentStatus = authProfile?.status_payment ?? 'unpaid';
-  const profileLevel: ProfileLevel = authProfile?.profile_level ?? 'basic';
+  const paymentStatus = paymentStatusProp ?? authProfile?.status_payment ?? 'unpaid';
+  const payment = useCurrentPaymentStatus(paymentStatus);
+  const profileLevel: ProfileLevel = (profileLevelProp ?? authProfile?.profile_level ?? 'basic') as ProfileLevel;
   const [activeTab, setActiveTab] = useState("piagam");
   const [isDownloading, setIsDownloading] = useState(false);
   const [fetchedKoordinator, setFetchedKoordinator] = useState<KoordinatorData | undefined>(undefined);
 
   useEffect(() => {
     if (koordinatorProp) return;
-    apiRequest<{ crews: { nama: string; jabatan: string | null; niam: string | null; xp_level?: number }[] }>('/api/media/crew')
+    apiRequest<{ crews: KoordinatorData[] }>('/api/media/crew')
       .then(data => {
         const found = data.crews.find(c =>
           c.jabatan?.toLowerCase() === 'koordinator' || c.jabatan?.toLowerCase() === 'ketua'
         );
-        if (found) setFetchedKoordinator({ nama: found.nama, niam: found.niam, jabatan: found.jabatan || 'Koordinator', xp_level: found.xp_level });
+        if (found) setFetchedKoordinator({ ...found, jabatan: found.jabatan || 'Koordinator' });
       })
       .catch(() => {});
   }, [koordinatorProp]);
@@ -97,15 +106,15 @@ const EIDAsetPage = ({
 
   // Institution data (for Piagam) - prioritize real data
   const displayNIP = institutionProfile?.nip || authProfile?.nip || "";
-  const displayPesantrenName = institutionProfile?.nama_pesantren || authProfile?.nama_pesantren || "Pesantren Belum Terdaftar";
-  const displayAddress = institutionProfile?.alamat_singkat || "Alamat belum diisi";
+  const displayPesantrenName = institutionProfile?.nama_pesantren || authProfile?.nama_pesantren || "-";
+  const displayAddress = institutionProfile?.alamat_singkat || "-";
   const displayMediaName = institutionProfile?.nama_media || displayPesantrenName;
 
   // Koordinator data from crews table (for E-ID)
-  const koordinatorName = koordinator?.nama || "Belum Ditunjuk";
-  const koordinatorNIAM = koordinator?.niam || null;
+  const koordinatorName = koordinator?.nama || "-";
+  const koordinatorNIAM = koordinator?.niam ?? null;
   const koordinatorJabatan = koordinator?.jabatan || "Koordinator";
-  const koordinatorXP = koordinator?.xp_level || 0;
+  const koordinatorXP = getTransactionXPTotal(koordinator as unknown as Record<string, unknown>);
   const koordinatorPhoto = koordinator?.photoUrl;
 
   // Get highest achieved level
@@ -116,13 +125,15 @@ const EIDAsetPage = ({
   };
 
   const highestLevel = getHighestLevel();
-  const canAccessEID = paymentStatus === "paid";
-  const hasKoordinator = koordinator && koordinator.niam;
+  const canAccessCoordinatorEID = payment.isActive && canAccessEID({
+    crewStatus: koordinator?.status,
+    profileLevel,
+  });
+  const hasKoordinator = Boolean(koordinator && koordinatorNIAM);
 
-  // Check if user is unpaid - for paywall logic
-  const isUnpaid = paymentStatus === "unpaid";
+  const isUnpaid = !payment.isActive;
   const hasValidNIP = !!displayNIP && displayNIP.length >= 7;
-  const lockedTooltipMessage = "Fitur ini hanya tersedia untuk anggota yang sudah melakukan aktivasi pembayaran.";
+  const lockedTooltipMessage = "Aktifkan akun terlebih dahulu";
 
   const getLevelBadgeColor = () => {
     switch (highestLevel) {
@@ -146,7 +157,7 @@ const EIDAsetPage = ({
     if (!hasValidNIP) {
       toast({
         title: "NIP Belum Tersedia",
-        description: "NIP akan diterbitkan setelah pembayaran diverifikasi oleh Admin Pusat.",
+        description: "Identitas resmi akan tampil setelah pembayaran terverifikasi.",
         variant: "destructive",
       });
       return;
@@ -245,9 +256,9 @@ const EIDAsetPage = ({
                   <div className="flex items-start gap-2">
                     <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-amber-800">NIP Belum Diterbitkan</p>
+                      <p className="text-sm font-medium text-amber-800">Identitas belum aktif</p>
                       <p className="text-xs text-amber-700">
-                        Nomor Induk Pesantren (NIP) akan diterbitkan otomatis setelah pembayaran Anda diverifikasi oleh Admin Pusat.
+                        Identitas resmi akan tampil setelah pembayaran terverifikasi.
                       </p>
                     </div>
                   </div>
@@ -258,7 +269,7 @@ const EIDAsetPage = ({
                 <VirtualCharter
                   ref={charterRef}
                   level={highestLevel}
-                  noId={displayNIP || "XXXXXXX"}
+                  noId={displayNIP || "-"}
                   namaPesantren={displayPesantrenName}
                   namaKoordinator={hasKoordinator ? koordinatorName : undefined}
                   alamat={displayAddress}
@@ -293,7 +304,7 @@ const EIDAsetPage = ({
                     {(isUnpaid || !hasValidNIP) && (
                       <TooltipContent>
                         <p className="max-w-xs">
-                          {isUnpaid ? lockedTooltipMessage : "NIP belum diterbitkan. Tunggu verifikasi pembayaran."}
+                          {isUnpaid ? lockedTooltipMessage : "Identitas resmi akan tampil setelah pembayaran terverifikasi."}
                         </p>
                       </TooltipContent>
                     )}
@@ -306,7 +317,7 @@ const EIDAsetPage = ({
 
         {/* Tab 2: E-ID Koordinator - Uses CREW data with NIAM */}
         <TabsContent value="eid" className="space-y-6">
-          {!canAccessEID ? (
+          {!canAccessCoordinatorEID ? (
             <Card className="bg-slate-100 relative overflow-hidden">
               <div className="blur-md opacity-50 pointer-events-none p-8">
                 <div className="aspect-[1.6/1] max-w-md mx-auto bg-gradient-to-br from-emerald-600 to-emerald-800 rounded-xl" />
@@ -317,9 +328,9 @@ const EIDAsetPage = ({
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">Fitur Terkunci</h3>
                 <p className="text-slate-300 text-center mb-4 px-8 max-w-md">
-                  {paymentStatus === "unpaid"
-                    ? "Lunasi administrasi untuk mengakses E-ID Card"
-                    : "Lengkapi profil ke level Gold untuk mengakses E-ID Card"}
+                  {payment.isActive
+                    ? "E-ID valid hanya untuk kru aktif dari pesantren level Silver atau lebih tinggi."
+                    : "Aktifkan akun terlebih dahulu"}
                 </p>
               </div>
             </Card>
@@ -350,41 +361,33 @@ const EIDAsetPage = ({
                 </CardHeader>
                 <CardContent>
                   <VirtualMemberCard
-                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "—"}
+                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "-"}
                     name={koordinatorName}
                     asalMedia={displayMediaName}
                     alamat={displayAddress}
                     role={koordinatorJabatan}
                     xp={koordinatorXP}
-                    socialMedia={{
-                      instagram: "@mpj_jatim",
-                      youtube: "Media Pondok Jatim"
-                    }}
                   />
                 </CardContent>
               </Card>
 
-              {/* Physical Card Preview - Uses NIAM and crew photo */}
+              {/* Physical card uses NIAM and crew photo */}
               <Card className="bg-white">
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <IdCard className="h-4 w-4 text-[#166534]" />
-                    Pratinjau Fisik (Portrait)
+                    Kartu Fisik (Portrait)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <PhysicalMemberCard
-                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "—"}
+                    noId={koordinatorNIAM ? formatNIAM(koordinatorNIAM, true) : "-"}
                     name={koordinatorName}
                     asalMedia={displayMediaName}
                     alamat={displayAddress}
                     role={koordinatorJabatan}
                     xp={koordinatorXP}
                     photoUrl={koordinatorPhoto}
-                    socialMedia={{
-                      instagram: "@mpj_jatim",
-                      youtube: "Media Pondok Jatim"
-                    }}
                   />
                 </CardContent>
               </Card>

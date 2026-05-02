@@ -39,7 +39,7 @@ const CheckInstitution = () => {
               description: `Akun Anda sudah terdaftar sebagai pengelola "${claim.pesantren_name}". Satu akun hanya boleh mengelola satu pesantren.`,
               variant: "destructive",
             });
-            navigate('/user', { replace: true });
+            navigate('/cms/user-beranda', { replace: true });
             return;
           }
 

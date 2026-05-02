@@ -234,7 +234,7 @@ const AdminPusatHome = ({ onNavigate, isDebugMode, debugData }: Props) => {
                   onClick={() => onNavigate?.("master-regional")}
                   className="flex items-center gap-1 text-xs text-amber-600 font-medium mt-2 hover:underline"
                 >
-                  Lihat Regional Data <ArrowRight className="h-3 w-3" />
+                  Pengaturan Regional <ArrowRight className="h-3 w-3" />
                 </button>
               </div>
               <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">

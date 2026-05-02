@@ -5,6 +5,7 @@ import { ROUTES } from '@/app/constants/router';
 import ComingSoonOverlay from '@/components/shared/ComingSoonOverlay';
 import CmsLayout from '@/shared/components/layouts/CmsLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { v4Routes } from '@/features/v4/routes/v4-routes';
 
 // Shared
 const PengaturanUnified = Loadable(lazy(() => import('@/components/shared/Pengaturan')));
@@ -77,6 +78,17 @@ const UserManagement = Loadable(lazy(() => import('@/components/super-admin/User
 const MajelisOverview = Loadable(lazy(() => import('@/components/majelis-dashboard/MajelisOverview')));
 const HakAkses = Loadable(lazy(() => import('@/pages/HakAkses')));
 
+const legacyMediaRouteMap = {
+  beranda: "/cms/user-beranda",
+  identitas: "/cms/identitas",
+  administrasi: "/cms/pembayaran",
+  tim: "/cms/tim",
+  event: "/cms/user-event",
+  eid: "/cms/eid",
+  hub: "/cms/hub",
+  pengaturan: "/cms/pengaturan",
+} as const;
+
 const router = createBrowserRouter([
   // Error pages
   { path: ROUTES.ERROR.FORBIDDEN, element: <Forbidden /> },
@@ -99,17 +111,22 @@ const router = createBrowserRouter([
   { path: ROUTES.PUBLIC.PAYMENT_PENDING, element: <PaymentPending /> },
   { path: ROUTES.PUBLIC.DEBUG_VIEW, element: <DebugView /> },
 
-  // Event public routes
-  { path: '/events', element: <EventListing /> },
-  { path: '/events/:id', element: <EventDetail /> },
-  { path: '/ticket/:code', element: <EventTicket /> },
-  { path: '/ticket', element: <EventTicket /> },
-  { path: '/scan', element: <EventScan /> },
+  // Legacy user dashboard aliases
+  { path: '/user', element: <Navigate to="/cms/user-beranda" replace /> },
+  { path: '/user/beranda', element: <Navigate to="/cms/user-beranda" replace /> },
+  { path: '/user/identitas', element: <Navigate to="/cms/identitas" replace /> },
+  { path: '/user/pembayaran', element: <Navigate to="/cms/pembayaran" replace /> },
+  { path: '/user/tim', element: <Navigate to="/cms/tim" replace /> },
+  { path: '/user/eid', element: <Navigate to="/cms/eid" replace /> },
+  { path: '/user/crew', element: <Navigate to="/cms/user-beranda" replace /> },
 
   // Public verification routes
   { path: ROUTES.VERIFICATION.DIREKTORI, element: <PublicDirektori /> },
   { path: ROUTES.VERIFICATION.PESANTREN_PROFILE, element: <PublicPesantrenProfile /> },
   { path: ROUTES.VERIFICATION.CREW_PROFILE, element: <PublicCrewProfile /> },
+
+  // V4 dashboards - isolated from existing /cms routes
+  ...v4Routes,
 
   // CMS
   {
@@ -117,39 +134,35 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><CmsLayout /></ProtectedRoute>,
     children: [
       // User (Media Pesantren)
-      { path: 'user-beranda',   element: <MediaDashboardHome /> },         // dashboard → keep prefix
+      { path: 'user-beranda',   element: <MediaDashboardHome routeMap={legacyMediaRouteMap} /> },         // dashboard, keep prefix
       { path: 'identitas',      element: <IdentitasPesantren /> },
       { path: 'pembayaran',     element: <Administrasi /> },
       { path: 'tim',            element: <ManajemenKru /> },
       { path: 'eid',            element: <EIDAsetPage /> },
-      { path: 'user-event',     element: <EventPage /> },                   // skip (in progress)
+      { path: 'user-event',     element: <EventPage /> },                   // skip, in progress
       { path: 'hub',            element: <MPJHub /> },
 
       // Admin Pusat
-      { path: 'admin-pusat-dashboard',        element: <AdminPusatHome /> },           // dashboard → keep prefix
+      { path: 'admin-pusat-dashboard',        element: <AdminPusatHome /> },           // dashboard, keep prefix
       { path: 'administrasi',                 element: <AdminPusatAdministrasi /> },
       { path: 'master-data',                  element: <AdminPusatMasterData /> },
       { path: 'master-regional',              element: <AdminPusatRegional /> },
-      { path: 'admin-pusat-manajemen-event',        element: <AdminPusatEvent /> },
-      { path: 'admin-pusat-event-narasumber',         element: <EventNarasumber /> },
-      { path: 'admin-pusat-event-peserta',            element: <EventMasterPeserta /> },
-      { path: 'admin-pusat-event-master-data',        element: <AdminPusatMasterData /> },
-      { path: 'admin-pusat-event-scan',               element: <EventScanAbsensi /> },
-      { path: 'militansi',                            element: <ComingSoonOverlay title="Manajemen Militansi" description="Leaderboard dan sistem gamifikasi XP" /> },
-      { path: 'mpj-hub',                              element: <ComingSoonOverlay title="MPJ HUB" description="Pusat kolaborasi dan resource sharing" /> },
-      { path: 'admin-pusat/regional/:id',             element: <AdminRegionalDetail /> },
+      { path: 'admin-pusat-manajemen-event',  element: <AdminPusatEvent /> },           // skip, in progress
+      { path: 'militansi',                    element: <ComingSoonOverlay title="Manajemen Militansi" description="Leaderboard dan sistem gamifikasi XP" /> },
+      { path: 'mpj-hub',                      element: <ComingSoonOverlay title="MPJ HUB" description="Pusat kolaborasi dan resource sharing" /> },
+      { path: 'admin-pusat/regional/:id',     element: <AdminRegionalDetail /> },
 
       // Admin Regional
-      { path: 'admin-regional-dashboard',  element: <RegionalDashboardHome /> },   // dashboard → keep prefix
+      { path: 'admin-regional-dashboard',  element: <RegionalDashboardHome /> },   // dashboard, keep prefix
       { path: 'data-master',               element: <DataMasterRegional /> },
       { path: 'validasi-pendaftar',        element: <ValidasiPendaftar /> },
-      { path: 'admin-regional-manajemen-event', element: <ManajemenEvent /> },      // skip (in progress)
+      { path: 'admin-regional-manajemen-event', element: <ManajemenEvent /> },      // skip, in progress
       { path: 'laporan',                   element: <LaporanDokumentasi /> },
       { path: 'late-payment',              element: <LatePaymentFollowUp /> },
       { path: 'download-center',           element: <DownloadCenter /> },
 
       // Admin Finance
-      { path: 'admin-finance-dashboard',   element: <FinanceBeranda /> },           // dashboard → keep prefix
+      { path: 'admin-finance-dashboard',   element: <FinanceBeranda /> },           // dashboard, keep prefix
       { path: 'verifikasi',                element: <FinanceVerifikasi /> },
       { path: 'laporan-keuangan',          element: <FinanceLaporan /> },
       { path: 'harga',                     element: <FinanceHarga /> },
@@ -163,7 +176,7 @@ const router = createBrowserRouter([
       { path: 'finance',        element: <ComingSoonOverlay title="Finance" description="Laporan keuangan super admin" /> },
       { path: 'hak-akses',      element: <HakAkses /> },
 
-      // Pengaturan — satu route untuk semua role (komponen sama)
+      // Pengaturan, satu route untuk semua role (komponen sama)
       { path: 'pengaturan',     element: <PengaturanUnified /> },
     ],
   },

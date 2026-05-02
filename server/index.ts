@@ -15,6 +15,9 @@ import { claimRoutes } from "./routes/claims";
 import { mediaRoutes } from "./routes/media";
 import { regionalRoutes } from "./routes/regional";
 import { eventRoutes } from "./routes/event-routes";
+import { letterRoutes } from "./routes/letters";
+import { signatureRoutes } from "./routes/signatures";
+import { templateRoutes } from "./routes/templates";
 
 const app = Fastify({ logger: true });
 
@@ -44,6 +47,9 @@ await app.register(claimRoutes, { prefix: "/api/claims" });
 await app.register(mediaRoutes, { prefix: "/api/media" });
 await app.register(regionalRoutes, { prefix: "/api/regional" });
 await app.register(eventRoutes, { prefix: "/api/events" });
+await app.register(letterRoutes, { prefix: "/api/letters" });
+await app.register(signatureRoutes, { prefix: "/api/signatures" });
+await app.register(templateRoutes, { prefix: "/api/templates" });
 
 app.setErrorHandler((error, _request, reply) => {
   if (error instanceof ZodError) {

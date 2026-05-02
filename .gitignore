@@ -6,22 +6,47 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.out
+*.err
 
+# Local dev logs (MPJ)
+dev-server.err.log
+dev-server.out.log
+
+# Uploads
+uploads/
+
+# Node / Build
 node_modules
 dist
 dist-ssr
-*.local
-.env
+build/
+coverage/
+.vite
 
-# Editor directories and files
+# Env
+.env
+.env.*
+!.env.example
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
+# Prisma
 /generated/prisma
+
+# Temp
+*.tmp
+*.temp

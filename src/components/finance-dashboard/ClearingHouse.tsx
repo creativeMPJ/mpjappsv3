@@ -55,7 +55,6 @@ interface PendingProfile {
   } | null;
 }
 
-// Generate NIP: MPJ-YYYY-XXXX
 const ClearingHouse = () => {
   const [selectedProfile, setSelectedProfile] = useState<PendingProfile | null>(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -81,10 +80,10 @@ const ClearingHouse = () => {
         body: JSON.stringify({}),
       });
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({
-        title: "Akun Diaktifkan",
-        description: `NIP: ${data.nip} berhasil dibuat. Status akun: Active & Paid.`,
+        title: "Pembayaran disetujui",
+        description: "Aktivasi akan diproses oleh sistem. Identitas resmi akan tampil setelah pembayaran terverifikasi.",
       });
       queryClient.invalidateQueries({ queryKey: ['pending-profiles'] });
       setShowApproveDialog(false);
@@ -276,13 +275,12 @@ const ClearingHouse = () => {
       <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Terima & Aktifkan Akun?</AlertDialogTitle>
+            <AlertDialogTitle>Setujui Pembayaran?</AlertDialogTitle>
             <AlertDialogDescription>
-              Akun <strong>{selectedProfile?.nama_pesantren}</strong> akan diaktifkan dengan status:
+              Pembayaran untuk <strong>{selectedProfile?.nama_pesantren}</strong> akan disetujui.
               <ul className="mt-2 space-y-1 list-disc list-inside">
-                <li>Status Akun: <strong>Active</strong></li>
-                <li>Status Pembayaran: <strong>Paid</strong></li>
-                <li>NIP akan digenerate otomatis</li>
+                <li>Aktivasi akan diproses oleh sistem setelah pembayaran disetujui.</li>
+                <li>Identitas resmi akan tampil setelah pembayaran terverifikasi.</li>
               </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -293,7 +291,7 @@ const ClearingHouse = () => {
               disabled={approveMutation.isPending}
               className="bg-emerald-500 hover:bg-emerald-600"
             >
-              {approveMutation.isPending ? "Memproses..." : "Ya, Aktifkan"}
+              {approveMutation.isPending ? "Memproses..." : "Setujui Pembayaran"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

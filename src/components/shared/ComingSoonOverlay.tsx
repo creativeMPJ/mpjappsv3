@@ -16,7 +16,7 @@ const ComingSoonOverlay = ({ title, description }: ComingSoonOverlayProps) => {
             <Construction className="h-8 w-8 text-amber-600" />
           </div>
           <Badge className="bg-amber-100 text-amber-700 border-amber-300">
-            Coming Soon
+            Segera Hadir
           </Badge>
           <h2 className="text-xl font-bold text-foreground">{title}</h2>
           <p className="text-sm text-muted-foreground">

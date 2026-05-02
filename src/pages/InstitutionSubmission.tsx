@@ -29,6 +29,20 @@ import { useAuth } from "@/contexts/AuthContext";
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
+interface AuthResponse {
+  user?: {
+    id?: string;
+  };
+  token?: string;
+}
+
+interface ErrorResponse {
+  message?: string;
+}
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Terjadi kesalahan saat mendaftar";
+
 const InstitutionSubmission = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -95,7 +109,7 @@ const InstitutionSubmission = () => {
               description: `Akun Anda sudah terdaftar sebagai pengelola "${claim.pesantren_name}". Satu akun hanya boleh mengelola satu pesantren.`,
               variant: "destructive",
             });
-            navigate('/user', { replace: true });
+            navigate('/cms/user-beranda', { replace: true });
             return;
           }
 
@@ -253,10 +267,10 @@ const InstitutionSubmission = () => {
         }),
       });
 
-      let registerData: any;
+      let registerData: AuthResponse;
 
       if (registerResponse.status === 409) {
-        // Account already exists — try to login instead
+        // Account already exists: try to login instead
         const loginResponse = await fetch(`${apiBase}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -272,7 +286,7 @@ const InstitutionSubmission = () => {
 
         registerData = await loginResponse.json();
       } else if (!registerResponse.ok) {
-        const errBody = await registerResponse.json().catch(() => null);
+        const errBody = await registerResponse.json().catch(() => null) as ErrorResponse | null;
         throw new Error(errBody?.message || "Gagal membuat akun");
       } else {
         registerData = await registerResponse.json();
@@ -326,11 +340,11 @@ const InstitutionSubmission = () => {
       });
 
       navigate('/verification-pending', { replace: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration error:", error);
       toast({
         title: "Gagal mendaftar",
-        description: error.message || "Terjadi kesalahan saat mendaftar",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {

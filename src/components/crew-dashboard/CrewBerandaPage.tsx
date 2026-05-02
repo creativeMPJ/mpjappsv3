@@ -1,15 +1,18 @@
-import { Bell, Zap, Award, ChevronRight, IdCard, LogOut } from "lucide-react";
+import { Bell, CalendarCheck, ChevronRight, IdCard, LogOut, Zap, Award } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
 import { formatNIAM, getXPLevel } from "@/lib/id-utils";
+import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { isPaymentActive } from "@/features/v4/utils";
+import { getCrewStatusClass, getCrewStatusLabel } from "./crew-state";
 
 type ViewType = "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil";
 
@@ -19,6 +22,12 @@ interface CrewData {
   niam?: string;
   jabatan?: string;
   xp_level?: number;
+  xpTotal?: number;
+  xp_total?: number;
+  transactionXpTotal?: number;
+  transaction_xp_total?: number;
+  status?: string | null;
+  paymentVerified?: boolean;
   skill?: string[];
   institution_name?: string;
   institution_nip?: string;
@@ -34,47 +43,27 @@ interface CrewBerandaPageProps {
   debugCrew?: CrewData;
 }
 
-const mockNews = [
-  {
-    id: 1,
-    title: "Kopdar Akbar MPJ Jawa Timur 2025",
-    date: "25 Des 2024",
-    thumbnail: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=200&h=120&fit=crop",
-  },
-  {
-    id: 2,
-    title: "Workshop Video Editing untuk Kru Media",
-    date: "20 Des 2024",
-    thumbnail: "https://images.unsplash.com/photo-1492724441997-5dc865305da7?w=200&h=120&fit=crop",
-  },
-  {
-    id: 3,
-    title: "Pengumuman Pemenang Lomba Konten Kreatif",
-    date: "15 Des 2024",
-    thumbnail: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=200&h=120&fit=crop",
-  },
-];
-
 const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const { signOut } = useAuth();
+  const { signOut, profile } = useAuth();
   
-  const isDebugMode = (location.state as any)?.isDebugMode;
+  const isDebugMode = Boolean((location.state as { isDebugMode?: boolean } | null)?.isDebugMode);
 
-  // Use debug data or fallback to defaults
-  const crewName = debugCrew?.nama || "Ahmad Fauzi";
-  const crewNIAM = debugCrew?.niam || "";
-  const currentXP = debugCrew?.xp_level || 150;
-  const jabatan = debugCrew?.jabatan || "Kru Media";
-  const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "PP. Al-Hikmah";
+  const crewName = debugCrew?.nama || "Belum ada data";
+  const paymentActive = isPaymentActive(profile?.status_payment);
+  const crewNIAM = debugCrew?.niam ?? null;
+  const currentXP = getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>);
+  const jabatan = debugCrew?.jabatan || "-";
+  const pesantrenAsal = debugCrew?.pesantren_asal || debugCrew?.institution_name || "Data akan tampil setelah tersedia";
+  const statusLabel = getCrewStatusLabel(debugCrew?.status);
   
   const xpInfo = getXPLevel(currentXP);
   const stats = {
     currentXP,
     targetXP: xpInfo.maxXP === Infinity ? currentXP + 1000 : xpInfo.maxXP,
-    totalCertificates: 5,
+    totalEventsJoined: 0,
   };
 
   const handleLogout = async () => {
@@ -98,9 +87,8 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Avatar className="h-14 w-14 ring-2 ring-primary-foreground/30">
-                <AvatarImage src="https://i.pravatar.cc/150?img=12" />
                 <AvatarFallback className="bg-primary-foreground text-primary font-bold text-lg">
-                  {crewName.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  {debugCrew?.nama ? crewName.split(' ').map(n => n[0]).join('').slice(0, 2) : "K"}
                 </AvatarFallback>
               </Avatar>
               {/* Militansi Badge Overlay */}
@@ -111,8 +99,11 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
             <div>
               <h1 className="text-xl font-bold text-primary-foreground">{crewName}</h1>
               <p className="text-primary-foreground/80 text-sm">{pesantrenAsal}</p>
-              <Badge variant="secondary" className="mt-1 bg-primary-foreground/20 text-primary-foreground border-0 text-xs">
+              <Badge variant="secondary" className="mt-1 mr-1 bg-primary-foreground/20 text-primary-foreground border-0 text-xs">
                 {jabatan}
+              </Badge>
+              <Badge variant="outline" className={cn("mt-1 text-xs", getCrewStatusClass(debugCrew?.status))}>
+                {statusLabel}
               </Badge>
             </div>
           </div>
@@ -133,8 +124,7 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
         </div>
 
         {/* NIAM Identity Card - Dominant Display */}
-        {crewNIAM && (
-          <Card className="bg-primary-foreground/10 backdrop-blur border-primary-foreground/20 mb-4">
+        <Card className="bg-primary-foreground/10 backdrop-blur border-primary-foreground/20 mb-4">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
@@ -145,13 +135,17 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                     Nomor Induk Anggota Media
                   </p>
                   <p className="text-3xl font-mono font-bold text-primary-foreground tracking-widest">
-                    {formatNIAM(crewNIAM, true)}
+                    {crewNIAM ? formatNIAM(crewNIAM, true) : "-"}
                   </p>
+                  {!crewNIAM && (
+                    <Badge className="mt-2 bg-primary-foreground/20 text-primary-foreground border-0">
+                      Belum Aktif
+                    </Badge>
+                  )}
                 </div>
               </div>
             </CardContent>
-          </Card>
-        )}
+        </Card>
 
         {/* XP Progress Card */}
         <Card className="bg-primary-foreground/15 backdrop-blur border-0">
@@ -177,7 +171,7 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                 />
                 <p className="text-xs text-primary-foreground/60 mt-2">
                   {stats.targetXP === Infinity 
-                    ? '🎉 Level Tertinggi Tercapai!' 
+                    ? 'Level tertinggi tercapai'
                     : `${stats.targetXP - stats.currentXP} XP lagi ke ${xpInfo.level === 'bronze' ? 'Silver' : xpInfo.level === 'silver' ? 'Gold' : 'Platinum'}`
                   }
                 </p>
@@ -197,8 +191,19 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
         <Card className="shadow-lg border-0">
           <CardContent className="p-4">
             <div 
-              className="flex items-center justify-between cursor-pointer"
-              onClick={() => onNavigate("eid")}
+              className={`flex items-center justify-between ${paymentActive ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
+              onClick={() => {
+                if (paymentActive) {
+                  onNavigate("eid");
+                  return;
+                }
+
+                toast({
+                  title: "Belum aktif",
+                  description: "Aktifkan akun terlebih dahulu",
+                  variant: "destructive",
+                });
+              }}
             >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -206,7 +211,9 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
                 </div>
                 <div>
                   <p className="text-foreground font-semibold">Lihat E-ID Card</p>
-                  <p className="text-sm text-muted-foreground">Kartu identitas digital Anda</p>
+                  <p className="text-sm text-muted-foreground">
+                    {paymentActive ? "Kartu identitas digital Anda" : "Aktifkan akun terlebih dahulu"}
+                  </p>
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -215,21 +222,25 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
         </Card>
       </div>
 
-      {/* Certificate Counter */}
+      {/* Event Counter */}
       <div className="px-4 mt-3">
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-amber-50 to-orange-50">
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-emerald-50 to-lime-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Award className="h-6 w-6 text-amber-600" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <CalendarCheck className="h-6 w-6 text-emerald-600" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-sm">Total Sertifikat</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalCertificates}</p>
+                  <p className="text-muted-foreground text-sm">Total Event Diikuti</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalEventsJoined}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Belum ada event diikuti</p>
                 </div>
               </div>
-              <Badge className="bg-amber-100 text-amber-700 border-amber-200">Coming Soon</Badge>
+              <Button variant="outline" size="sm" onClick={() => onNavigate("event")}>
+                Lihat Event
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -244,29 +255,13 @@ const CrewBerandaPage = ({ onNavigate, debugCrew }: CrewBerandaPageProps) => {
           </Button>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-580px)]">
-          <div className="space-y-3 pb-4">
-            {mockNews.map((news) => (
-              <Card key={news.id} className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-0">
-                  <div className="flex gap-3">
-                    <img
-                      src={news.thumbnail}
-                      alt={news.title}
-                      className="w-24 h-20 object-cover rounded-l-lg"
-                    />
-                    <div className="flex-1 py-3 pr-3">
-                      <h3 className="font-semibold text-sm text-foreground line-clamp-2 mb-1">
-                        {news.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">{news.date}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </ScrollArea>
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center">
+            <Award className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
+            <p className="font-medium text-foreground">Belum ada data</p>
+            <p className="mt-1 text-sm text-muted-foreground">Data akan tampil setelah tersedia</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

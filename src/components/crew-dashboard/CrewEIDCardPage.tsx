@@ -3,15 +3,18 @@ import { useLocation } from "react-router-dom";
 import { Download, Shield, Lock, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { VirtualMemberCard, PhysicalMemberCard } from "@/components/shared/MemberCard";
-import { formatNIAM, getXPLevel } from "@/lib/id-utils";
+import { formatNIAM } from "@/lib/id-utils";
 import { XPLevelBadge } from "@/components/shared/LevelBadge";
+import { getTransactionXPTotal } from "@/lib/v4-core-rules";
+import { useAuth } from "@/contexts/AuthContext";
+import { isPaymentActive } from "@/features/v4/utils";
+import { canShowCrewIdentity, fieldOrDash, getCrewStatusLabel } from "./crew-state";
 
 interface CrewEIDCardPageProps {
-  isGold: boolean;
+  canAccessEID: boolean;
   onBack: () => void;
   // Crew data from crews table - required for proper E-ID card generation
   debugCrew?: {
@@ -19,6 +22,12 @@ interface CrewEIDCardPageProps {
     niam?: string | null;
     jabatan?: string;
     xp_level?: number;
+    xpTotal?: number;
+    xp_total?: number;
+    transactionXpTotal?: number;
+    transaction_xp_total?: number;
+    status?: string | null;
+    paymentVerified?: boolean;
     skill?: string[];
     photoUrl?: string;
     // Institution context
@@ -28,54 +37,45 @@ interface CrewEIDCardPageProps {
   };
 }
 
-const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCardPageProps) => {
+const CrewEIDCardPage = ({ canAccessEID, debugCrew: propDebugCrew }: CrewEIDCardPageProps) => {
   const location = useLocation();
+  const { profile } = useAuth();
 
   // Support debug mode via location.state OR props
-  const stateDebugCrew = (location.state as any)?.debugCrew;
-  const isDebugMode = (location.state as any)?.isDebugMode || !!propDebugCrew;
+  const locationState = location.state as { debugCrew?: CrewEIDCardPageProps["debugCrew"]; isDebugMode?: boolean } | null;
+  const stateDebugCrew = locationState?.debugCrew;
   const debugCrew = propDebugCrew || stateDebugCrew;
+  const paymentActive = isPaymentActive(profile?.status_payment);
+  const crewNIAM = debugCrew?.niam ?? null;
+  const canRenderCard = canAccessEID && canShowCrewIdentity(debugCrew?.status, profile?.status_payment, crewNIAM);
 
-  // Build crew data - ALL fields from crews table
-  const crewData = isDebugMode && debugCrew ? {
-    name: debugCrew.nama || "Nama Kru",
-    noId: debugCrew.niam ? formatNIAM(debugCrew.niam, true) : "—",
-    asalMedia: debugCrew.institution_name || debugCrew.pesantren_asal || "Media Pesantren",
-    alamatPesantren: debugCrew.alamat_asal || "Alamat Pesantren",
-    role: debugCrew.jabatan || "Kru Media",
-    xp: debugCrew.xp_level || 0,
-    skills: debugCrew.skill || [],
-    photoUrl: debugCrew.photoUrl,
-    socialMedia: {
-      instagram: "@mpj_jatim",
-      youtube: "Media Pondok Jatim",
-    },
-  } : {
-    // Default/demo crew data
-    name: "Ahmad Fauzi",
-    noId: "AN260100101",
-    asalMedia: "PP. Nurul Huda",
-    alamatPesantren: "Jl. Raya Pesantren No. 45, Singosari, Malang, Jawa Timur",
-    role: "Kru Media",
-    xp: 150,
-    skills: ["Fotografer", "Editor", "Desainer"],
-    photoUrl: undefined,
-    socialMedia: {
-      instagram: "@mpj_nurulhuda",
-      youtube: "MPJ Nurul Huda",
-    },
+  const crewData = {
+    name: fieldOrDash(debugCrew?.nama),
+    noId: crewNIAM ? formatNIAM(crewNIAM, true) : "-",
+    asalMedia: fieldOrDash(debugCrew?.institution_name || debugCrew?.pesantren_asal),
+    alamatPesantren: fieldOrDash(debugCrew?.alamat_asal),
+    role: fieldOrDash(debugCrew?.jabatan),
+    xp: getTransactionXPTotal(debugCrew as unknown as Record<string, unknown>),
+    photoUrl: debugCrew?.photoUrl,
   };
 
-  const xpLevel = getXPLevel(crewData.xp);
-
   const handleDownloadPDF = () => {
+    if (!paymentActive) {
+      toast({
+        title: "Belum aktif",
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     toast({
-      title: "Download PDF",
-      description: "Layout cetak sedang diproses untuk diunduh...",
+      title: "Fitur akan segera tersedia",
+      description: "Download E-ID belum tersedia.",
     });
   };
 
-  if (!isGold && !isDebugMode) {
+  if (!canRenderCard) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] p-4">
         <Card className="w-full max-w-sm bg-muted relative overflow-hidden">
@@ -105,11 +105,16 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             </div>
             <h3 className="text-lg font-bold text-primary-foreground mb-2">Fitur Terkunci</h3>
             <p className="text-primary-foreground/80 text-center text-sm mb-6 px-8">
-              Upgrade ke status Gold untuk mengakses E-Kartu Anggota
+              {paymentActive
+                ? "Identitas resmi akan tampil setelah aktivasi selesai."
+                : "Aktifkan akun terlebih dahulu."}
             </p>
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Button
+              disabled={!paymentActive}
+              className={paymentActive ? "bg-accent hover:bg-accent/90 text-accent-foreground" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
+            >
               <Shield className="h-4 w-4 mr-2" />
-              Upgrade to Gold
+              {paymentActive ? getCrewStatusLabel(debugCrew?.status) : "Aktifkan akun terlebih dahulu"}
             </Button>
           </div>
         </Card>
@@ -122,7 +127,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
       <Tabs defaultValue="virtual" className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="virtual">Kartu Virtual</TabsTrigger>
-          <TabsTrigger value="physical">Pratinjau Fisik</TabsTrigger>
+          <TabsTrigger value="physical">Kartu Fisik</TabsTrigger>
         </TabsList>
 
         {/* TAB 1: Kartu Virtual - Landscape 16:9 */}
@@ -141,7 +146,6 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             alamat={crewData.alamatPesantren}
             role={crewData.role}
             xp={crewData.xp}
-            socialMedia={crewData.socialMedia}
           />
 
           {/* Info Notice */}
@@ -156,7 +160,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
           </div>
         </TabsContent>
 
-        {/* TAB 2: Pratinjau Fisik - Portrait for Events */}
+        {/* TAB 2: Kartu Fisik */}
         <TabsContent value="physical" className="space-y-4">
           {/* Physical Member Card - Portrait with flip */}
           <PhysicalMemberCard
@@ -167,16 +171,16 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             role={crewData.role}
             xp={crewData.xp}
             photoUrl={crewData.photoUrl}
-            socialMedia={crewData.socialMedia}
           />
 
           {/* Download Button */}
           <Button 
             onClick={handleDownloadPDF}
-            className="w-full max-w-[280px] mx-auto flex bg-primary hover:bg-primary/90"
+            disabled={!paymentActive}
+            className={paymentActive ? "w-full max-w-[280px] mx-auto flex bg-primary hover:bg-primary/90" : "w-full max-w-[280px] mx-auto flex bg-slate-400 hover:bg-slate-400 cursor-not-allowed"}
           >
             <Download className="h-4 w-4 mr-2" />
-            Download Layout Cetak (PDF)
+            {paymentActive ? "Segera Hadir" : "Aktifkan akun terlebih dahulu"}
           </Button>
 
           {/* Physical Card Info */}
@@ -184,8 +188,7 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
             <CardContent className="p-4">
               <h3 className="font-semibold text-foreground mb-2">Layout Kartu Cetak</h3>
               <p className="text-sm text-muted-foreground">
-                Format kartu fisik (portrait) untuk keperluan cetak dan event. 
-                Dilengkapi dengan foto dan QR Code untuk proses absensi.
+                Format kartu fisik akan tersedia setelah data identitas lengkap.
               </p>
             </CardContent>
           </Card>
@@ -199,11 +202,11 @@ const CrewEIDCardPage = ({ isGold, onBack, debugCrew: propDebugCrew }: CrewEIDCa
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Status Keanggotaan</span>
-              <span className="font-medium text-accent">Aktif</span>
+              <span className="font-medium text-accent">{paymentActive ? "Aktif" : "Belum aktif"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Berlaku Hingga</span>
-              <span className="font-medium">31 Desember 2025</span>
+              <span className="font-medium">-</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">No. ID</span>

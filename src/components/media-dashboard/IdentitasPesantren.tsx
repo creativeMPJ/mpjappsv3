@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Lock,
   Building2,
+  IdCard,
   Image,
   Globe,
   History,
@@ -38,6 +39,44 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/api-client";
+import { useCurrentPaymentStatus } from "@/features/v4/utils";
+import { useNavigate } from "react-router-dom";
+
+type ProfileLevel = "basic" | "silver" | "gold" | "platinum";
+
+interface PesantrenProfileResponse {
+  namaPesantren?: string | null;
+  namaPengasuh?: string | null;
+  alamatSingkat?: string | null;
+  regionName?: string | null;
+  cityName?: string | null;
+  logoPesantrenUrl?: string | null;
+  namaMedia?: string | null;
+  instagram?: string | null;
+  youtube?: string | null;
+  tiktok?: string | null;
+  website?: string | null;
+  fotoPengasuhUrl?: string | null;
+  dawuhPengasuh?: string | null;
+  jumlahSantri?: number | string | null;
+  tahunBerdiri?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  visiMisi?: string | null;
+  sejarahSingkat?: string | null;
+  tipePesantren?: string | null;
+  jenjangPendidikan?: string | null;
+  programUnggulan?: string | null;
+  fotoGedungUrl?: string | null;
+  logoMediaUrl?: string | null;
+  profileLevel?: string | null;
+}
+
+const isProfileLevel = (value: unknown): value is ProfileLevel =>
+  value === "basic" || value === "silver" || value === "gold" || value === "platinum";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Terjadi kesalahan";
 
 
 // Tipe Pesantren options
@@ -67,10 +106,22 @@ const programUnggulanOptions = [
   { value: "teknologi", label: "Teknologi Informasi" },
 ];
 
-const IdentitasPesantren = () => {
+interface IdentitasPesantrenProps {
+  paymentStatus?: string;
+  profileLevel?: ProfileLevel;
+  onProfileLevelChange?: () => void | Promise<void>;
+}
+
+const IdentitasPesantren = ({
+  paymentStatus: paymentStatusProp,
+  profileLevel: profileLevelProp,
+  onProfileLevelChange,
+}: IdentitasPesantrenProps = {}) => {
   const { profile } = useAuth();
-  const paymentStatus = profile?.status_payment ?? 'unpaid';
-  const [profileLevel, setProfileLevel] = useState<"basic" | "silver" | "gold" | "platinum">(profile?.profile_level ?? 'basic');
+  const navigate = useNavigate();
+  const paymentStatus = paymentStatusProp ?? profile?.status_payment ?? 'unpaid';
+  const payment = useCurrentPaymentStatus(paymentStatus);
+  const [profileLevel, setProfileLevel] = useState<ProfileLevel>(profileLevelProp ?? profile?.profile_level ?? 'basic');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState<string | null>(null);
@@ -114,7 +165,7 @@ const IdentitasPesantren = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const data = await apiRequest<{ profile: any }>("/api/profile/pesantren");
+        const data = await apiRequest<{ profile: PesantrenProfileResponse }>("/api/profile/pesantren");
         const p = data.profile;
         setFormData({
           namaPesantren: p.namaPesantren ?? "",
@@ -144,11 +195,11 @@ const IdentitasPesantren = () => {
           fotoGedungPesantren: p.fotoGedungUrl ?? "",
           logoMediaPesantren: p.logoMediaUrl ?? "",
         });
-        if (p.profileLevel) {
+        if (isProfileLevel(p.profileLevel)) {
           setProfileLevel(p.profileLevel);
         }
-      } catch (err: any) {
-        if (!err.message?.includes("404")) {
+      } catch (err: unknown) {
+        if (!getErrorMessage(err).includes("404")) {
           toast({ title: "Gagal memuat profil", variant: "destructive" });
         }
       } finally {
@@ -243,11 +294,14 @@ const IdentitasPesantren = () => {
         method: "PUT",
         body: JSON.stringify(payloads[step]),
       });
-      setProfileLevel(res.profileLevel as any);
+      if (isProfileLevel(res.profileLevel)) {
+        setProfileLevel(res.profileLevel);
+      }
+      await onProfileLevelChange?.();
       const labels = ["Silver", "Gold", "Platinum"];
       toast({ title: `Level ${labels[step - 1]} Tercapai!`, description: "Data berhasil disimpan." });
-    } catch (err: any) {
-      toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Gagal menyimpan", description: getErrorMessage(err), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -260,6 +314,15 @@ const IdentitasPesantren = () => {
   };
 
   const handleUpload = async (type: string, file: File, field: string) => {
+    if (!payment.isActive) {
+      toast({
+        title: payment.label,
+        description: "Aktifkan akun terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const formPayload = new FormData();
     formPayload.append("file", file);
     formPayload.append("type", type);
@@ -272,8 +335,8 @@ const IdentitasPesantren = () => {
       });
       setFormData(prev => ({ ...prev, [field]: res.url }));
       toast({ title: "Upload berhasil" });
-    } catch (err: any) {
-      toast({ title: "Upload gagal", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Upload gagal", description: getErrorMessage(err), variant: "destructive" });
     } finally {
       setIsUploading(null);
     }
@@ -287,6 +350,7 @@ const IdentitasPesantren = () => {
   };
 
   const isPlatinum = profileLevel === "platinum";
+  const canOpenEid = payment.isActive && Boolean(profile?.nip);
 
   if (isLoading) {
     return (
@@ -322,6 +386,48 @@ const IdentitasPesantren = () => {
             <span className="text-sm font-bold text-primary">{calculateProgress()}%</span>
           </div>
           <Progress value={calculateProgress()} className="h-3" />
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white border border-slate-200 shadow-sm">
+        <CardContent className="p-4 md:p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <IdCard className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">E-ID Card Pesantren</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Identitas digital akan tampil setelah akun aktif dan NIP tersedia.
+                </p>
+              </div>
+            </div>
+            <Badge className={cn(
+              "shrink-0",
+              canOpenEid ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-200"
+            )}>
+              {canOpenEid ? "Tersedia" : "Aktifkan akun terlebih dahulu"}
+            </Badge>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => navigate("/media/eid")}
+              disabled={!canOpenEid}
+              className={cn(
+                "gap-2",
+                canOpenEid ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-400 hover:bg-slate-400 cursor-not-allowed"
+              )}
+            >
+              <IdCard className="h-4 w-4" />
+              {canOpenEid ? "Lihat E-ID Card" : "Aktifkan akun terlebih dahulu"}
+            </Button>
+            {!canOpenEid && (
+              <p className="text-xs text-slate-500">
+                Identitas resmi akan tampil setelah pembayaran terverifikasi.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -409,15 +515,16 @@ const IdentitasPesantren = () => {
                   Logo Pesantren
                 </Label>
                 <input ref={logoRef} type="file" accept="image/png,image/jpg,image/jpeg" className="hidden"
+                  disabled={!payment.isActive}
                   onChange={(e) => e.target.files?.[0] && handleUpload("logo_pesantren", e.target.files[0], "logoPesantrenUrl")} />
-                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => logoRef.current?.click()}>
+                <div className={cn("border-2 border-dashed border-border rounded-lg p-4 text-center transition-colors", payment.isActive ? "hover:border-primary cursor-pointer" : "opacity-60 cursor-not-allowed")}
+                  onClick={() => payment.isActive ? logoRef.current?.click() : toast({ title: payment.label, description: "Aktifkan akun terlebih dahulu", variant: "destructive" })}>
                   {formData.logoPesantrenUrl ? (
                     <img src={formData.logoPesantrenUrl} alt="Logo" className="h-16 w-16 object-contain mx-auto rounded" />
                   ) : (
                     <>
                       {isUploading === "logo_pesantren" ? <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /> : <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />}
-                      <p className="text-sm text-muted-foreground">PNG/JPG</p>
+                      <p className="text-sm text-muted-foreground">{payment.isActive ? "PNG/JPG" : "Aktifkan akun terlebih dahulu"}</p>
                     </>
                   )}
                 </div>
@@ -436,15 +543,16 @@ const IdentitasPesantren = () => {
                   Foto Pengasuh
                 </Label>
                 <input ref={fotoPengasuhRef} type="file" accept="image/png,image/jpg,image/jpeg" className="hidden"
+                  disabled={!payment.isActive}
                   onChange={(e) => e.target.files?.[0] && handleUpload("foto_pengasuh", e.target.files[0], "fotoPengasuhUrl")} />
-                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer"
-                  onClick={() => fotoPengasuhRef.current?.click()}>
+                <div className={cn("border-2 border-dashed border-border rounded-lg p-4 text-center transition-colors", payment.isActive ? "hover:border-primary cursor-pointer" : "opacity-60 cursor-not-allowed")}
+                  onClick={() => payment.isActive ? fotoPengasuhRef.current?.click() : toast({ title: payment.label, description: "Aktifkan akun terlebih dahulu", variant: "destructive" })}>
                   {formData.fotoPengasuhUrl ? (
                     <img src={formData.fotoPengasuhUrl} alt="Foto Pengasuh" className="h-16 w-16 object-cover mx-auto rounded-full" />
                   ) : (
                     <>
                       {isUploading === "foto_pengasuh" ? <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /> : <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />}
-                      <p className="text-sm text-muted-foreground">PNG/JPG</p>
+                      <p className="text-sm text-muted-foreground">{payment.isActive ? "PNG/JPG" : "Aktifkan akun terlebih dahulu"}</p>
                     </>
                   )}
                 </div>
@@ -583,15 +691,16 @@ const IdentitasPesantren = () => {
                 <div className="space-y-2">
                   <Label className="text-sm md:text-base">Foto Gedung Pesantren</Label>
                   <input ref={fotoGedungRef} type="file" accept="image/png,image/jpg,image/jpeg" className="hidden"
+                    disabled={!payment.isActive}
                     onChange={(e) => e.target.files?.[0] && handleUpload("foto_gedung", e.target.files[0], "fotoGedungPesantren")} />
-                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-cyan-400 transition-colors cursor-pointer"
-                    onClick={() => fotoGedungRef.current?.click()}>
+                  <div className={cn("border-2 border-dashed border-border rounded-lg p-4 text-center transition-colors", payment.isActive ? "hover:border-cyan-400 cursor-pointer" : "opacity-60 cursor-not-allowed")}
+                    onClick={() => payment.isActive ? fotoGedungRef.current?.click() : toast({ title: payment.label, description: "Aktifkan akun terlebih dahulu", variant: "destructive" })}>
                     {formData.fotoGedungPesantren ? (
                       <img src={formData.fotoGedungPesantren} alt="Foto Gedung" className="h-20 w-full object-cover rounded" />
                     ) : (
                       <>
                         {isUploading === "foto_gedung" ? <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /> : <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />}
-                        <p className="text-sm text-muted-foreground">PNG/JPG</p>
+                        <p className="text-sm text-muted-foreground">{payment.isActive ? "PNG/JPG" : "Aktifkan akun terlebih dahulu"}</p>
                       </>
                     )}
                   </div>
@@ -600,15 +709,16 @@ const IdentitasPesantren = () => {
                 <div className="space-y-2">
                   <Label className="text-sm md:text-base">Logo Media Pesantren</Label>
                   <input ref={logoMediaRef} type="file" accept="image/png,image/jpg,image/jpeg" className="hidden"
+                    disabled={!payment.isActive}
                     onChange={(e) => e.target.files?.[0] && handleUpload("logo_media", e.target.files[0], "logoMediaPesantren")} />
-                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-cyan-400 transition-colors cursor-pointer"
-                    onClick={() => logoMediaRef.current?.click()}>
+                  <div className={cn("border-2 border-dashed border-border rounded-lg p-4 text-center transition-colors", payment.isActive ? "hover:border-cyan-400 cursor-pointer" : "opacity-60 cursor-not-allowed")}
+                    onClick={() => payment.isActive ? logoMediaRef.current?.click() : toast({ title: payment.label, description: "Aktifkan akun terlebih dahulu", variant: "destructive" })}>
                     {formData.logoMediaPesantren ? (
                       <img src={formData.logoMediaPesantren} alt="Logo Media" className="h-16 w-16 object-contain mx-auto rounded" />
                     ) : (
                       <>
                         {isUploading === "logo_media" ? <Loader2 className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /> : <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />}
-                        <p className="text-sm text-muted-foreground">PNG/JPG</p>
+                        <p className="text-sm text-muted-foreground">{payment.isActive ? "PNG/JPG" : "Aktifkan akun terlebih dahulu"}</p>
                       </>
                     )}
                   </div>

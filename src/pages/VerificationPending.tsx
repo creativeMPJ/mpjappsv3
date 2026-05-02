@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clock, LogOut, Home, MessageCircle, CheckCircle, Lock, RefreshCw, CreditCard } from "lucide-react";
+import { Clock, LogOut, Home, MessageCircle, CheckCircle, RefreshCw, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiRequest } from "@/lib/api-client";
@@ -33,7 +33,7 @@ interface RegionData {
  */
 const VerificationPending = () => {
   const navigate = useNavigate();
-  const { signOut, user, profile, refreshAuth } = useAuth();
+  const { signOut, user, refreshAuth } = useAuth();
   const { toast } = useToast();
   
   const [claimData, setClaimData] = useState<ClaimData | null>(null);
@@ -51,14 +51,14 @@ const VerificationPending = () => {
       if (claim) {
         setClaimData(claim);
 
-        // approved atau regional_approved → akun aktif, masuk CMS
+        // approved atau regional_approved: akun aktif, masuk CMS
         if (claim.status === 'approved' || claim.status === 'regional_approved') {
           await refreshAuth();
           toast({
-            title: "Akun Terverifikasi! ✅",
+            title: "Akun Terverifikasi",
             description: "Selamat! Akun Anda telah aktif.",
           });
-          navigate('/cms', { replace: true });
+          navigate('/cms/user-beranda', { replace: true });
           return;
         }
 
@@ -70,7 +70,7 @@ const VerificationPending = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [user, navigate, toast]);
+  }, [user, navigate, refreshAuth, toast]);
 
   useEffect(() => {
     fetchClaimData();
@@ -108,7 +108,9 @@ const VerificationPending = () => {
   const handleContactAdmin = () => {
     const pengaju = claimData?.nama_pengelola || 'Pengaju';
     const pesantren = claimData?.pesantren_name || 'Pesantren';
-    const phone = regionData?.admin_phone || '6281234567890';
+    if (!regionData?.admin_phone) return;
+
+    const phone = regionData.admin_phone.replace(/^0/, '62');
     const isKlaim = claimData?.jenis_pengajuan === 'klaim';
     
     // Different message based on jenis_pengajuan
@@ -215,10 +217,10 @@ const VerificationPending = () => {
                 </div>
                 <div className="pt-2 opacity-50">
                   <p className="text-sm font-medium text-foreground">
-                    {isKlaim ? 'Akun Aktif (Data Lama)' : 'Verifikasi Admin Pusat'}
+                    {isKlaim ? 'Aktif' : 'Verifikasi Admin Pusat'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isKlaim ? 'Akun langsung aktif dengan data existing' : 'Pengesahan akhir oleh Admin Pusat'}
+                    {isKlaim ? 'Akun aktif dengan data lama' : 'Pengesahan akhir oleh Admin Pusat'}
                   </p>
                 </div>
               </div>
@@ -227,7 +229,7 @@ const VerificationPending = () => {
             {/* Estimation Note */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p className="text-xs text-muted-foreground text-center">
-                ⏱️ Proses ini biasanya memakan waktu <span className="font-medium text-foreground">1x24 jam</span> pada hari kerja.
+                Proses ini biasanya memakan waktu <span className="font-medium text-foreground">1x24 jam</span> pada hari kerja.
               </p>
             </div>
 
@@ -247,11 +249,17 @@ const VerificationPending = () => {
               {/* Contact Admin */}
               <Button
                 onClick={handleContactAdmin}
+                disabled={!regionData?.admin_phone}
                 className="w-full h-11 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
               >
                 <MessageCircle className="w-4 h-4" />
-                Hubungi Admin Regional
+                {regionData?.admin_phone ? "Hubungi Admin Regional" : "Kontak Admin Belum Tersedia"}
               </Button>
+              {!regionData?.admin_phone && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Hubungi admin MPJ melalui kanal resmi jika membutuhkan bantuan.
+                </p>
+              )}
 
               {/* Secondary Actions */}
               <div className="flex gap-3">

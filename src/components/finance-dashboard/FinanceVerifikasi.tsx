@@ -1,18 +1,17 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useCallback, useEffect, useState } from "react";
+import { CheckCircle, Clock, Eye, FileImage, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, XCircle, Eye, Clock, Loader2, RefreshCw, FileImage } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,7 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/api-client";
+import { getPaymentStateLabel, getPaymentStatus } from "@/features/v4/utils";
 
 interface PaymentItem {
   id: string;
@@ -48,6 +49,9 @@ interface PaymentItem {
   };
 }
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Terjadi kesalahan";
+
 const FinanceVerifikasi = () => {
   const { toast } = useToast();
   const [payments, setPayments] = useState<PaymentItem[]>([]);
@@ -59,25 +63,23 @@ const FinanceVerifikasi = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     setLoading(true);
     try {
       const data = await apiRequest<{ payments: PaymentItem[] }>("/api/admin/payments");
-      setPayments(data.payments);
-    } catch (error: any) {
-      toast({ title: "Gagal memuat data", description: error.message, variant: "destructive" });
+      setPayments(data.payments ?? []);
+    } catch (error) {
+      toast({ title: "Gagal memuat data", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [fetchPayments]);
 
-  const pendingPayments = payments.filter(
-    (p) => p.status === "pending_verification"
-  );
+  const pendingPayments = payments.filter((payment) => getPaymentStatus(payment.status) === "pending");
   const allPayments = payments;
 
   const formatCurrency = (amount: number) =>
@@ -97,16 +99,19 @@ const FinanceVerifikasi = () => {
     });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending_payment":
-        return <Badge variant="outline" className="text-amber-600 border-amber-300">Menunggu Bayar</Badge>;
-      case "pending_verification":
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Perlu Verifikasi</Badge>;
-      case "verified":
-        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Terverifikasi</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+    const normalized = getPaymentStatus(status);
+    const label = getPaymentStateLabel(normalized);
+
+    if (normalized === "pending") {
+      return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">{label}</Badge>;
     }
+    if (normalized === "verified") {
+      return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{label}</Badge>;
+    }
+    if (normalized === "rejected") {
+      return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">{label}</Badge>;
+    }
+    return <Badge variant="outline">{label}</Badge>;
   };
 
   const handleApprove = (payment: PaymentItem) => {
@@ -129,18 +134,18 @@ const FinanceVerifikasi = () => {
     if (!selectedPayment) return;
     setProcessing(true);
     try {
-      const result = await apiRequest<{ success: boolean; nip: string; pesantrenName: string }>(
+      const result = await apiRequest<{ success: boolean; pesantrenName?: string | null }>(
         `/api/admin/payments/${selectedPayment.id}/approve`,
-        { method: "POST" }
+        { method: "POST" },
       );
       toast({
-        title: "Pembayaran Disetujui ✅",
-        description: `${result.pesantrenName} — NIP: ${result.nip}`,
+        title: "Pembayaran disetujui",
+        description: `${result.pesantrenName ?? selectedPayment.pesantren_claims.pesantren_name}: Aktivasi akan diproses oleh sistem.`,
       });
       setShowApproveDialog(false);
       fetchPayments();
-    } catch (error: any) {
-      toast({ title: "Gagal approve", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Gagal verifikasi", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -155,13 +160,13 @@ const FinanceVerifikasi = () => {
         body: JSON.stringify({ reason: rejectReason }),
       });
       toast({
-        title: "Pembayaran Ditolak",
-        description: `${selectedPayment.pesantren_claims.pesantren_name} harus upload ulang bukti bayar.`,
+        title: "Pembayaran ditolak",
+        description: `${selectedPayment.pesantren_claims.pesantren_name} perlu mengunggah ulang bukti pembayaran.`,
       });
       setShowRejectDialog(false);
       fetchPayments();
-    } catch (error: any) {
-      toast({ title: "Gagal reject", description: error.message, variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Gagal menolak", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setProcessing(false);
     }
@@ -177,14 +182,13 @@ const FinanceVerifikasi = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
           <CardContent className="p-4 flex items-center gap-3">
             <Clock className="w-8 h-8 text-blue-600" />
             <div>
               <p className="text-2xl font-bold text-blue-700">{pendingPayments.length}</p>
-              <p className="text-xs text-blue-600/70">Menunggu Verifikasi</p>
+              <p className="text-xs text-blue-600/70">Menunggu verifikasi</p>
             </div>
           </CardContent>
         </Card>
@@ -193,26 +197,25 @@ const FinanceVerifikasi = () => {
             <CheckCircle className="w-8 h-8 text-emerald-600" />
             <div>
               <p className="text-2xl font-bold text-emerald-700">
-                {payments.filter((p) => p.status === "verified").length}
+                {payments.filter((payment) => getPaymentStatus(payment.status) === "verified").length}
               </p>
               <p className="text-xs text-emerald-600/70">Terverifikasi</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+        <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
           <CardContent className="p-4 flex items-center gap-3">
-            <Clock className="w-8 h-8 text-amber-600" />
+            <XCircle className="w-8 h-8 text-red-600" />
             <div>
-              <p className="text-2xl font-bold text-amber-700">
-                {payments.filter((p) => p.status === "pending_payment").length}
+              <p className="text-2xl font-bold text-red-700">
+                {payments.filter((payment) => getPaymentStatus(payment.status) === "rejected").length}
               </p>
-              <p className="text-xs text-amber-600/70">Belum Bayar</p>
+              <p className="text-xs text-red-600/70">Pembayaran ditolak</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pending Verification Table */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center justify-between">
@@ -227,7 +230,8 @@ const FinanceVerifikasi = () => {
           {pendingPayments.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-400" />
-              <p className="font-medium">Tidak ada pembayaran yang perlu diverifikasi</p>
+              <p className="font-medium">Belum ada data</p>
+              <p className="text-sm">Data akan tampil setelah tersedia</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -246,56 +250,34 @@ const FinanceVerifikasi = () => {
                 <TableBody>
                   {pendingPayments.map((payment) => (
                     <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        {payment.pesantren_claims.pesantren_name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {payment.pesantren_claims.nama_pengelola}
-                      </TableCell>
+                      <TableCell className="font-medium">{payment.pesantren_claims.pesantren_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{payment.pesantren_claims.nama_pengelola}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           {payment.pesantren_claims.jenis_pengajuan === "pesantren_baru" ? "Baru" : "Klaim"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {formatCurrency(payment.total_amount)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {formatDate(payment.created_at)}
-                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{formatCurrency(payment.total_amount)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(payment.created_at)}</TableCell>
                       <TableCell>
                         {payment.proof_file_url ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewProof(payment)}
-                            className="gap-1 text-blue-600"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => handleViewProof(payment)} className="gap-1 text-blue-600">
                             <Eye className="h-3.5 w-3.5" />
                             Lihat
                           </Button>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            onClick={() => handleApprove(payment)}
-                            className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs gap-1"
-                          >
+                          <Button size="sm" onClick={() => handleApprove(payment)} className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs gap-1">
                             <CheckCircle className="h-3.5 w-3.5" />
-                            Setuju
+                            Setujui pembayaran
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleReject(payment)}
-                            className="h-8 text-xs gap-1"
-                          >
+                          <Button size="sm" variant="destructive" onClick={() => handleReject(payment)} className="h-8 text-xs gap-1">
                             <XCircle className="h-3.5 w-3.5" />
-                            Tolak
+                            Tolak pembayaran
                           </Button>
                         </div>
                       </TableCell>
@@ -308,7 +290,6 @@ const FinanceVerifikasi = () => {
         </CardContent>
       </Card>
 
-      {/* All Payments History */}
       {allPayments.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -329,21 +310,15 @@ const FinanceVerifikasi = () => {
                 <TableBody>
                   {allPayments.map((payment) => (
                     <TableRow key={payment.id}>
-                      <TableCell className="font-medium text-sm">
-                        {payment.pesantren_claims.pesantren_name}
-                      </TableCell>
+                      <TableCell className="font-medium text-sm">{payment.pesantren_claims.pesantren_name}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
                           {payment.pesantren_claims.jenis_pengajuan === "pesantren_baru" ? "Baru" : "Klaim"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {formatCurrency(payment.total_amount)}
-                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{formatCurrency(payment.total_amount)}</TableCell>
                       <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {formatDate(payment.created_at)}
-                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{formatDate(payment.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -353,25 +328,20 @@ const FinanceVerifikasi = () => {
         </Card>
       )}
 
-      {/* Approve Dialog */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Konfirmasi Approve Pembayaran</DialogTitle>
+            <DialogTitle>Konfirmasi Verifikasi Pembayaran</DialogTitle>
             <DialogDescription>
-              Setujui pembayaran ini? Akun pesantren akan diaktifkan dan NIP akan di-generate.
+              Setujui pembayaran ini? Akun akan diproses sesuai alur aktivasi sistem setelah pembayaran terverifikasi.
             </DialogDescription>
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-3 py-2">
               <div className="bg-muted/50 rounded-lg p-3 space-y-1">
                 <p className="font-medium">{selectedPayment.pesantren_claims.pesantren_name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedPayment.pesantren_claims.nama_pengelola}
-                </p>
-                <p className="text-sm font-mono">
-                  Total: {formatCurrency(selectedPayment.total_amount)}
-                </p>
+                <p className="text-sm text-muted-foreground">{selectedPayment.pesantren_claims.nama_pengelola}</p>
+                <p className="text-sm font-mono">Total: {formatCurrency(selectedPayment.total_amount)}</p>
               </div>
             </div>
           )}
@@ -381,46 +351,32 @@ const FinanceVerifikasi = () => {
             </Button>
             <Button onClick={confirmApprove} disabled={processing} className="bg-emerald-600 hover:bg-emerald-700">
               {processing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-              Approve
+              Verifikasi
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tolak Pembayaran</DialogTitle>
-            <DialogDescription>
-              Pengguna akan diminta upload ulang bukti pembayaran.
-            </DialogDescription>
+            <DialogDescription>Pengguna akan diminta mengunggah ulang bukti pembayaran.</DialogDescription>
           </DialogHeader>
           {selectedPayment && (
             <div className="space-y-3 py-2">
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="font-medium">{selectedPayment.pesantren_claims.pesantren_name}</p>
-                <p className="text-sm text-muted-foreground">
-                  Total: {formatCurrency(selectedPayment.total_amount)}
-                </p>
+                <p className="text-sm text-muted-foreground">Total: {formatCurrency(selectedPayment.total_amount)}</p>
               </div>
-              <Textarea
-                placeholder="Alasan penolakan (wajib diisi)..."
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                rows={3}
-              />
+              <Textarea placeholder="Alasan penolakan (wajib diisi)..." value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} rows={3} />
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRejectDialog(false)} disabled={processing}>
               Batal
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmReject}
-              disabled={processing || !rejectReason.trim()}
-            >
+            <Button variant="destructive" onClick={confirmReject} disabled={processing || !rejectReason.trim()}>
               {processing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
               Tolak Pembayaran
             </Button>
@@ -428,7 +384,6 @@ const FinanceVerifikasi = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Proof Dialog */}
       <Dialog open={showProofDialog} onOpenChange={setShowProofDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -436,26 +391,19 @@ const FinanceVerifikasi = () => {
               <FileImage className="h-5 w-5" />
               Bukti Pembayaran
             </DialogTitle>
-            <DialogDescription>
-              {selectedPayment?.pesantren_claims.pesantren_name}
-            </DialogDescription>
+            <DialogDescription>{selectedPayment?.pesantren_claims.pesantren_name}</DialogDescription>
           </DialogHeader>
-          {selectedPayment?.proof_file_url && (
-            <div className="flex items-center justify-center p-2 bg-muted/30 rounded-lg min-h-[200px]">
-              <img
-                src={selectedPayment.proof_file_url}
-                alt="Bukti Pembayaran"
-                className="max-w-full max-h-[400px] object-contain rounded"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                  (e.target as HTMLImageElement).parentElement!.innerHTML = `
-                    <div class="text-center py-8">
-                      <p class="text-muted-foreground text-sm">File bukti tidak bisa ditampilkan (mungkin PDF)</p>
-                      <a href="${selectedPayment.proof_file_url}" target="_blank" class="text-blue-600 underline text-sm mt-2 block">Buka di tab baru</a>
-                    </div>
-                  `;
-                }}
-              />
+          {selectedPayment?.proof_file_url ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-center p-2 bg-muted/30 rounded-lg min-h-[200px]">
+                <img src={selectedPayment.proof_file_url} alt="Bukti Pembayaran" className="max-w-full max-h-[400px] object-contain rounded" />
+              </div>
+              <p className="text-center text-xs text-muted-foreground">Jika file tidak tampil, buka di tab baru.</p>
+            </div>
+          ) : (
+            <div className="py-10 text-center text-muted-foreground">
+              <p className="font-medium">Belum ada data</p>
+              <p className="text-sm">Data akan tampil setelah tersedia</p>
             </div>
           )}
           <DialogFooter>
@@ -463,10 +411,7 @@ const FinanceVerifikasi = () => {
               Tutup
             </Button>
             {selectedPayment?.proof_file_url && (
-              <Button
-                variant="outline"
-                onClick={() => window.open(selectedPayment.proof_file_url!, "_blank")}
-              >
+              <Button variant="outline" onClick={() => window.open(selectedPayment.proof_file_url!, "_blank")}>
                 Buka di Tab Baru
               </Button>
             )}

@@ -113,6 +113,12 @@ interface RegionWithStats extends Region {
   admin_count: number;
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return fallback;
+}
+
 const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
   const { toast } = useToast();
   const [regions, setRegions] = useState<Region[]>([]);
@@ -197,7 +203,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
   };
 
   useEffect(() => {
-    // DEBUG MODE: Use mock data instead of fetching from database
+    // DEBUG MODE: Use seeded demo data instead of fetching from database
     if (isDebugMode && debugData) {
       const regionsData = (debugData.regions || []) as Array<Record<string, unknown>>;
       const citiesData = (debugData.cities || []) as Array<Record<string, unknown>>;
@@ -211,7 +217,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       }));
       setRegions(mappedRegions);
 
-      // Map cities from debug data (use provided cities or create mock)
+      // Map cities from debug data (use provided cities or create demo entries)
       const mappedCities: City[] = citiesData.length > 0 
         ? citiesData.map((item) => ({
             id: String(item.id),
@@ -260,7 +266,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
   }, [isDebugMode, debugData]);
 
   // ══════════════════════════════════════════════════════════════
-  // STEP 1 & 2: Regional & City Management
+  // Step 1 & 2: Regional & City Management
   // ══════════════════════════════════════════════════════════════
   
   const handleAddRegion = async () => {
@@ -312,7 +318,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       setIsSaving(false);
       
       toast({
-        title: "✅ Step 1 Selesai (Simulasi)",
+        title: "Step 1 Selesai (Simulasi)",
         description: `Regional "${newRegion.name}" (Kode: ${newRegion.code}) berhasil dibuat.`,
       });
       return;
@@ -336,14 +342,14 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       setSelectedRegion(data);
       
       toast({
-        title: "✅ Step 1 Selesai",
+        title: "Step 1 Selesai",
         description: `Regional "${data.name}" (Kode: ${data.code}) berhasil dibuat.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error adding region:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat menambah regional.",
+        description: getErrorMessage(error, "Terjadi kesalahan saat menambah regional."),
         variant: "destructive",
       });
     } finally {
@@ -391,11 +397,11 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
         title: "Berhasil",
         description: `Regional "${region.name}" berhasil dihapus.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting region:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Tidak dapat menghapus regional yang masih memiliki pesantren terdaftar.",
+        description: getErrorMessage(error, "Tidak dapat menghapus regional yang masih memiliki pesantren terdaftar."),
         variant: "destructive",
       });
     }
@@ -439,7 +445,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       setIsSaving(false);
       
       toast({
-        title: "✅ Step 2 Selesai (Simulasi)",
+        title: "Step 2 Selesai (Simulasi)",
         description: `Kota "${newCity.name}" berhasil ditambahkan ke ${selectedRegion.name}.`,
       });
       return;
@@ -463,14 +469,14 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       setIsAddCityOpen(false);
       
       toast({
-        title: "✅ Step 2 Selesai",
+        title: "Step 2 Selesai",
         description: `Kota "${data.name}" berhasil ditambahkan ke ${selectedRegion.name}.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error adding city:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat menambah kota.",
+        description: getErrorMessage(error, "Terjadi kesalahan saat menambah kota."),
         variant: "destructive",
       });
     } finally {
@@ -539,18 +545,18 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
         title: "Berhasil",
         description: `Kota "${city.name}" berhasil dihapus.`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting city:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Tidak dapat menghapus kota yang masih memiliki pesantren terdaftar.",
+        description: getErrorMessage(error, "Tidak dapat menghapus kota yang masih memiliki pesantren terdaftar."),
         variant: "destructive",
       });
     }
   };
 
   // ══════════════════════════════════════════════════════════════
-  // STEP 3: Admin Assignment
+  // Step 3: Admin Assignment
   // ══════════════════════════════════════════════════════════════
 
   const getRoleBadge = (role: AppRole) => {
@@ -607,8 +613,8 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       setIsMergeOpen(false);
       setMergeSource(null);
       fetchData();
-    } catch (error: any) {
-      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Gagal", description: getErrorMessage(error, "Terjadi kesalahan saat menggabung regional."), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -677,16 +683,16 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
       ));
 
       toast({
-        title: "✅ Step 3 Selesai",
+        title: "Step 3 Selesai",
         description: `${selectedUser.nama_pesantren || selectedUser.nama_pengasuh || "User"} berhasil diangkat sebagai Admin ${regionExists.name}.`,
       });
 
       setIsAssignDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error assigning admin:", error);
       toast({
         title: "Gagal",
-        description: error.message || "Terjadi kesalahan saat mengangkat admin.",
+        description: getErrorMessage(error, "Terjadi kesalahan saat mengangkat admin."),
         variant: "destructive",
       });
     } finally {
@@ -722,9 +728,17 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Manajemen Regional</h1>
-        <p className="text-muted-foreground mt-1">Kelola wilayah dan Admin Regional dalam satu tempat</p>
+        <h1 className="text-2xl font-bold text-foreground">Pengaturan Regional</h1>
+        <p className="text-muted-foreground mt-1">Kelola cakupan wilayah, kota/kabupaten, dan admin regional MPJ.</p>
       </div>
+
+      <Card className="border-amber-200 bg-amber-50/60">
+        <CardContent className="space-y-2 p-4 text-sm text-amber-800">
+          <p className="font-medium">Kode regional digunakan dalam NIP dan tidak boleh diubah sembarangan.</p>
+          <p>Perubahan cakupan kota dapat memengaruhi routing pendaftaran.</p>
+          <p>NIP existing tidak berubah akibat merge atau arsip regional.</p>
+        </CardContent>
+      </Card>
 
       {/* Workflow Steps Indicator */}
       <Card className="bg-muted/30 border-dashed">
@@ -786,7 +800,7 @@ const AdminPusatRegional = ({ isDebugMode, debugData }: Props = {}) => {
                     className="gap-1"
                   >
                     <Plus className="h-4 w-4" />
-                    Buat Regional
+                    Tambah Regional
                   </Button>
                 </div>
               </CardHeader>
