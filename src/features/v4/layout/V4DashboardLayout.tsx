@@ -33,6 +33,7 @@ const crewLegacyTitleByPath: Record<string, string> = {
 const pusatLegacyTitleByPath: Record<string, string> = {
   "/pusat/master-regional": "Pengaturan Regional",
   "/pusat/pengaturan/regional": "Pengaturan Regional",
+  "/pusat/militansi/leveling": "Pengaturan Leveling",
   "/pusat/pengaturan/harga-sku": "Harga & SKU",
   "/pusat/pengaturan/paket-slot": "Harga & SKU",
 };

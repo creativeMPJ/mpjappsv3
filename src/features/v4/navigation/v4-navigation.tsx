@@ -107,9 +107,10 @@ export const pusatNav: V4NavGroup[] = [
         icon: Medal,
         enabled: true,
         children: [
-          { label: "Daftar Level", icon: Medal, enabled: false },
-          { label: "Daftar XP", icon: ShieldCheck, enabled: false },
-          { label: "Pengaturan Level/XP", icon: Settings, enabled: false },
+          { label: "Overview", path: "/pusat/militansi", icon: Medal, enabled: true },
+          { label: "Leaderboard", icon: ShieldCheck, enabled: false },
+          { label: "Aktivitas XP", icon: BarChart3, enabled: false },
+          { label: "Pengaturan Leveling", path: "/pusat/militansi/leveling", icon: Settings, enabled: true },
         ],
       },
     ],
@@ -141,7 +142,6 @@ export const pusatNav: V4NavGroup[] = [
         children: [
           { label: "Regional", path: "/pusat/pengaturan/regional", icon: Map, enabled: true },
           { label: "Kode Khodim", path: "/pusat/pengaturan/kode-khodim", icon: IdCard, enabled: true },
-          { label: "Leveling", path: "/pusat/pengaturan/leveling", icon: Medal, enabled: true },
           { label: "Harga & SKU", path: "/pusat/pengaturan/harga-sku", icon: WalletCards, enabled: true },
           { label: "Admin & Role", path: "/pusat/pengaturan/admin-role", icon: UserCog, enabled: true },
         ],

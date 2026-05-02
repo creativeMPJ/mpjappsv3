@@ -23,6 +23,7 @@ type ParentRoutePolicy = {
 type ExplicitRouteAuditPolicy = ParentRoutePolicy & {
   label: string;
   path: string;
+  firstChildPath?: string;
 };
 
 const PUSAT_PARENT_ROUTE_POLICIES: Record<string, ParentRoutePolicy> = {
@@ -51,17 +52,29 @@ const PUSAT_PARENT_ROUTE_POLICIES: Record<string, ParentRoutePolicy> = {
     message: "Parent route resmi MPJ Hub adalah placeholder Segera Hadir yang aman.",
   },
   "/pusat/militansi": {
-    status: "PLACEHOLDER_COMING_SOON",
-    message: "Parent route Militansi adalah placeholder Segera Hadir yang aman.",
+    status: "OK",
+    message: "Militansi adalah monitoring readiness safe untuk XP, level, dan aktivitas.",
+  },
+  "/pusat/militansi/leveling": {
+    status: "OK",
+    message: "Pengaturan Leveling adalah setting readiness safe di modul Militansi.",
   },
 };
 
 const EXTRA_PUSAT_ROUTE_AUDIT_POLICIES: ExplicitRouteAuditPolicy[] = [
   {
+    path: "/pusat/pengaturan/leveling",
+    label: "Pengaturan Leveling Legacy",
+    status: "SAFE_REDIRECT_TO_FIRST_CHILD",
+    message: "Legacy route aman dan redirect ke /pusat/militansi/leveling.",
+    firstChildPath: "/pusat/militansi/leveling",
+  },
+  {
     path: "/pusat/pengaturan/paket-slot",
     label: "Harga & SKU Legacy",
     status: "SAFE_REDIRECT_TO_FIRST_CHILD",
     message: "Legacy route aman dan redirect ke /pusat/pengaturan/harga-sku.",
+    firstChildPath: "/pusat/pengaturan/harga-sku",
   },
 ];
 
@@ -75,7 +88,7 @@ export function auditPusatNavigationRoutes(routes: RouteObject[]): V4RouteAuditR
       label: policy.label,
       status: policy.status,
       message: policy.message,
-      firstChildPath: "/pusat/pengaturan/harga-sku",
+      firstChildPath: policy.firstChildPath,
     }));
 
   return [...navAudit, ...extraAudit];

@@ -118,6 +118,75 @@ const aktivasiReadinessItems: ReadinessItem[] = [
   },
 ];
 
+const pusatHubReadinessItems: ReadinessItem[] = [
+  {
+    name: "Dokumen Resmi",
+    description: "Kesiapan akses dokumen resmi MPJ untuk kebutuhan organisasi.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Materi Media",
+    description: "Kesiapan materi media resmi untuk publikasi dan koordinasi.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Template Publikasi",
+    description: "Kesiapan template publikasi yang dapat dipakai lintas tim.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Arsip Event",
+    description: "Kesiapan arsip kegiatan dan dokumentasi event MPJ.",
+    status: "Segera Hadir",
+  },
+];
+
+const pusatMilitansiReadinessItems: ReadinessItem[] = [
+  {
+    name: "Ringkasan XP",
+    description: "Kesiapan ringkasan XP dari aktivitas militansi MPJ.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Leaderboard",
+    description: "Kesiapan peringkat militansi berdasarkan data aktivitas.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Aktivitas XP",
+    description: "Kesiapan monitoring aktivitas yang menghasilkan XP.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Level Militansi",
+    description: "Kesiapan level militansi dan syarat peningkatan level.",
+    status: "Segera Hadir",
+  },
+];
+
+const levelingReadinessItems: ReadinessItem[] = [
+  {
+    name: "XP Rules",
+    description: "Kesiapan aturan XP untuk aktivitas dan kontribusi media.",
+    status: "Belum dikonfigurasi",
+  },
+  {
+    name: "Threshold Level",
+    description: "Kesiapan batas kenaikan level setelah konfigurasi tersedia.",
+    status: "Belum dikonfigurasi",
+  },
+  {
+    name: "Benefit Level",
+    description: "Kesiapan benefit yang terkait dengan level profil.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Evaluasi Kenaikan Level",
+    description: "Kesiapan evaluasi syarat kenaikan level berdasarkan data real.",
+    status: "Segera Hadir",
+  },
+];
+
 function RouteHubPage({
   title,
   description,
@@ -196,17 +265,23 @@ function ReadinessPage({
   title,
   description,
   items,
+  tableTitle = "Kesiapan Monitoring",
+  tableDescription = "Halaman ini menampilkan kesiapan modul tanpa menjalankan aksi operasional.",
+  emptyDescription,
 }: {
   title: string;
   description: string;
   items: ReadinessItem[];
+  tableTitle?: string;
+  tableDescription?: string;
+  emptyDescription?: string;
 }) {
   return (
     <div className="space-y-6">
       <PageHeader title={title} description={description} />
       <DataTableShell
-        title="Kesiapan Monitoring"
-        description="Halaman ini menampilkan kesiapan modul tanpa menjalankan aksi operasional."
+        title={tableTitle}
+        description={tableDescription}
         columns={["Area", "Deskripsi", "Status", "Aksi"]}
         rows={items}
         renderRow={(row) => {
@@ -226,6 +301,12 @@ function ReadinessPage({
           );
         }}
       />
+      {emptyDescription && (
+        <EmptyState
+          title="Belum ada data"
+          description={emptyDescription}
+        />
+      )}
     </div>
   );
 }
@@ -415,7 +496,7 @@ export function PusatMasterDataOverviewPage() {
           status: "Aktif",
         },
       ]}
-      note="Regional, Kode Khodim, Leveling, dan Harga & SKU dikelola di Pengaturan."
+      note="Regional, Kode Khodim, dan Harga & SKU dikelola di Pengaturan."
     />
   );
 }
@@ -466,18 +547,26 @@ export function PusatEventOverviewPage() {
 
 export function PusatMilitansiPage() {
   return (
-    <PlaceholderPage
+    <ReadinessPage
       title="Militansi"
-      description="Fitur akan segera tersedia."
+      description="Monitoring XP, level, dan aktivitas militansi MPJ."
+      items={pusatMilitansiReadinessItems}
+      tableTitle="Kesiapan Militansi"
+      tableDescription="Data militansi akan tampil setelah tersedia."
+      emptyDescription="Data militansi akan tampil setelah tersedia."
     />
   );
 }
 
 export function PusatHubPage() {
   return (
-    <PlaceholderPage
+    <ReadinessPage
       title="MPJ Hub"
-      description="Fitur akan segera tersedia."
+      description="Pusat resource dan dokumen resmi MPJ."
+      items={pusatHubReadinessItems}
+      tableTitle="Kesiapan Resource"
+      tableDescription="Resource akan tampil setelah tersedia."
+      emptyDescription="Resource akan tampil setelah tersedia."
     />
   );
 }
@@ -486,7 +575,7 @@ export function PusatPengaturanOverviewPage() {
   return (
     <RouteHubPage
       title="Pengaturan"
-      description="Kelola konfigurasi sistem MPJ, cakupan wilayah, role, leveling, dan katalog harga."
+      description="Kelola konfigurasi sistem MPJ, cakupan wilayah, role, dan katalog harga."
       cards={[
         {
           title: "Regional",
@@ -498,12 +587,6 @@ export function PusatPengaturanOverviewPage() {
           title: "Kode Khodim",
           description: "Kelola role khodim resmi untuk NIAM dan struktur organisasi.",
           path: "/pusat/pengaturan/kode-khodim",
-          status: "Segera Hadir",
-        },
-        {
-          title: "Leveling",
-          description: "Atur level profil, benefit, dan syarat peningkatan level.",
-          path: "/pusat/pengaturan/leveling",
           status: "Segera Hadir",
         },
         {
@@ -538,9 +621,13 @@ export function PusatPengaturanKodeKhodimPage() {
 
 export function PusatPengaturanLevelingPage() {
   return (
-    <PlaceholderPage
+    <ReadinessPage
       title="Pengaturan Leveling"
-      description="Atur level profil, benefit, dan syarat peningkatan level."
+      description="Kelola aturan level, XP, benefit, dan syarat peningkatan level."
+      items={levelingReadinessItems}
+      tableTitle="Kesiapan Setting XP & Leveling"
+      tableDescription="Konfigurasi level dan XP akan tampil setelah tersedia."
+      emptyDescription="Data leveling akan tampil setelah tersedia."
     />
   );
 }
