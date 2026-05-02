@@ -187,6 +187,52 @@ const levelingReadinessItems: ReadinessItem[] = [
   },
 ];
 
+const profilPusatReadinessItems: ReadinessItem[] = [
+  {
+    name: "Identitas Organisasi",
+    description: "Kesiapan identitas resmi MPJ Pusat untuk kebutuhan dashboard.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Logo & Brand",
+    description: "Kesiapan aset logo dan panduan brand resmi.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Kontak Resmi",
+    description: "Kesiapan kontak resmi untuk komunikasi organisasi.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Social Links",
+    description: "Kesiapan tautan kanal resmi MPJ Pusat.",
+    status: "Segera Hadir",
+  },
+];
+
+const timPusatReadinessItems: ReadinessItem[] = [
+  {
+    name: "Admin Pusat",
+    description: "Kesiapan daftar admin pusat dan cakupan akses internal.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Asisten Pusat",
+    description: "Kesiapan struktur asisten pusat untuk dukungan operasional.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Role Operasional",
+    description: "Kesiapan pembagian peran operasional internal.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Riwayat Akses",
+    description: "Kesiapan monitoring riwayat akses tim pusat.",
+    status: "Segera Hadir",
+  },
+];
+
 function RouteHubPage({
   title,
   description,
@@ -578,6 +624,18 @@ export function PusatPengaturanOverviewPage() {
       description="Kelola konfigurasi sistem MPJ, cakupan wilayah, role, dan katalog harga."
       cards={[
         {
+          title: "Profil Pusat",
+          description: "Kelola identitas dan informasi resmi MPJ Pusat.",
+          path: "/pusat/pengaturan/profil",
+          status: "Segera Hadir",
+        },
+        {
+          title: "Tim Pusat",
+          description: "Kelola struktur tim pusat dan akses operasional internal.",
+          path: "/pusat/pengaturan/tim-pusat",
+          status: "Segera Hadir",
+        },
+        {
           title: "Regional",
           description: "Kelola cakupan wilayah, kota/kabupaten, dan admin regional.",
           path: "/pusat/pengaturan/regional",
@@ -594,12 +652,6 @@ export function PusatPengaturanOverviewPage() {
           description: "Kelola katalog harga, item invoice, dan konfigurasi biaya sistem MPJ.",
           path: "/pusat/pengaturan/harga-sku",
           status: "Belum dikonfigurasi",
-        },
-        {
-          title: "Admin & Role",
-          description: "Kelola akses admin, role, dan permission dashboard.",
-          path: "/pusat/pengaturan/admin-role",
-          status: "Segera Hadir",
         },
       ]}
     />
@@ -666,11 +718,28 @@ export function PusatPengaturanHargaSkuPage() {
   );
 }
 
-export function PusatPengaturanAdminRolePage() {
+export function PusatPengaturanProfilPage() {
   return (
-    <PlaceholderPage
-      title="Pengaturan Admin & Role"
-      description="Kelola akses admin dan permission dashboard."
+    <ReadinessPage
+      title="Profil Pusat"
+      description="Kelola identitas dan informasi resmi MPJ Pusat."
+      items={profilPusatReadinessItems}
+      tableTitle="Kesiapan Profil Pusat"
+      tableDescription="Informasi resmi MPJ Pusat akan tampil setelah tersedia."
+      emptyDescription="Data profil pusat akan tampil setelah tersedia."
+    />
+  );
+}
+
+export function PusatPengaturanTimPusatPage() {
+  return (
+    <ReadinessPage
+      title="Tim Pusat"
+      description="Kelola struktur tim pusat dan akses operasional internal."
+      items={timPusatReadinessItems}
+      tableTitle="Kesiapan Tim Pusat"
+      tableDescription="Struktur tim pusat akan tampil setelah tersedia."
+      emptyDescription="Data tim pusat akan tampil setelah tersedia."
     />
   );
 }

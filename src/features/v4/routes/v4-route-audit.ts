@@ -35,6 +35,14 @@ const PUSAT_PARENT_ROUTE_POLICIES: Record<string, ParentRoutePolicy> = {
     status: "OK",
     message: "Pengaturan Regional aktif dan render halaman pengelolaan regional.",
   },
+  "/pusat/pengaturan/profil": {
+    status: "PLACEHOLDER_COMING_SOON",
+    message: "Profil Pusat adalah readiness safe untuk identitas resmi MPJ Pusat.",
+  },
+  "/pusat/pengaturan/tim-pusat": {
+    status: "PLACEHOLDER_COMING_SOON",
+    message: "Tim Pusat adalah readiness safe untuk struktur tim dan akses internal.",
+  },
   "/pusat/pengaturan/harga-sku": {
     status: "PLACEHOLDER_COMING_SOON",
     message: "Harga & SKU adalah placeholder Segera Hadir yang aman.",
@@ -62,6 +70,13 @@ const PUSAT_PARENT_ROUTE_POLICIES: Record<string, ParentRoutePolicy> = {
 };
 
 const EXTRA_PUSAT_ROUTE_AUDIT_POLICIES: ExplicitRouteAuditPolicy[] = [
+  {
+    path: "/pusat/pengaturan/admin-role",
+    label: "Tim Pusat Legacy",
+    status: "SAFE_REDIRECT_TO_FIRST_CHILD",
+    message: "Legacy route aman dan redirect ke /pusat/pengaturan/tim-pusat.",
+    firstChildPath: "/pusat/pengaturan/tim-pusat",
+  },
   {
     path: "/pusat/pengaturan/leveling",
     label: "Pengaturan Leveling Legacy",

@@ -140,10 +140,11 @@ export const pusatNav: V4NavGroup[] = [
         icon: Settings,
         enabled: true,
         children: [
+          { label: "Profil Pusat", path: "/pusat/pengaturan/profil", icon: User, enabled: true },
+          { label: "Tim Pusat", path: "/pusat/pengaturan/tim-pusat", icon: UserCog, enabled: true },
           { label: "Regional", path: "/pusat/pengaturan/regional", icon: Map, enabled: true },
           { label: "Kode Khodim", path: "/pusat/pengaturan/kode-khodim", icon: IdCard, enabled: true },
           { label: "Harga & SKU", path: "/pusat/pengaturan/harga-sku", icon: WalletCards, enabled: true },
-          { label: "Admin & Role", path: "/pusat/pengaturan/admin-role", icon: UserCog, enabled: true },
         ],
       },
     ],
