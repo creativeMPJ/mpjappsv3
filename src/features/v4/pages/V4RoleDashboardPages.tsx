@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Home, Users, WalletCards, ShieldCheck, FolderOpen } from "lucide-react";
+import { FileText, Home, Users, WalletCards } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { DisabledActionCell, EmptyState, MetricCard, PageHeader, DataTableShell, StatusBadge } from "../components/v4-components";
 import { v4AdminService, type PusatHomeSummary } from "../services/v4-services";
 import { formatCurrency, formatText } from "../utils";
@@ -50,7 +50,59 @@ const CREW_ROUTES = {
 type MediaRouteKey = keyof typeof MEDIA_ROUTES;
 type CrewRouteKey = keyof typeof CREW_ROUTES;
 
-function buildCrewPreview(userName?: string | null, profileName?: string | null, statusAccount?: string | null, paymentStatus?: string | null, logoUrl?: string | null) {
+type V4ReadinessItem = {
+  name: string;
+  description: string;
+  status: string;
+};
+
+const crewHubReadinessItems: V4ReadinessItem[] = [
+  {
+    name: "Panduan Kru",
+    description: "Kesiapan panduan resmi untuk kru media.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Materi Skill",
+    description: "Kesiapan materi pembelajaran dan peningkatan skill.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Template Konten",
+    description: "Kesiapan template konten untuk kebutuhan produksi media.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Arsip Event",
+    description: "Kesiapan arsip materi dan dokumentasi event.",
+    status: "Segera Hadir",
+  },
+];
+
+const crewMilitansiReadinessItems: V4ReadinessItem[] = [
+  {
+    name: "XP Saya",
+    description: "Pantauan XP pribadi berdasarkan aktivitas kontribusi media.",
+    status: "Belum ada aktivitas",
+  },
+  {
+    name: "Level Saya",
+    description: "Pantauan level pribadi setelah data aktivitas tersedia.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Aktivitas Terbaru",
+    description: "Riwayat kontribusi media akan tampil setelah tersedia.",
+    status: "Segera Hadir",
+  },
+  {
+    name: "Leaderboard",
+    description: "Peringkat kontribusi media akan tampil setelah tersedia.",
+    status: "Segera Hadir",
+  },
+];
+
+function buildCrewContext(userName?: string | null, profileName?: string | null, statusAccount?: string | null, paymentStatus?: string | null, logoUrl?: string | null) {
   return {
     nama: userName ?? profileName ?? "Dev Kru",
     niam: null,
@@ -65,6 +117,41 @@ function buildCrewPreview(userName?: string | null, profileName?: string | null,
     prinsip_hidup: null,
     photoUrl: logoUrl ?? undefined,
   };
+}
+
+function ReadinessTable({
+  title,
+  description,
+  items,
+}: {
+  title: string;
+  description: string;
+  items: V4ReadinessItem[];
+}) {
+  return (
+    <DataTableShell
+      title={title}
+      description={description}
+      columns={["Area", "Deskripsi", "Status", "Aksi"]}
+      rows={items}
+      renderRow={(row) => {
+        const item = row as V4ReadinessItem;
+
+        return (
+          <TableRow key={item.name}>
+            <TableCell className="font-medium">{item.name}</TableCell>
+            <TableCell>{item.description}</TableCell>
+            <TableCell>
+              <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                {item.status}
+              </Badge>
+            </TableCell>
+            <DisabledActionCell />
+          </TableRow>
+        );
+      }}
+    />
+  );
 }
 
 function pickLabel(record: Record<string, unknown>) {
@@ -83,24 +170,6 @@ function pickLabel(record: Record<string, unknown>) {
 
 function resolveStatus(value: unknown) {
   return typeof value === "string" ? value : null;
-}
-
-function CrewEmptyState({
-  title,
-  description,
-  actionLabel = "Segera Hadir",
-}: {
-  title: string;
-  description: string;
-  actionLabel?: string;
-}) {
-  return (
-    <EmptyState
-      title={title}
-      description={description}
-      action={<Button disabled>{actionLabel}</Button>}
-    />
-  );
 }
 
 export function FinanceBerandaPage() {
@@ -222,23 +291,23 @@ export function MediaHubPage() {
 export function CrewBerandaPageView() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const crewPreview = buildCrewPreview(user?.name, profile?.nama_pesantren, profile?.status_account, profile?.status_payment, profile?.logo_url);
+  const crewContext = buildCrewContext(user?.name, profile?.nama_pesantren, profile?.status_account, profile?.status_payment, profile?.logo_url);
 
   const handleNavigate = useCallback((view: string) => {
     const key = view as CrewRouteKey;
     navigate(CREW_ROUTES[key] ?? CREW_ROUTES.beranda);
   }, [navigate]);
 
-  return <CrewBerandaPage onNavigate={handleNavigate as (view: "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil") => void} debugCrew={crewPreview} />;
+  return <CrewBerandaPage onNavigate={handleNavigate as (view: "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil") => void} debugCrew={crewContext} />;
 }
 
 export function CrewEIDPageView() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const crewPreview = buildCrewPreview(user?.name, profile?.nama_pesantren, profile?.status_account, profile?.status_payment, profile?.logo_url);
+  const crewContext = buildCrewContext(user?.name, profile?.nama_pesantren, profile?.status_account, profile?.status_payment, profile?.logo_url);
   const canAccess = canAccessEID({ crewStatus: profile?.status_account, profileLevel: profile?.profile_level });
 
-  return <CrewEIDCardPage canAccessEID={canAccess} onBack={() => navigate("/crew/profil")} debugCrew={crewPreview} />;
+  return <CrewEIDCardPage canAccessEID={canAccess} onBack={() => navigate("/crew/profil")} debugCrew={crewContext} />;
 }
 
 export function CrewEventPageView() {
@@ -247,22 +316,20 @@ export function CrewEventPageView() {
 
 export function CrewMilitansiPageView() {
   const { profile } = useAuth();
-  const xpTotal = 0;
   const status = profile?.status_account;
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Militansi" description="Monitoring data militansi." />
+      <PageHeader title="Militansi" description="Pantau XP, level, dan aktivitas kontribusi media." />
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={status} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Total XP" value={xpTotal} icon={ShieldCheck} />
-      </div>
-      <CrewEmptyState
-        title="Belum ada aktivitas"
-        description="Data akan tampil setelah tersedia"
+      <ReadinessTable
+        title="Kesiapan Militansi"
+        description="XP dan level akan tampil setelah aktivitas tersedia."
+        items={crewMilitansiReadinessItems}
       />
+      <EmptyState title="Belum ada aktivitas" description="XP dan level akan tampil setelah aktivitas tersedia." />
     </div>
   );
 }
@@ -272,18 +339,16 @@ export function CrewHubPageView() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="MPJ-Hub" description="Monitoring data MPJ-Hub." />
+      <PageHeader title="MPJ Hub" description="Resource pembelajaran dan panduan untuk kru media." />
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={profile?.status_account} />
       </div>
-      <CrewEmptyState
-        title="Belum ada data"
-        description="Data akan tampil setelah tersedia"
+      <ReadinessTable
+        title="Kesiapan Resource"
+        description="Resource akan tampil setelah tersedia."
+        items={crewHubReadinessItems}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <MetricCard title="Resource" value="-" icon={FolderOpen} />
-        <MetricCard title="Status" value="Segera Hadir" icon={ShieldCheck} />
-      </div>
+      <EmptyState title="Belum ada data" description="Resource akan tampil setelah tersedia." />
     </div>
   );
 }
@@ -295,11 +360,11 @@ export function CrewSertifikatPageView() {
 export function CrewProfilPageView() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const crewPreview = buildCrewPreview(user?.name, profile?.nama_pesantren, profile?.status_account, profile?.status_payment, profile?.logo_url);
+  const crewContext = buildCrewContext(user?.name, profile?.nama_pesantren, profile?.status_account, profile?.status_payment, profile?.logo_url);
   const handleNavigate = useCallback((view: string) => {
     const key = view as CrewRouteKey;
     navigate(CREW_ROUTES[key] ?? CREW_ROUTES.beranda);
   }, [navigate]);
 
-  return <CrewProfilPage onNavigate={handleNavigate as (view: "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil") => void} debugCrew={crewPreview} />;
+  return <CrewProfilPage onNavigate={handleNavigate as (view: "beranda" | "leaderboard" | "hub" | "event" | "eid" | "profil") => void} debugCrew={crewContext} />;
 }
