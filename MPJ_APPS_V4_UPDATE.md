@@ -1,7 +1,8 @@
 ﻿# MPJ Apps V4 — Update Log
 
 Versi: 4.0  
-Tanggal: 30 April 2026  
+Tanggal awal: 30 April 2026
+Update terakhir: 2 Mei 2026
 Branch: rou-improvement  
 
 ---
@@ -144,6 +145,128 @@ Crew → Event → XP → Leaderboard
 - Tidak ada perubahan backend
 - Tidak ada perubahan API
 - Semua perubahan pada frontend & logic enforcement
+
+---
+
+## 🧩 FINAL FE V4 CLEANUP — 2 MEI 2026
+
+Cleanup ini merapikan route, menu, placeholder, dan readiness page V4 lintas role tanpa mengubah backend, Prisma, migration, endpoint, payment flow, atau contract API existing.
+
+### Admin Pusat
+
+Struktur Pengaturan Pusat final:
+- Profil Pusat
+- Tim Pusat
+- Regional
+- Kode Khodim
+- Harga & SKU
+
+Route resmi Pengaturan Pusat:
+- `/pusat/pengaturan/profil`
+- `/pusat/pengaturan/tim-pusat`
+- `/pusat/pengaturan/regional`
+- `/pusat/pengaturan/kode-khodim`
+- `/pusat/pengaturan/harga-sku`
+
+Legacy route yang tetap aman:
+- `/pusat/pengaturan/admin-role` redirect ke `/pusat/pengaturan/tim-pusat`
+- `/pusat/pengaturan/paket-slot` redirect ke `/pusat/pengaturan/harga-sku`
+- `/pusat/pengaturan/leveling` redirect ke `/pusat/militansi/leveling`
+
+Militansi final:
+- `/pusat/militansi` menjadi monitoring/readiness untuk XP, leaderboard, aktivitas XP, dan level militansi.
+- `/pusat/militansi/leveling` menjadi readiness Pengaturan Leveling dan XP Rules.
+- Submenu Militansi final:
+  - Overview
+  - Leaderboard
+  - Aktivitas XP
+  - Pengaturan Leveling
+
+MPJ Hub:
+- `/pusat/mpj-hub` menjadi readiness resource dan dokumen resmi MPJ.
+- Tidak menampilkan file, link, angka, atau data palsu.
+- Action upload/download/manage tetap `Segera Hadir` sampai data/API real tersedia.
+
+### Admin Media
+
+Route ready:
+- `/media/beranda`
+- `/media/administrasi`
+- `/media/identitas`
+- `/media/tim`
+- `/media/eid`
+- `/media/event`
+
+Route readiness:
+- `/media/hub` menjadi readiness MPJ Hub untuk panduan, materi media, template konten, dan arsip event.
+- `/media/pengaturan` masih placeholder aman.
+
+### Crew
+
+Route ready:
+- `/crew/beranda`
+- `/crew/profil`
+- `/crew/eid`
+- `/crew/event`
+
+Route readiness:
+- `/crew/hub` menjadi readiness MPJ Hub untuk panduan kru, materi skill, template konten, dan arsip event.
+- `/crew/militansi` menjadi readiness XP personal, level, aktivitas terbaru, dan leaderboard tanpa angka XP palsu.
+- `/crew/sertifikat` masih placeholder aman.
+
+### Admin Regional
+
+Route ready:
+- `/regional/beranda`
+- `/regional/administrasi/monitoring-pendaftaran`
+- `/regional/sekretariat`
+- `/regional/sekretariat/administrasi`
+- `/regional/sekretariat/sertifikat`
+- `/regional/master-data`
+- `/regional/master-data/pesantren`
+- `/regional/master-data/kru`
+- `/regional/event/daftar`
+
+Route yang masih readiness/placeholder aman:
+- Monitoring Lembaga
+- Leveling Wilayah
+- Peserta
+- Scan
+- Monitoring Militansi
+- MPJ Hub
+- Profil Regional
+- Tim Regional
+
+### Finance
+
+Route ready:
+- `/finance/beranda`
+- `/finance/verifikasi`
+
+Route readiness:
+- `/finance/laporan`
+
+### Copy dan Konsep yang Dirapikan
+
+- `Paket / Slot` diganti menjadi `Harga & SKU`.
+- `Admin & Role` diganti menjadi `Tim Pusat`.
+- Leveling dikeluarkan dari Pengaturan umum dan dipindahkan ke Militansi.
+- Placeholder generic `Pengaturan ini akan segera tersedia` tidak lagi dipakai untuk overview Pengaturan Pusat.
+- Page readiness tidak menampilkan data dummy, mock, harga palsu, XP palsu, leaderboard palsu, atau link kosong.
+- Route parent yang punya child aman tidak otomatis dianggap error; diklasifikasikan sebagai overview, readiness, placeholder, atau legacy redirect safe.
+
+### Status Validasi
+
+- ESLint terbatas untuk file yang diubah sudah dijalankan pada batch cleanup terkait.
+- `git diff --check` sudah dijalankan pada batch cleanup terkait; hanya warning CRLF yang muncul dari file existing.
+- Manual route check sudah dilakukan untuk route utama V4 Admin Pusat, Admin Media, Crew, Regional, dan Finance.
+
+### Prioritas Batch Berikutnya
+
+- Rapikan readiness page Admin Regional yang masih generic.
+- Rapikan `/media/pengaturan`.
+- Rapikan copy kecil Crew seperti konsistensi `MPJ Hub`.
+- Evaluasi `/finance/laporan` sebagai readiness laporan tanpa data palsu.
 
 ---
 
